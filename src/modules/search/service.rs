@@ -146,8 +146,8 @@ mod tests {
             .execute(&ctx.pool)
             .await
             .unwrap();
-        // bookmark（单用户表）
-        sqlx::query("INSERT INTO bookmark (title, url) VALUES ('费曼技巧详解', 'https://example.com/feynman')")
+        // bookmark（user 1 的收藏）
+        sqlx::query("INSERT INTO bookmark (title, url, user_id) VALUES ('费曼技巧详解', 'https://example.com/feynman', 1)")
             .execute(&ctx.pool).await.unwrap();
         // reading（reading_article 表）
         sqlx::query(
@@ -336,9 +336,9 @@ mod tests {
     async fn bookmark_matches_url_and_description() {
         let ctx = setup().await;
         sqlx::query(
-            "INSERT INTO bookmark (title, url, description) VALUES
-             ('无关标题', 'https://feynman-technique.com/', ''),
-             ('普通书签', 'https://other.com/', '费曼技巧的详细说明')",
+            "INSERT INTO bookmark (title, url, description, user_id) VALUES
+             ('无关标题', 'https://feynman-technique.com/', '', 1),
+             ('普通书签', 'https://other.com/', '费曼技巧的详细说明', 1)",
         )
         .execute(&ctx.pool)
         .await

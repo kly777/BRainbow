@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT b.id, b.title, b.url, b.description,\n                      0 AS \"title_hit!: i64\"\n               FROM bookmark_fts fts\n               JOIN bookmark b ON b.id = fts.rowid\n               WHERE bookmark_fts MATCH ?2\n                 AND (b.user_id = ?1 OR b.user_id IS NULL)\n               ORDER BY rank\n               LIMIT ?3",
+  "query": "SELECT b.id, b.title, b.url, b.description,\n                      0 AS \"title_hit!: i64\"\n               FROM bookmark_fts fts\n               JOIN bookmark b ON b.id = fts.rowid\n               WHERE bookmark_fts MATCH ?2\n                 AND (?1 IS NULL OR b.user_id = ?1)\n               ORDER BY rank\n               LIMIT ?3",
   "describe": {
     "columns": [
       {
@@ -65,5 +65,5 @@
       false
     ]
   },
-  "hash": "933d8a8b10b0bfed7a46c1e62046f84b35cec53cb084575179631b6c1f40dd13"
+  "hash": "c3b0969c46dec9986cecc7a7e41b7d89b121d1addc67b7bc4a35a3e06c54795d"
 }

@@ -2,7 +2,8 @@ use chrono::Utc;
 use sqlx::{QueryBuilder, Row, Sqlite, SqlitePool};
 use std::sync::Arc;
 
-use crate::shared::db_query::like_contains;
+use crate::shared::actor::Actor;
+use crate::shared::db_query::{like_contains, push_owner_scope};
 
 use super::model::{
     Bookmark, BookmarkRow, BookmarkTag, BookmarkTagWithCount, GroupedBookmarksResponse, TagGroup,
@@ -51,10 +52,10 @@ impl BookmarkRepo {
         Self { pool }
     }
 
-    /// 全局搜索命中（匹配标题/URL/描述/标签名）
+    /// 全局搜索命中（匹配标题/URL/描述/标签名）—— admin 全量；普通用户只看自己的（见 `shared/actor.rs`）
     pub async fn search_hits(
         &self,
-        user_id: i32,
+        actor: &Actor,
         like: &str,
         cap: i64,
     ) -> Result<Vec<BookmarkHitRow>, sqlx::Error> {
@@ -63,11 +64,11 @@ impl BookmarkRepo {
             r#"SELECT id, title, url, description,
                       title LIKE ?2 ESCAPE '\' AS "title_hit!: i64"
                FROM bookmark
-               WHERE (user_id = ?1 OR user_id IS NULL)
+               WHERE (?1 IS NULL OR user_id = ?1)
                  AND (title LIKE ?2 ESCAPE '\' OR url LIKE ?2 ESCAPE '\' OR description LIKE ?2 ESCAPE '\'
                       OR EXISTS (SELECT 1 FROM bookmark_tag_rel r JOIN bookmark_tag t ON t.id = r.tag_id WHERE r.bookmark_id = bookmark.id AND t.name LIKE ?2 ESCAPE '\'))
                ORDER BY (title LIKE ?2 ESCAPE '\') DESC, id DESC LIMIT ?3"#,
-            user_id,
+            actor.owner_scope(),
             like,
             cap
         )
@@ -78,7 +79,7 @@ impl BookmarkRepo {
 
     pub async fn search_hits_fts(
         &self,
-        user_id: i32,
+        actor: &Actor,
         fts_query: &str,
         cap: i64,
     ) -> Result<Vec<BookmarkHitRow>, sqlx::Error> {
@@ -89,10 +90,10 @@ impl BookmarkRepo {
                FROM bookmark_fts fts
                JOIN bookmark b ON b.id = fts.rowid
                WHERE bookmark_fts MATCH ?2
-                 AND (b.user_id = ?1 OR b.user_id IS NULL)
+                 AND (?1 IS NULL OR b.user_id = ?1)
                ORDER BY rank
                LIMIT ?3"#,
-            user_id,
+            actor.owner_scope(),
             fts_query,
             cap
         )
@@ -104,16 +105,14 @@ impl BookmarkRepo {
     /// 获取所有书签（分页，可选按标签过滤，支持排序）
     pub async fn find_all_paginated(
         &self,
-        user_id: i32,
+        actor: &Actor,
         limit: i64,
         offset: i64,
         tag: Option<&str>,
         sort: &str,
     ) -> Result<(Vec<Bookmark>, i64), sqlx::Error> {
-        let mut count_builder =
-            QueryBuilder::new("SELECT COUNT(*) FROM bookmark WHERE (user_id = ");
-        count_builder.push_bind(user_id);
-        count_builder.push(" OR user_id IS NULL)");
+        let mut count_builder = QueryBuilder::new("SELECT COUNT(*) FROM bookmark WHERE 1 = 1");
+        push_owner_scope(&mut count_builder, actor, "user_id");
         if let Some(t) = tag {
             tags_filter_clause(&mut count_builder, t);
         }
@@ -123,9 +122,8 @@ impl BookmarkRepo {
             .await?;
 
         let mut fetch_builder = QueryBuilder::new(BOOKMARK_SELECT);
-        fetch_builder.push(" WHERE (user_id = ");
-        fetch_builder.push_bind(user_id);
-        fetch_builder.push(" OR user_id IS NULL)");
+        fetch_builder.push(" WHERE 1 = 1");
+        push_owner_scope(&mut fetch_builder, actor, "user_id");
         if let Some(t) = tag {
             tags_filter_clause(&mut fetch_builder, t);
         }
@@ -148,7 +146,7 @@ impl BookmarkRepo {
     }
 
     /// 根据 ID 获取书签
-    pub async fn find_by_id(&self, user_id: i32, id: i32) -> Result<Option<Bookmark>, sqlx::Error> {
+    pub async fn find_by_id(&self, actor: &Actor, id: i32) -> Result<Option<Bookmark>, sqlx::Error> {
         let row = sqlx::query_as!(
             BookmarkRow,
             r#"SELECT id AS "id: i32", title, url, description,
@@ -159,9 +157,9 @@ impl BookmarkRepo {
                            (SELECT t.name FROM bookmark_tag_rel r
                             JOIN bookmark_tag t ON t.id = r.tag_id
                             WHERE r.bookmark_id = bookmark.id ORDER BY t.name)) AS tags
-               FROM bookmark WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)"#,
+               FROM bookmark WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)"#,
             id,
-            user_id
+            actor.owner_scope()
         )
         .fetch_optional(&*self.pool)
         .await?;
@@ -169,7 +167,21 @@ impl BookmarkRepo {
         Ok(row.map(BookmarkRow::into_bookmark))
     }
 
-    /// 创建书签
+    /// 只看归属：返回 `None` = 书签不存在；`Some(None)` = 无主行；`Some(Some(uid))` = 有主。
+    ///
+    /// 给"子表随父"用（`bookmark_tag_rel` 没有 user_id，写路径要在动子行前问一句
+    /// "这书签是他的吗"）：判据在 `Actor` 上，这里只负责把归属取出来。
+    pub async fn owner_of(&self, id: i32) -> Result<Option<Option<i64>>, sqlx::Error> {
+        let row = sqlx::query_scalar!(
+            r#"SELECT user_id AS "user_id: i64" FROM bookmark WHERE id = ?1"#,
+            id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+        Ok(row)
+    }
+
+    /// 创建书签（`user_id` 是创建者，由 service 传 `actor.user_id`）
     pub async fn create(
         &self,
         user_id: i32,
@@ -197,7 +209,7 @@ impl BookmarkRepo {
         .fetch_one(&mut *tx)
         .await?;
 
-        self.replace_tags_in_tx(&mut tx, row.id, tags).await?;
+        self.replace_tags_in_tx(&mut tx, user_id, row.id, tags).await?;
         tx.commit().await?;
 
         let mut bookmark = Bookmark {
@@ -219,10 +231,13 @@ impl BookmarkRepo {
         Ok(bookmark)
     }
 
-    /// 根据 URL 获取书签（导入时按 URL 去重/合并）
+    /// 根据 URL 获取书签（URL 查重 / 导入时按 URL 去重）
+    ///
+    /// 按归属过滤：普通用户只可能拿到自己的那份（别人的同 URL 书签既不算"已收藏"，
+    /// 也不会被导入合并进去）；admin 的全量口径下会拿到任意一行（admin 全管）。
     pub async fn find_by_url(
         &self,
-        user_id: i32,
+        actor: &Actor,
         url: &str,
     ) -> Result<Option<Bookmark>, sqlx::Error> {
         let row = sqlx::query_as!(
@@ -235,9 +250,9 @@ impl BookmarkRepo {
                            (SELECT t.name FROM bookmark_tag_rel r
                             JOIN bookmark_tag t ON t.id = r.tag_id
                             WHERE r.bookmark_id = bookmark.id ORDER BY t.name)) AS tags
-               FROM bookmark WHERE url = ?1 AND (user_id = ?2 OR user_id IS NULL)"#,
+               FROM bookmark WHERE url = ?1 AND (?2 IS NULL OR user_id = ?2)"#,
             url,
-            user_id
+            actor.owner_scope()
         )
         .fetch_optional(&*self.pool)
         .await?;
@@ -245,10 +260,10 @@ impl BookmarkRepo {
         Ok(row.map(BookmarkRow::into_bookmark))
     }
 
-    /// 更新书签（仅更新提供的字段）
+    /// 更新书签（仅更新提供的字段）—— 越权时返回 `RowNotFound`（service 转 404）
     pub async fn update(
         &self,
-        user_id: i32,
+        actor: &Actor,
         id: i32,
         title: Option<&str>,
         url: Option<&str>,
@@ -283,9 +298,7 @@ impl BookmarkRepo {
         assert!(field_count > 0, "update must set at least updated_at");
         builder.push(" WHERE id = ");
         builder.push_bind(id);
-        builder.push(" AND (user_id = ");
-        builder.push_bind(user_id);
-        builder.push(" OR user_id IS NULL)");
+        push_owner_scope(&mut builder, actor, "user_id");
         builder.push(" RETURNING id, title, url, description, visit_count, created_at, updated_at");
 
         let result = builder.build().fetch_one(&*self.pool).await?;
@@ -309,12 +322,12 @@ impl BookmarkRepo {
         Ok(bookmark)
     }
 
-    /// 删除书签（关联标签关系由外键级联删除）
-    pub async fn delete(&self, user_id: i32, id: i32) -> Result<u64, sqlx::Error> {
+    /// 删除书签（关联标签关系由外键级联删除）—— 越权即 0 行
+    pub async fn delete(&self, actor: &Actor, id: i32) -> Result<u64, sqlx::Error> {
         let result = sqlx::query!(
-            "DELETE FROM bookmark WHERE id = ? AND (user_id = ? OR user_id IS NULL)",
+            "DELETE FROM bookmark WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)",
             id,
-            user_id
+            actor.owner_scope()
         )
         .execute(&*self.pool)
         .await?;
@@ -322,17 +335,17 @@ impl BookmarkRepo {
         Ok(result.rows_affected())
     }
 
-    /// 批量删除书签（关联标签关系由外键级联删除）
-    pub async fn batch_delete(&self, user_id: i32, ids: &[i32]) -> Result<u64, sqlx::Error> {
+    /// 批量删除书签（关联标签关系由外键级联删除）—— 越权的那几条静默跳过
+    pub async fn batch_delete(&self, actor: &Actor, ids: &[i32]) -> Result<u64, sqlx::Error> {
         if ids.is_empty() {
             return Ok(0);
         }
         let mut total = 0u64;
         for &id in ids {
             let result = sqlx::query!(
-                "DELETE FROM bookmark WHERE id = ? AND (user_id = ? OR user_id IS NULL)",
+                "DELETE FROM bookmark WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)",
                 id,
-                user_id
+                actor.owner_scope()
             )
             .execute(&*self.pool)
             .await?;
@@ -341,32 +354,34 @@ impl BookmarkRepo {
         Ok(total)
     }
 
-    /// 增加书签访问次数
-    pub async fn increment_visit(&self, user_id: i32, id: i32) -> Result<(), sqlx::Error> {
-        sqlx::query!(
-            "UPDATE bookmark SET visit_count = visit_count + 1 WHERE id = ? AND (user_id = ? OR user_id IS NULL)",
+    /// 增加书签访问次数 —— 返回受影响行数（0 = 书签不存在或不属于调用者）
+    pub async fn increment_visit(&self, actor: &Actor, id: i32) -> Result<u64, sqlx::Error> {
+        let result = sqlx::query!(
+            "UPDATE bookmark SET visit_count = visit_count + 1 WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)",
             id,
-            user_id
+            actor.owner_scope()
         )
         .execute(&*self.pool)
         .await?;
-        Ok(())
+        Ok(result.rows_affected())
     }
 
     /// 按标签分组获取书签（标签按该标签下书签总访问频率排序）
     pub async fn find_grouped_by_tag(
         &self,
-        user_id: i32,
+        actor: &Actor,
     ) -> Result<GroupedBookmarksResponse, sqlx::Error> {
         // 获取所有标签，按该标签下书签总 visit_count 排序
+        // （分组来自**调用者可见的书签** —— 标签本身的归属不在这里过滤：
+        //  子表随父，书签可见就意味着它挂的标签也可见）
         let tag_rows = sqlx::query!(
             r#"SELECT t.name AS "name: String", COALESCE(SUM(b.visit_count), 0) AS "total_visits!: i64"
                FROM bookmark_tag t
                JOIN bookmark_tag_rel r ON r.tag_id = t.id
-               JOIN bookmark b ON b.id = r.bookmark_id AND (b.user_id = ?1 OR b.user_id IS NULL)
+               JOIN bookmark b ON b.id = r.bookmark_id AND (?1 IS NULL OR b.user_id = ?1)
                GROUP BY t.id, t.name
                ORDER BY COALESCE(SUM(b.visit_count), 0) DESC, t.name"#,
-            user_id
+            actor.owner_scope()
         )
         .fetch_all(&*self.pool)
         .await?;
@@ -375,9 +390,8 @@ impl BookmarkRepo {
         for tag_row in tag_rows {
             // 获取该标签下的书签
             let mut builder = QueryBuilder::new(BOOKMARK_SELECT);
-            builder.push(" WHERE (user_id = ");
-            builder.push_bind(user_id);
-            builder.push(" OR user_id IS NULL)");
+            builder.push(" WHERE 1 = 1");
+            push_owner_scope(&mut builder, actor, "user_id");
             tags_filter_clause(&mut builder, &tag_row.name);
             builder.push(" ORDER BY visit_count DESC, created_at DESC");
 
@@ -393,9 +407,8 @@ impl BookmarkRepo {
 
         // 获取没有标签的书签
         let mut untagged_builder = QueryBuilder::new(BOOKMARK_SELECT);
-        untagged_builder.push(" WHERE (user_id = ");
-        untagged_builder.push_bind(user_id);
-        untagged_builder.push(" OR user_id IS NULL)");
+        untagged_builder.push(" WHERE 1 = 1");
+        push_owner_scope(&mut untagged_builder, actor, "user_id");
         untagged_builder.push(
             " AND NOT EXISTS (SELECT 1 FROM bookmark_tag_rel WHERE bookmark_id = bookmark.id)",
         );
@@ -416,7 +429,7 @@ impl BookmarkRepo {
     /// 按关键词搜索书签（匹配标题/URL/备注，命中越多得分越高；可选按标签过滤）
     pub async fn search_paginated(
         &self,
-        user_id: i32,
+        actor: &Actor,
         query: &str,
         tag: Option<&str>,
         limit: i64,
@@ -425,14 +438,13 @@ impl BookmarkRepo {
         let keywords: Vec<&str> = query.split_whitespace().collect();
         if keywords.is_empty() {
             return self
-                .find_all_paginated(user_id, limit, offset, tag, "created_at")
+                .find_all_paginated(actor, limit, offset, tag, "created_at")
                 .await;
         }
 
-        let mut count_builder =
-            QueryBuilder::new("SELECT COUNT(*) FROM bookmark WHERE (user_id = ");
-        count_builder.push_bind(user_id);
-        count_builder.push(" OR user_id IS NULL) AND (");
+        let mut count_builder = QueryBuilder::new("SELECT COUNT(*) FROM bookmark WHERE 1 = 1");
+        push_owner_scope(&mut count_builder, actor, "user_id");
+        count_builder.push(" AND (");
         Self::append_keyword_where(&mut count_builder, &keywords);
         count_builder.push(")");
         if let Some(t) = tag {
@@ -444,9 +456,9 @@ impl BookmarkRepo {
             .await?;
 
         let mut fetch_builder = QueryBuilder::new(BOOKMARK_SELECT);
-        fetch_builder.push(" WHERE (user_id = ");
-        fetch_builder.push_bind(user_id);
-        fetch_builder.push(" OR user_id IS NULL) AND (");
+        fetch_builder.push(" WHERE 1 = 1");
+        push_owner_scope(&mut fetch_builder, actor, "user_id");
+        fetch_builder.push(" AND (");
         Self::append_keyword_where(&mut fetch_builder, &keywords);
         fetch_builder.push(")");
         if let Some(t) = tag {
@@ -504,31 +516,40 @@ impl BookmarkRepo {
     // ── 标签 ──
 
     /// 搜索标签（q 为空则返回全部），带使用次数
+    ///
+    /// 归属按 `bookmark_tag.user_id` 判（标准口径：admin 全量 / 普通用户只看自己建的）；
+    /// 计数只算**可见书签** —— 别人的收藏数量不该从标签计数里漏出来。
     pub async fn search_tags(
         &self,
+        actor: &Actor,
         q: Option<&str>,
     ) -> Result<Vec<BookmarkTagWithCount>, sqlx::Error> {
         let q = q.unwrap_or("").trim();
         let rows = if q.is_empty() {
             sqlx::query_as!(
                 BookmarkTagWithCount,
-                r#"SELECT t.id AS "id: i32", t.name, COUNT(r.bookmark_id) AS "count!: i64"
+                r#"SELECT t.id AS "id: i32", t.name, COUNT(b.id) AS "count!: i64"
                    FROM bookmark_tag t
                    LEFT JOIN bookmark_tag_rel r ON r.tag_id = t.id
+                   LEFT JOIN bookmark b ON b.id = r.bookmark_id AND (?1 IS NULL OR b.user_id = ?1)
+                   WHERE (?1 IS NULL OR t.user_id = ?1)
                    GROUP BY t.id, t.name
-                   ORDER BY COUNT(r.bookmark_id) DESC, t.name"#
+                   ORDER BY COUNT(b.id) DESC, t.name"#,
+                actor.owner_scope()
             )
             .fetch_all(&*self.pool)
             .await?
         } else {
             sqlx::query_as!(
                 BookmarkTagWithCount,
-                r#"SELECT t.id AS "id: i32", t.name, COUNT(r.bookmark_id) AS "count!: i64"
+                r#"SELECT t.id AS "id: i32", t.name, COUNT(b.id) AS "count!: i64"
                    FROM bookmark_tag t
                    LEFT JOIN bookmark_tag_rel r ON r.tag_id = t.id
-                   WHERE t.name LIKE ? ESCAPE '\'
+                   LEFT JOIN bookmark b ON b.id = r.bookmark_id AND (?1 IS NULL OR b.user_id = ?1)
+                   WHERE (?1 IS NULL OR t.user_id = ?1) AND t.name LIKE ?2 ESCAPE '\'
                    GROUP BY t.id, t.name
-                   ORDER BY COUNT(r.bookmark_id) DESC, t.name"#,
+                   ORDER BY COUNT(b.id) DESC, t.name"#,
+                actor.owner_scope(),
                 like_contains(q)
             )
             .fetch_all(&*self.pool)
@@ -537,11 +558,19 @@ impl BookmarkRepo {
         Ok(rows)
     }
 
-    /// 创建标签；已存在时返回现有标签
-    pub async fn create_tag(&self, name: &str) -> Result<BookmarkTag, sqlx::Error> {
-        let result = sqlx::query!("INSERT OR IGNORE INTO bookmark_tag (name) VALUES (?)", name)
-            .execute(&*self.pool)
-            .await?;
+    /// 创建标签；已存在时按名称复用现有行。
+    ///
+    /// 标签名是全局命名空间（`bookmark_tag.name` 有 UNIQUE 约束），所以"按名复用"
+    /// 可能落到别人建的那行上 —— 复用不改归属。归属只决定两件事：它出现在谁的标签
+    /// 列表里（[`BookmarkRepo::search_tags`]），以及谁能删（[`BookmarkRepo::delete_tag`]）。
+    pub async fn create_tag(&self, actor: &Actor, name: &str) -> Result<BookmarkTag, sqlx::Error> {
+        let result = sqlx::query!(
+            "INSERT OR IGNORE INTO bookmark_tag (name, user_id) VALUES (?1, ?2)",
+            name,
+            actor.user_id
+        )
+        .execute(&*self.pool)
+        .await?;
         if result.rows_affected() == 0 {
             return self.find_tag_by_name(name).await;
         }
@@ -555,15 +584,19 @@ impl BookmarkRepo {
         Ok(row)
     }
 
-    /// 删除标签（关联关系由外键级联删除）
-    pub async fn delete_tag(&self, id: i32) -> Result<u64, sqlx::Error> {
-        let result = sqlx::query!("DELETE FROM bookmark_tag WHERE id = ?", id)
-            .execute(&*self.pool)
-            .await?;
+    /// 删除标签（关联关系由外键级联删除）—— 越权即 0 行
+    pub async fn delete_tag(&self, actor: &Actor, id: i32) -> Result<u64, sqlx::Error> {
+        let result = sqlx::query!(
+            "DELETE FROM bookmark_tag WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)",
+            id,
+            actor.owner_scope()
+        )
+        .execute(&*self.pool)
+        .await?;
         Ok(result.rows_affected())
     }
 
-    /// 获取书签的标签
+    /// 获取书签的标签（子行随父：调用方必须先确认书签对调用者可见）
     pub async fn get_bookmark_tags(
         &self,
         bookmark_id: i32,
@@ -582,22 +615,28 @@ impl BookmarkRepo {
         Ok(rows)
     }
 
-    /// 整体替换书签的标签（按名称，不存在的自动创建）
+    /// 整体替换书签的标签（按名称，不存在的自动创建；新建的标签归 `actor`）。
+    ///
+    /// **归属判据不在这里** —— `bookmark_tag_rel` 没有 `user_id`，子表随父：调用方
+    /// 必须先确认父行书签对 `actor` 可见（`BookmarkService::ensure_bookmark_owned`）。
     pub async fn set_bookmark_tags(
         &self,
+        actor: &Actor,
         bookmark_id: i32,
         names: &[String],
     ) -> Result<Vec<BookmarkTag>, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
-        self.replace_tags_in_tx(&mut tx, bookmark_id, names).await?;
+        self.replace_tags_in_tx(&mut tx, actor.user_id, bookmark_id, names)
+            .await?;
         tx.commit().await?;
         self.get_bookmark_tags(bookmark_id).await
     }
 
-    /// 在事务内：确保标签存在 → 清空 → 重建关联
+    /// 在事务内：确保标签存在 → 清空 → 重建关联（`user_id` 是新建标签的归属者）
     async fn replace_tags_in_tx(
         &self,
         tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+        user_id: i32,
         bookmark_id: i32,
         names: &[String],
     ) -> Result<(), sqlx::Error> {
@@ -607,9 +646,13 @@ impl BookmarkRepo {
             if name.is_empty() {
                 continue;
             }
-            sqlx::query!("INSERT OR IGNORE INTO bookmark_tag (name) VALUES (?)", name)
-                .execute(&mut **tx)
-                .await?;
+            sqlx::query!(
+                "INSERT OR IGNORE INTO bookmark_tag (name, user_id) VALUES (?, ?)",
+                name,
+                user_id
+            )
+            .execute(&mut **tx)
+            .await?;
             let id: i32 = sqlx::query_scalar!(
                 r#"SELECT id AS "id: i32" FROM bookmark_tag WHERE name = ?"#,
                 name
@@ -658,6 +701,12 @@ mod tests {
 
     const TEST_USER_ID: i32 = 1;
 
+    /// 测试调用者：普通用户（归属就是 TEST_USER_ID）—— admin 那一档在
+    /// `service.rs` 的归属矩阵测试里
+    fn actor() -> Actor {
+        Actor::user(TEST_USER_ID)
+    }
+
     async fn setup_db() -> BookmarkRepo {
         let pool = SqlitePool::connect("sqlite::memory:")
             .await
@@ -697,7 +746,7 @@ mod tests {
         assert_eq!(bm.tags, str_vec(&["rust", "编程"])); // 按名称排序
 
         let found = repo
-            .find_by_id(TEST_USER_ID, bm.id)
+            .find_by_id(&actor(), bm.id)
             .await
             .unwrap()
             .expect("应找到");
@@ -707,7 +756,7 @@ mod tests {
     #[tokio::test]
     async fn find_by_id_not_found() {
         let repo = setup_db().await;
-        assert!(repo.find_by_id(TEST_USER_ID, 999).await.unwrap().is_none());
+        assert!(repo.find_by_id(&actor(), 999).await.unwrap().is_none());
     }
 
     #[tokio::test]
@@ -730,7 +779,7 @@ mod tests {
         .unwrap();
 
         let (items, total) = repo
-            .find_all_paginated(TEST_USER_ID, 10, 0, None, "created_at")
+            .find_all_paginated(&actor(), 10, 0, None, "created_at")
             .await
             .unwrap();
         assert_eq!(total, 3);
@@ -759,14 +808,14 @@ mod tests {
         .unwrap();
 
         let (items, total) = repo
-            .find_all_paginated(TEST_USER_ID, 10, 0, Some("编程"), "created_at")
+            .find_all_paginated(&actor(), 10, 0, Some("编程"), "created_at")
             .await
             .unwrap();
         assert_eq!(total, 2);
         assert!(items.iter().all(|b| b.tags.contains(&"编程".to_string())));
 
         let (items, total) = repo
-            .find_all_paginated(TEST_USER_ID, 10, 0, Some("不存在的"), "created_at")
+            .find_all_paginated(&actor(), 10, 0, Some("不存在的"), "created_at")
             .await
             .unwrap();
         assert_eq!(total, 0);
@@ -782,7 +831,7 @@ mod tests {
                 .unwrap();
         }
         let (items, total) = repo
-            .find_all_paginated(TEST_USER_ID, 3, 2, None, "created_at")
+            .find_all_paginated(&actor(), 3, 2, None, "created_at")
             .await
             .unwrap();
         assert_eq!(total, 10);
@@ -806,7 +855,7 @@ mod tests {
 
         // 只更新标题
         let updated = repo
-            .update(TEST_USER_ID, bm.id, Some("新标题"), None, None)
+            .update(&actor(), bm.id, Some("新标题"), None, None)
             .await
             .unwrap();
         assert_eq!(updated.title, "新标题");
@@ -822,7 +871,7 @@ mod tests {
     async fn update_nonexistent_fails() {
         let repo = setup_db().await;
         assert!(
-            repo.update(TEST_USER_ID, 999, Some("x"), None, None)
+            repo.update(&actor(), 999, Some("x"), None, None)
                 .await
                 .is_err()
         );
@@ -835,15 +884,15 @@ mod tests {
             .create(TEST_USER_ID, "x", "https://x.com", "", &str_vec(&["编程"]))
             .await
             .unwrap();
-        assert_eq!(repo.delete(TEST_USER_ID, bm.id).await.unwrap(), 1);
+        assert_eq!(repo.delete(&actor(), bm.id).await.unwrap(), 1);
         assert!(
-            repo.find_by_id(TEST_USER_ID, bm.id)
+            repo.find_by_id(&actor(), bm.id)
                 .await
                 .unwrap()
                 .is_none()
         );
         // 标签本身保留，关联清除
-        let tags = repo.search_tags(None).await.unwrap();
+        let tags = repo.search_tags(&actor(), None).await.unwrap();
         assert_eq!(tags.len(), 1);
         assert_eq!(tags[0].count, 0);
     }
@@ -851,7 +900,7 @@ mod tests {
     #[tokio::test]
     async fn delete_nonexistent_returns_zero() {
         let repo = setup_db().await;
-        assert_eq!(repo.delete(TEST_USER_ID, 999).await.unwrap(), 0);
+        assert_eq!(repo.delete(&actor(), 999).await.unwrap(), 0);
     }
 
     #[tokio::test]
@@ -861,7 +910,7 @@ mod tests {
             .await
             .unwrap();
         let (items, total) = repo
-            .search_paginated(TEST_USER_ID, "", None, 10, 0)
+            .search_paginated(&actor(), "", None, 10, 0)
             .await
             .unwrap();
         assert_eq!(total, 1);
@@ -894,7 +943,7 @@ mod tests {
         .unwrap();
 
         let (items, total) = repo
-            .search_paginated(TEST_USER_ID, "rust", None, 10, 0)
+            .search_paginated(&actor(), "rust", None, 10, 0)
             .await
             .unwrap();
         assert_eq!(total, 2);
@@ -902,7 +951,7 @@ mod tests {
 
         // 多关键词命中得分排序
         let (items, total) = repo
-            .search_paginated(TEST_USER_ID, "rust 教程", None, 10, 0)
+            .search_paginated(&actor(), "rust 教程", None, 10, 0)
             .await
             .unwrap();
         assert_eq!(total, 2);
@@ -927,7 +976,7 @@ mod tests {
             .unwrap();
 
         let (items, total) = repo
-            .search_paginated(TEST_USER_ID, "rust", Some("编程"), 10, 0)
+            .search_paginated(&actor(), "rust", Some("编程"), 10, 0)
             .await
             .unwrap();
         assert_eq!(total, 1);
@@ -941,7 +990,7 @@ mod tests {
             .await
             .unwrap();
         let (items, total) = repo
-            .search_paginated(TEST_USER_ID, "不存在", None, 10, 0)
+            .search_paginated(&actor(), "不存在", None, 10, 0)
             .await
             .unwrap();
         assert_eq!(total, 0);
@@ -953,8 +1002,8 @@ mod tests {
     #[tokio::test]
     async fn create_tag_idempotent() {
         let repo = setup_db().await;
-        let t1 = repo.create_tag("编程").await.unwrap();
-        let t2 = repo.create_tag("编程").await.unwrap();
+        let t1 = repo.create_tag(&actor(), "编程").await.unwrap();
+        let t2 = repo.create_tag(&actor(), "编程").await.unwrap();
         assert_eq!(t1.id, t2.id);
         assert_eq!(t1.name, "编程");
     }
@@ -975,14 +1024,14 @@ mod tests {
             .await
             .unwrap();
 
-        let tags = repo.search_tags(None).await.unwrap();
+        let tags = repo.search_tags(&actor(), None).await.unwrap();
         // 按 count DESC：编程(2) 在前
         assert_eq!(tags[0].name, "编程");
         assert_eq!(tags[0].count, 2);
         assert_eq!(tags[1].name, "rust");
         assert_eq!(tags[1].count, 1);
 
-        let matched = repo.search_tags(Some("rus")).await.unwrap();
+        let matched = repo.search_tags(&actor(), Some("rus")).await.unwrap();
         assert_eq!(matched.len(), 1);
         assert_eq!(matched[0].name, "rust");
     }
@@ -996,7 +1045,7 @@ mod tests {
             .unwrap();
 
         let tags = repo
-            .set_bookmark_tags(bm.id, &str_vec(&["编程", "rust"]))
+            .set_bookmark_tags(&actor(), bm.id, &str_vec(&["编程", "rust"]))
             .await
             .unwrap();
         assert_eq!(tags.len(), 2);
@@ -1006,18 +1055,18 @@ mod tests {
 
         // 整体替换：清空并设置新标签
         let tags = repo
-            .set_bookmark_tags(bm.id, &str_vec(&["rust"]))
+            .set_bookmark_tags(&actor(), bm.id, &str_vec(&["rust"]))
             .await
             .unwrap();
         assert_eq!(tags.len(), 1);
         assert_eq!(tags[0].name, "rust");
         // 空的也清空
-        let tags = repo.set_bookmark_tags(bm.id, &[]).await.unwrap();
+        let tags = repo.set_bookmark_tags(&actor(), bm.id, &[]).await.unwrap();
         assert!(tags.is_empty());
         assert!(repo.get_bookmark_tags(bm.id).await.unwrap().is_empty());
         // 标签名去重
         let tags = repo
-            .set_bookmark_tags(bm.id, &str_vec(&["a", "a"]))
+            .set_bookmark_tags(&actor(), bm.id, &str_vec(&["a", "a"]))
             .await
             .unwrap();
         assert_eq!(tags.len(), 1);
@@ -1031,7 +1080,7 @@ mod tests {
             .await
             .unwrap();
         let tags = repo
-            .set_bookmark_tags(bm.id, &str_vec(&["", "  ", "有效"]))
+            .set_bookmark_tags(&actor(), bm.id, &str_vec(&["", "  ", "有效"]))
             .await
             .unwrap();
         assert_eq!(tags.len(), 1);
@@ -1051,13 +1100,13 @@ mod tests {
             )
             .await
             .unwrap();
-        let tag = repo.search_tags(Some("编程")).await.unwrap().remove(0);
+        let tag = repo.search_tags(&actor(), Some("编程")).await.unwrap().remove(0);
 
-        assert_eq!(repo.delete_tag(tag.id).await.unwrap(), 1);
+        assert_eq!(repo.delete_tag(&actor(), tag.id).await.unwrap(), 1);
         let got = repo.get_bookmark_tags(bm.id).await.unwrap();
         assert_eq!(got.len(), 1);
         assert_eq!(got[0].name, "rust");
         // 删除不存在的标签返回 0
-        assert_eq!(repo.delete_tag(999).await.unwrap(), 0);
+        assert_eq!(repo.delete_tag(&actor(), 999).await.unwrap(), 0);
     }
 }

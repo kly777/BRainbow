@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id: i32\", title, url, description,\n                      COALESCE(visit_count, 0) AS \"visit_count!: i64\",\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\",\n                      (SELECT GROUP_CONCAT(name, char(31)) FROM\n                           (SELECT t.name FROM bookmark_tag_rel r\n                            JOIN bookmark_tag t ON t.id = r.tag_id\n                            WHERE r.bookmark_id = bookmark.id ORDER BY t.name)) AS tags\n               FROM bookmark WHERE url = ?1 AND (user_id = ?2 OR user_id IS NULL)",
+  "query": "SELECT id AS \"id: i32\", title, url, description,\n                      COALESCE(visit_count, 0) AS \"visit_count!: i64\",\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\",\n                      (SELECT GROUP_CONCAT(name, char(31)) FROM\n                           (SELECT t.name FROM bookmark_tag_rel r\n                            JOIN bookmark_tag t ON t.id = r.tag_id\n                            WHERE r.bookmark_id = bookmark.id ORDER BY t.name)) AS tags\n               FROM bookmark WHERE url = ?1 AND (?2 IS NULL OR user_id = ?2)",
   "describe": {
     "columns": [
       {
@@ -86,5 +86,5 @@
       true
     ]
   },
-  "hash": "4af6dac4c090e8143c5752acedaddec260fba2fd99315203fc05fbcc47bd1b59"
+  "hash": "8e2409aaf2098b529d545684bd0c382bc0cecdbbae3b33be8bdb349de4fa2b67"
 }

@@ -119,15 +119,18 @@ async fn bookmark_isolation_between_users() {
     let qsvc = crate::modules::bookmark::BookmarkQueryService::new(pool);
 
     let bm_a = svc
-        .create(1, "A 的书签", "https://a.example.com", "", &[])
+        .create(&Actor::user(1), "A 的书签", "https://a.example.com", "", &[])
         .await
         .unwrap();
 
-    let (_, total) = qsvc.list(2, 10, 0, None, "created_at").await.unwrap();
+    let (_, total) = qsvc
+        .list(&Actor::user(2), 10, 0, None, "created_at")
+        .await
+        .unwrap();
     assert_eq!(total, 0, "B 不应看到 A 的书签");
-    assert!(qsvc.by_id(2, bm_a.id).await.unwrap().is_none());
-    assert_eq!(svc.delete(2, bm_a.id).await.unwrap(), 0);
-    assert!(qsvc.by_id(1, bm_a.id).await.unwrap().is_some());
+    assert!(qsvc.by_id(&Actor::user(2), bm_a.id).await.unwrap().is_none());
+    assert_eq!(svc.delete(&Actor::user(2), bm_a.id).await.unwrap(), 0);
+    assert!(qsvc.by_id(&Actor::user(1), bm_a.id).await.unwrap().is_some());
 }
 
 /// mem：A 创建 → B 不可见/不可复习

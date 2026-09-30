@@ -10,9 +10,13 @@ use crate::shared::error_types::ServiceError;
 #[async_trait]
 pub trait TaskTimeWindowValidator: Send + Sync {
     /// 校验时间窗口约束（C001 + C002）
+    ///
+    /// 收 `&Actor` 而不是 `user_id`：这条写路径会去读任务已有的窗口，而"读得到哪些窗口"
+    /// 本身就是归属判据（admin 全量、普通用户只看自己任务的）—— 收 id 会把 admin 降格成
+    /// 普通用户，判据就散了。
     async fn validate_time_windows(
         &self,
-        user_id: i32,
+        actor: &Actor,
         task_id: i32,
         time_windows: &[TimeWindow],
         exclude_id: Option<i32>,

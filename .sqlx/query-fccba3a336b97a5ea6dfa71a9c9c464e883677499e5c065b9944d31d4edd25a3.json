@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS \"id: i32\", title, description,\n                      parent_task_id AS \"parent_task_id?: i32\",\n                      COALESCE(status, 'backlog') AS \"status!: crate::modules::task::model::TaskStatus\",\n                      completed_at AS \"completed_at?: chrono::DateTime<chrono::Utc>\",\n                      effort_estimate_minutes AS \"effort_estimate_minutes?: i32\",\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"\n               FROM task WHERE status != 'archived' AND (user_id = ?1 OR user_id IS NULL)\n               ORDER BY created_at DESC LIMIT ?2 OFFSET ?3",
+  "query": "UPDATE task SET status = 'completed', completed_at = ?1, updated_at = ?2\n               WHERE id = ?3 AND (?4 IS NULL OR user_id = ?4)\n               RETURNING id AS \"id: i32\", title, description,\n                         parent_task_id AS \"parent_task_id?: i32\",\n                         COALESCE(status, 'backlog') AS \"status!: crate::modules::task::model::TaskStatus\",\n                         completed_at AS \"completed_at?: chrono::DateTime<chrono::Utc>\",\n                         effort_estimate_minutes AS \"effort_estimate_minutes?: i32\",\n                         COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                         COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"",
   "describe": {
     "columns": [
       {
@@ -84,12 +84,12 @@
       {
         "name": "updated_at!: chrono::DateTime<chrono::Utc>",
         "ordinal": 8,
-        "type_info": "Datetime",
+        "type_info": "Null",
         "origin": "Expression"
       }
     ],
     "parameters": {
-      "Right": 3
+      "Right": 4
     },
     "nullable": [
       false,
@@ -100,8 +100,8 @@
       true,
       true,
       false,
-      false
+      null
     ]
   },
-  "hash": "bfde2fdb481f62e13ed60f748a1af27a4cd114cd07e3bae9a72189c1412ef313"
+  "hash": "fccba3a336b97a5ea6dfa71a9c9c464e883677499e5c065b9944d31d4edd25a3"
 }

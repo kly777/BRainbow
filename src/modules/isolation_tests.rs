@@ -87,9 +87,11 @@ async fn task_isolation_between_users() {
     let qsvc = crate::modules::task::TaskQueryService::new(pool);
 
     use crate::modules::task::dto::CreateTaskRequest;
+    let a = Actor::user(1);
+    let b = Actor::user(2);
     let task_a = svc
         .create(
-            1,
+            &a,
             CreateTaskRequest {
                 title: "A 的任务".into(),
                 description: None,
@@ -101,12 +103,12 @@ async fn task_isolation_between_users() {
         .unwrap();
 
     // B 列表看不到
-    let (_, total) = qsvc.list(2, 10, 0).await.unwrap();
+    let (_, total) = qsvc.list(&b, 10, 0).await.unwrap();
     assert_eq!(total, 0, "B 不应看到 A 的任务");
     // B 按 id 读取 None
-    assert!(qsvc.by_id(2, task_a.id).await.unwrap().is_none());
+    assert!(qsvc.by_id(&b, task_a.id).await.unwrap().is_none());
     // B 完成操作不应影响 A 的任务（0 行受影响或抛错）
-    assert!(svc.complete(2, task_a.id).await.is_err());
+    assert!(svc.complete(&b, task_a.id).await.is_err());
 }
 
 /// bookmark：A 创建 → B 不可见/不可删
@@ -323,7 +325,7 @@ async fn time_window_follows_its_parent_task() {
 
     let task_a = task_svc
         .create(
-            a.user_id,
+            &a,
             CreateTaskRequest {
                 title: "A 的任务".into(),
                 description: None,

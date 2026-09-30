@@ -25,33 +25,59 @@ impl TaskService {
         }
     }
 
-    pub async fn create(&self, user_id: i32, req: CreateTaskRequest) -> Result<Task, ServiceError> {
+    /// 归属守卫：这个任务对 `actor` 存在/可写吗？不属于他或不存在 → `NotFound`
+    /// （越权按"不存在"处理，不泄露存在性）。
+    ///
+    /// 子表（`task_dependency`）与时间窗口校验都先过这一关 —— 它们是任务的从属数据，
+    /// 归属一律回到任务上判（`doc/design/authorization.md` §3.1）；`task` 自己引用别的
+    /// 任务（`parent_task_id`）时同理。判据在 [`Actor`] 上，这里只负责取归属
+    /// （`can_write` 与 `can_read` 今天同规则，所以 time_window 那侧的口径不变）。
+    pub(crate) async fn ensure_task_owned(
+        &self,
+        actor: &Actor,
+        task_id: i32,
+    ) -> Result<(), ServiceError> {
+        let owner = self
+            .repo
+            .owner_of(task_id)
+            .await
+            .map_err(ServiceError::Db)?;
+        match owner {
+            Some(owner) if actor.can_write(owner) => Ok(()),
+            _ => Err(ServiceError::NotFound("任务不存在".into())),
+        }
+    }
+
+    pub async fn create(
+        &self,
+        actor: &Actor,
+        req: CreateTaskRequest,
+    ) -> Result<Task, ServiceError> {
         validate_title(&req.title)?;
         validate_effort(req.effort_estimate_minutes)?;
         if let Some(parent_id) = req.parent_task_id {
-            check_circular_parent(&self.repo, user_id, 0, parent_id).await?;
+            // 父任务得是自己的：否则等于往别人的树上挂节点（读路径会过滤掉，见 find_tree）
+            self.ensure_task_owned(actor, parent_id).await?;
+            check_circular_parent(&self.repo, actor, 0, parent_id).await?;
         }
-        self.repo
-            .create(user_id, req)
-            .await
-            .map_err(ServiceError::Db)
+        self.repo.create(actor, req).await.map_err(ServiceError::Db)
     }
 
     pub async fn quick_create(
         &self,
-        user_id: i32,
+        actor: &Actor,
         req: QuickCreateTaskRequest,
     ) -> Result<Task, ServiceError> {
         validate_title(&req.title)?;
         self.repo
-            .quick_create(user_id, req)
+            .quick_create(actor, req)
             .await
             .map_err(ServiceError::Db)
     }
 
     pub async fn update(
         &self,
-        user_id: i32,
+        actor: &Actor,
         id: i32,
         req: UpdateTaskRequest,
     ) -> Result<Task, ServiceError> {
@@ -65,10 +91,39 @@ impl TaskService {
             if parent_id == id {
                 return Err(ServiceError::InvalidInput("不能设置自己为父任务".into()));
             }
-            check_circular_parent(&self.repo, user_id, id, parent_id).await?;
+            self.ensure_task_owned(actor, parent_id).await?;
+            check_circular_parent(&self.repo, actor, id, parent_id).await?;
         }
+        self.repo.update(actor, id, req).await.map_err(|e| match e {
+            sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
+            other => ServiceError::from(other),
+        })
+    }
+
+    pub async fn complete(&self, actor: &Actor, id: i32) -> Result<Task, ServiceError> {
+        self.repo.complete(actor, id).await.map_err(|e| match e {
+            sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
+            other => ServiceError::from(other),
+        })
+    }
+
+    pub async fn activate(&self, actor: &Actor, id: i32) -> Result<Task, ServiceError> {
+        self.repo.activate(actor, id).await.map_err(|e| match e {
+            sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
+            other => ServiceError::from(other),
+        })
+    }
+
+    pub async fn archive(&self, actor: &Actor, id: i32) -> Result<Task, ServiceError> {
+        self.repo.archive(actor, id).await.map_err(|e| match e {
+            sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
+            other => ServiceError::from(other),
+        })
+    }
+
+    pub async fn move_to_backlog(&self, actor: &Actor, id: i32) -> Result<Task, ServiceError> {
         self.repo
-            .update(user_id, id, req)
+            .move_to_backlog(actor, id)
             .await
             .map_err(|e| match e {
                 sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
@@ -76,67 +131,37 @@ impl TaskService {
             })
     }
 
-    pub async fn complete(&self, user_id: i32, id: i32) -> Result<Task, ServiceError> {
-        self.repo.complete(user_id, id).await.map_err(|e| match e {
-            sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
-            other => ServiceError::from(other),
-        })
-    }
-
-    pub async fn activate(&self, user_id: i32, id: i32) -> Result<Task, ServiceError> {
-        self.repo.activate(user_id, id).await.map_err(|e| match e {
-            sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
-            other => ServiceError::from(other),
-        })
-    }
-
-    pub async fn archive(&self, user_id: i32, id: i32) -> Result<Task, ServiceError> {
-        self.repo.archive(user_id, id).await.map_err(|e| match e {
-            sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
-            other => ServiceError::from(other),
-        })
-    }
-
-    pub async fn move_to_backlog(&self, user_id: i32, id: i32) -> Result<Task, ServiceError> {
-        self.repo
-            .move_to_backlog(user_id, id)
-            .await
-            .map_err(|e| match e {
-                sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
-                other => ServiceError::from(other),
-            })
-    }
-
-    pub async fn delete(&self, user_id: i32, id: i32) -> Result<u64, ServiceError> {
-        self.repo
-            .delete(user_id, id)
-            .await
-            .map_err(ServiceError::Db)
+    pub async fn delete(&self, actor: &Actor, id: i32) -> Result<u64, ServiceError> {
+        self.repo.delete(actor, id).await.map_err(ServiceError::Db)
     }
 
     pub async fn add_dependency(
         &self,
-        user_id: i32,
+        actor: &Actor,
         task_id: i32,
         depends_on: i32,
     ) -> Result<(), ServiceError> {
         if task_id == depends_on {
             return Err(ServiceError::InvalidInput("不能依赖自己".into()));
         }
+        // 子表随父：依赖行的两端都得是调用者自己的任务 —— 否则既是往别人的任务上挂行，
+        // 也会在 DAG / 详情里暴露出别人的任务 id
+        self.ensure_task_owned(actor, task_id).await?;
+        self.ensure_task_owned(actor, depends_on).await?;
         self.repo
-            .add_dependency(user_id, task_id, depends_on)
+            .add_dependency(actor, task_id, depends_on)
             .await
             .map_err(ServiceError::Db)
     }
 
     pub async fn remove_dependency(
         &self,
-        user_id: i32,
+        actor: &Actor,
         task_id: i32,
         depends_on: i32,
     ) -> Result<u64, ServiceError> {
         self.repo
-            .remove_dependency(user_id, task_id, depends_on)
+            .remove_dependency(actor, task_id, depends_on)
             .await
             .map_err(ServiceError::Db)
     }
@@ -145,15 +170,16 @@ impl TaskService {
     /// 在创建/更新 time_window 或更新任务的 time_windows 时调用
     pub async fn validate_time_windows(
         &self,
-        user_id: i32,
+        actor: &Actor,
         task_id: i32,
         time_windows: &[TimeWindow],
         exclude_id: Option<i32>,
     ) -> Result<(), ServiceError> {
-        // 获取任务已有的 available slots 和 planned slots
+        // 获取任务已有的 available slots 和 planned slots（归属随父任务：
+        // 别人任务的窗口不参与这里的重叠判断）
         let existing = self
             .repo
-            .find_time_windows_by_task(user_id, task_id)
+            .find_time_windows_by_task(actor, task_id)
             .await
             .map_err(ServiceError::Db)?;
 
@@ -267,33 +293,29 @@ fn validate_effort(minutes: Option<i32>) -> Result<(), ServiceError> {
 impl TaskTimeWindowValidator for TaskService {
     async fn validate_time_windows(
         &self,
-        user_id: i32,
+        actor: &Actor,
         task_id: i32,
         time_windows: &[TimeWindow],
         exclude_id: Option<i32>,
     ) -> Result<(), ServiceError> {
-        self.validate_time_windows(user_id, task_id, time_windows, exclude_id)
+        self.validate_time_windows(actor, task_id, time_windows, exclude_id)
             .await
     }
 
     /// 子表随父：时间窗口的归属回到任务上判（判据在 `Actor`，这里只负责取归属）
     async fn ensure_task_owned(&self, actor: &Actor, task_id: i32) -> Result<(), ServiceError> {
-        let owner = self.repo.owner_of(task_id).await.map_err(ServiceError::Db)?;
-        match owner {
-            Some(owner) if actor.can_read(owner) => Ok(()),
-            _ => Err(ServiceError::NotFound("任务不存在".into())),
-        }
+        self.ensure_task_owned(actor, task_id).await
     }
 }
 
 async fn check_circular_parent(
     repo: &TaskRepository,
-    user_id: i32,
+    actor: &Actor,
     task_id: i32,
     parent_id: i32,
 ) -> Result<(), ServiceError> {
     let is_circular = repo
-        .check_circular_parent(user_id, task_id, parent_id)
+        .check_circular_parent(actor, task_id, parent_id)
         .await
         .map_err(ServiceError::Db)?;
     if is_circular {
@@ -468,10 +490,11 @@ mod tests {
     #[tokio::test]
     async fn status_transitions_roundtrip() {
         let svc = task_svc().await;
-        let t = svc.create(1, mk_req("流转")).await.unwrap();
+        let owner = Actor::user(1);
+        let t = svc.create(&owner, mk_req("流转")).await.unwrap();
         assert_eq!(t.status, crate::modules::task::model::TaskStatus::Backlog);
 
-        let done = svc.complete(1, t.id).await.unwrap();
+        let done = svc.complete(&owner, t.id).await.unwrap();
         assert_eq!(
             done.status,
             crate::modules::task::model::TaskStatus::Completed
@@ -479,15 +502,15 @@ mod tests {
         assert!(done.completed_at.is_some(), "完成应落 completed_at");
 
         assert_eq!(
-            svc.activate(1, t.id).await.unwrap().status,
+            svc.activate(&owner, t.id).await.unwrap().status,
             crate::modules::task::model::TaskStatus::Active
         );
         assert_eq!(
-            svc.archive(1, t.id).await.unwrap().status,
+            svc.archive(&owner, t.id).await.unwrap().status,
             crate::modules::task::model::TaskStatus::Archived
         );
         assert_eq!(
-            svc.move_to_backlog(1, t.id).await.unwrap().status,
+            svc.move_to_backlog(&owner, t.id).await.unwrap().status,
             crate::modules::task::model::TaskStatus::Backlog
         );
     }
@@ -495,14 +518,16 @@ mod tests {
     #[tokio::test]
     async fn foreign_user_gets_not_found() {
         let svc = task_svc().await;
-        let t = svc.create(1, mk_req("我的")).await.unwrap();
+        let owner = Actor::user(1);
+        let other = Actor::user(2);
+        let t = svc.create(&owner, mk_req("我的")).await.unwrap();
 
-        // 他人操作 → NotFound（归属守卫 user_id = ? OR user_id IS NULL）
+        // 他人操作 → NotFound（归属判据见 shared/actor.rs）
         for op_result in [
-            svc.complete(2, t.id).await.err(),
-            svc.activate(2, t.id).await.err(),
-            svc.archive(2, t.id).await.err(),
-            svc.move_to_backlog(2, t.id).await.err(),
+            svc.complete(&other, t.id).await.err(),
+            svc.activate(&other, t.id).await.err(),
+            svc.archive(&other, t.id).await.err(),
+            svc.move_to_backlog(&other, t.id).await.err(),
         ] {
             assert!(matches!(op_result, Some(ServiceError::NotFound(_))));
         }
@@ -511,26 +536,28 @@ mod tests {
     #[tokio::test]
     async fn dependency_self_and_persistence() {
         let svc = task_svc().await;
-        let a = svc.create(1, mk_req("A")).await.unwrap();
-        let b = svc.create(1, mk_req("B")).await.unwrap();
+        let owner = Actor::user(1);
+        let a = svc.create(&owner, mk_req("A")).await.unwrap();
+        let b = svc.create(&owner, mk_req("B")).await.unwrap();
 
         // 自依赖在 service 层被拒
-        let err = svc.add_dependency(1, a.id, a.id).await.unwrap_err();
+        let err = svc.add_dependency(&owner, a.id, a.id).await.unwrap_err();
         assert!(matches!(err, ServiceError::InvalidInput(_)));
 
         // 持久化 + 移除影响行数验证
-        svc.add_dependency(1, b.id, a.id).await.unwrap();
-        assert_eq!(svc.remove_dependency(1, b.id, a.id).await.unwrap(), 1);
-        assert_eq!(svc.remove_dependency(1, b.id, a.id).await.unwrap(), 0);
+        svc.add_dependency(&owner, b.id, a.id).await.unwrap();
+        assert_eq!(svc.remove_dependency(&owner, b.id, a.id).await.unwrap(), 1);
+        assert_eq!(svc.remove_dependency(&owner, b.id, a.id).await.unwrap(), 0);
     }
 
     #[tokio::test]
     async fn circular_parent_detection() {
         let svc = task_svc().await;
-        let a = svc.create(1, mk_req("A")).await.unwrap();
+        let owner = Actor::user(1);
+        let a = svc.create(&owner, mk_req("A")).await.unwrap();
         let b = svc
             .create(
-                1,
+                &owner,
                 CreateTaskRequest {
                     parent_task_id: Some(a.id),
                     ..mk_req("B")
@@ -540,7 +567,7 @@ mod tests {
             .unwrap();
 
         // A 挂到 B 下会成环：A → B → A
-        let err = check_circular_parent(&svc.repo, 1, a.id, b.id)
+        let err = check_circular_parent(&svc.repo, &owner, a.id, b.id)
             .await
             .unwrap_err();
         match err {
@@ -548,8 +575,8 @@ mod tests {
             other => panic!("期望 InvalidInput，实际 {other:?}"),
         }
         // 无关任务不成环
-        let c = svc.create(1, mk_req("C")).await.unwrap();
-        check_circular_parent(&svc.repo, 1, a.id, c.id)
+        let c = svc.create(&owner, mk_req("C")).await.unwrap();
+        check_circular_parent(&svc.repo, &owner, a.id, c.id)
             .await
             .unwrap();
     }

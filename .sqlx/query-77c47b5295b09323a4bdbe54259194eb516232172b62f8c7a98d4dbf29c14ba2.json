@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT depends_on_task_id AS \"depends_on_task_id: i32\"\n               FROM task_dependency\n               WHERE task_id = ?1\n                 AND (?2 IS NULL OR EXISTS (\n                       SELECT 1 FROM task p\n                       WHERE p.id = task_dependency.task_id AND p.user_id = ?2))",
+  "describe": {
+    "columns": [
+      {
+        "name": "depends_on_task_id: i32",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "task_dependency",
+            "name": "depends_on_task_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "77c47b5295b09323a4bdbe54259194eb516232172b62f8c7a98d4dbf29c14ba2"
+}

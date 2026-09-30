@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "UPDATE task SET status = 'active', updated_at = ?1\n               WHERE id = ?2 AND (user_id = ?3 OR user_id IS NULL)\n               RETURNING id AS \"id: i32\", title, description,\n                         parent_task_id AS \"parent_task_id?: i32\",\n                         COALESCE(status, 'backlog') AS \"status!: crate::modules::task::model::TaskStatus\",\n                         completed_at AS \"completed_at?: chrono::DateTime<chrono::Utc>\",\n                         effort_estimate_minutes AS \"effort_estimate_minutes?: i32\",\n                         COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                         COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"",
+  "query": "UPDATE task SET status = 'archived', updated_at = ?1\n               WHERE id = ?2 AND (?3 IS NULL OR user_id = ?3)\n               RETURNING id AS \"id: i32\", title, description,\n                         parent_task_id AS \"parent_task_id?: i32\",\n                         COALESCE(status, 'backlog') AS \"status!: crate::modules::task::model::TaskStatus\",\n                         completed_at AS \"completed_at?: chrono::DateTime<chrono::Utc>\",\n                         effort_estimate_minutes AS \"effort_estimate_minutes?: i32\",\n                         COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                         COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"",
   "describe": {
     "columns": [
       {
@@ -103,5 +103,5 @@
       null
     ]
   },
-  "hash": "b8883cee3ea0bf3255b876821ac76d3c7b3f6d0c1e4663e4e1a9e43d09aec070"
+  "hash": "df0913fd6f7ad71a8b42e4e911079295e567c770bafc0b9c8d9bf24252088d1d"
 }

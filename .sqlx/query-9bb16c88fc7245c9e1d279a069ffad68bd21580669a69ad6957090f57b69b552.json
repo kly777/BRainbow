@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id AS tree_id, title AS tree_title,\n                          COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: String\"\n                   FROM chat_tree\n                   WHERE user_id = ?1 AND title LIKE ?2 ESCAPE '\\'\n                   ORDER BY updated_at DESC LIMIT ?3",
+  "query": "SELECT id AS tree_id, title AS tree_title,\n                          COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: String\"\n                   FROM chat_tree\n                   WHERE (?1 IS NULL OR user_id = ?1) AND title LIKE ?2 ESCAPE '\\'\n                   ORDER BY updated_at DESC LIMIT ?3",
   "describe": {
     "columns": [
       {
@@ -41,5 +41,5 @@
       false
     ]
   },
-  "hash": "6bc2232c2ddbbf87c85f098bc88d244beb3423242162261134c51b3917b69c32"
+  "hash": "9bb16c88fc7245c9e1d279a069ffad68bd21580669a69ad6957090f57b69b552"
 }

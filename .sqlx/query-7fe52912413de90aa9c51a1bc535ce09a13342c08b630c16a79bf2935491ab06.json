@@ -1,0 +1,105 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, tree_id, parent_id, role, content, revised_from, reasoning,\n                      COALESCE(created_at, '') AS \"created_at!: String\"\n               FROM chat_node WHERE id = ?1\n                 AND (?2 IS NULL OR EXISTS (\n                       SELECT 1 FROM chat_tree t\n                       WHERE t.id = chat_node.tree_id AND t.user_id = ?2))",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "tree_id",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "tree_id"
+          }
+        }
+      },
+      {
+        "name": "parent_id",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "parent_id"
+          }
+        }
+      },
+      {
+        "name": "role",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "role"
+          }
+        }
+      },
+      {
+        "name": "content",
+        "ordinal": 4,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "content"
+          }
+        }
+      },
+      {
+        "name": "revised_from",
+        "ordinal": 5,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "revised_from"
+          }
+        }
+      },
+      {
+        "name": "reasoning",
+        "ordinal": 6,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "reasoning"
+          }
+        }
+      },
+      {
+        "name": "created_at!: String",
+        "ordinal": 7,
+        "type_info": "Datetime",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "7fe52912413de90aa9c51a1bc535ce09a13342c08b630c16a79bf2935491ab06"
+}

@@ -1,5 +1,6 @@
 use sqlx::{FromRow, SqlitePool};
 
+use crate::shared::actor::Actor;
 use crate::shared::db_query::like_contains;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{SearchHit as GlobalSearchHit, SearchTarget, snippet};
@@ -124,15 +125,15 @@ impl ChatRepo {
         Self { pool }
     }
 
-    pub async fn list_trees(&self, user_id: i32) -> Result<Vec<TreeItem>, ServiceError> {
+    pub async fn list_trees(&self, actor: &Actor) -> Result<Vec<TreeItem>, ServiceError> {
         let rows: Vec<TreeRow> = sqlx::query_as!(
             TreeRow,
             r#"SELECT t.id, t.title, t.system_prompt, t.kind,
                       COALESCE(t.created_at, '') AS "created_at!: String",
                       COALESCE(t.updated_at, '') AS "updated_at!: String",
                       (SELECT COUNT(*) FROM chat_node n WHERE n.tree_id = t.id) AS node_count
-               FROM chat_tree t WHERE t.user_id = ?1 ORDER BY t.updated_at DESC"#,
-            user_id
+               FROM chat_tree t WHERE (?1 IS NULL OR t.user_id = ?1) ORDER BY t.updated_at DESC"#,
+            actor.owner_scope()
         )
         .fetch_all(&self.pool)
         .await?;
@@ -141,7 +142,7 @@ impl ChatRepo {
 
     pub async fn list_trees_by_kind(
         &self,
-        user_id: i32,
+        actor: &Actor,
         kind: &str,
     ) -> Result<Vec<TreeItem>, ServiceError> {
         let rows: Vec<TreeRow> = sqlx::query_as!(
@@ -150,8 +151,8 @@ impl ChatRepo {
                       COALESCE(t.created_at, '') AS "created_at!: String",
                       COALESCE(t.updated_at, '') AS "updated_at!: String",
                       (SELECT COUNT(*) FROM chat_node n WHERE n.tree_id = t.id) AS node_count
-               FROM chat_tree t WHERE t.user_id = ?1 AND t.kind = ?2 ORDER BY t.updated_at DESC"#,
-            user_id,
+               FROM chat_tree t WHERE (?1 IS NULL OR t.user_id = ?1) AND t.kind = ?2 ORDER BY t.updated_at DESC"#,
+            actor.owner_scope(),
             kind
         )
         .fetch_all(&self.pool)
@@ -161,7 +162,7 @@ impl ChatRepo {
 
     pub async fn get_tree(
         &self,
-        user_id: i32,
+        actor: &Actor,
         tree_id: i64,
     ) -> Result<Option<TreeDetail>, ServiceError> {
         let tree: Option<TreeRow> = sqlx::query_as!(
@@ -170,9 +171,9 @@ impl ChatRepo {
                       COALESCE(t.created_at, '') AS "created_at!: String",
                       COALESCE(t.updated_at, '') AS "updated_at!: String",
                       (SELECT COUNT(*) FROM chat_node n WHERE n.tree_id = t.id) AS node_count
-               FROM chat_tree t WHERE t.id = ?1 AND t.user_id = ?2"#,
+               FROM chat_tree t WHERE t.id = ?1 AND (?2 IS NULL OR t.user_id = ?2)"#,
             tree_id,
-            user_id
+            actor.owner_scope()
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -199,7 +200,7 @@ impl ChatRepo {
 
     pub async fn create_tree(
         &self,
-        user_id: i32,
+        actor: &Actor,
         title: &str,
         system_prompt: &str,
         kind: &str,
@@ -207,7 +208,7 @@ impl ChatRepo {
     ) -> Result<TreeDetail, ServiceError> {
         let id: i64 = sqlx::query!(
             "INSERT INTO chat_tree (user_id, title, system_prompt, kind, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?5)",
-            user_id,
+            actor.user_id,
             title,
             system_prompt,
             kind,
@@ -233,14 +234,14 @@ impl ChatRepo {
 
     pub async fn update_tree(
         &self,
-        user_id: i32,
+        actor: &Actor,
         tree_id: i64,
         req: UpdateTreeRequest,
     ) -> Result<(), ServiceError> {
         let exists: Option<i64> = sqlx::query_scalar!(
-            "SELECT id FROM chat_tree WHERE id = ?1 AND user_id = ?2",
+            "SELECT id FROM chat_tree WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)",
             tree_id,
-            user_id
+            actor.owner_scope()
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -272,11 +273,11 @@ impl ChatRepo {
         Ok(())
     }
 
-    pub async fn delete_tree(&self, user_id: i32, tree_id: i64) -> Result<(), ServiceError> {
+    pub async fn delete_tree(&self, actor: &Actor, tree_id: i64) -> Result<(), ServiceError> {
         let result = sqlx::query!(
-            "DELETE FROM chat_tree WHERE id = ?1 AND user_id = ?2",
+            "DELETE FROM chat_tree WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)",
             tree_id,
-            user_id
+            actor.owner_scope()
         )
         .execute(&self.pool)
         .await?;
@@ -289,7 +290,37 @@ impl ChatRepo {
         Ok(())
     }
 
-    pub async fn fetch_node(&self, node_id: i64) -> Result<Option<NodeItem>, ServiceError> {
+    /// 取单个节点的**可见**行：节点表没有 user_id，归属经所属对话树判
+    /// （`EXISTS` 到 `chat_tree`，见 `doc/design/authorization.md` §3.1）。
+    pub async fn fetch_node(
+        &self,
+        actor: &Actor,
+        node_id: i64,
+    ) -> Result<Option<NodeItem>, ServiceError> {
+        let row: Option<NodeRow> = sqlx::query_as!(
+            NodeRow,
+            r#"SELECT id, tree_id, parent_id, role, content, revised_from, reasoning,
+                      COALESCE(created_at, '') AS "created_at!: String"
+               FROM chat_node WHERE id = ?1
+                 AND (?2 IS NULL OR EXISTS (
+                       SELECT 1 FROM chat_tree t
+                       WHERE t.id = chat_node.tree_id AND t.user_id = ?2))"#,
+            node_id,
+            actor.owner_scope()
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row.map(Into::into))
+    }
+
+    /// 只看行、不看归属：**给 service 的写路径用**（先拿到 `tree_id` 才能问
+    /// "这棵树是他的吗"）。
+    ///
+    /// 不要把它当读接口用 —— 对外读一律走带 `actor` 的 [`Self::fetch_node`]。
+    pub(crate) async fn fetch_node_unscoped(
+        &self,
+        node_id: i64,
+    ) -> Result<Option<NodeItem>, ServiceError> {
         let row: Option<NodeRow> = sqlx::query_as!(
             NodeRow,
             r#"SELECT id, tree_id, parent_id, role, content, revised_from, reasoning,
@@ -322,21 +353,21 @@ impl ChatRepo {
         )
         .execute(&self.pool)
         .await?;
-        self.fetch_node(result.last_insert_rowid())
+        self.fetch_node_unscoped(result.last_insert_rowid())
             .await?
             .ok_or(ServiceError::Internal("节点写入失败".into()))
     }
 
     pub async fn fetch_tree_prompt(
         &self,
-        user_id: i32,
+        actor: &Actor,
         tree_id: i64,
     ) -> Result<Option<String>, ServiceError> {
         let tree: Option<TreePromptRow> = sqlx::query_as!(
             TreePromptRow,
-            "SELECT system_prompt FROM chat_tree WHERE id = ?1 AND user_id = ?2",
+            "SELECT system_prompt FROM chat_tree WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)",
             tree_id,
-            user_id
+            actor.owner_scope()
         )
         .fetch_optional(&self.pool)
         .await?;
@@ -358,7 +389,11 @@ impl ChatRepo {
             .await;
     }
 
-    pub async fn fetch_tree_user_id(&self, tree_id: i64) -> Result<Option<i64>, ServiceError> {
+    /// 取对话树的归属（`chat_tree.user_id` 是 NOT NULL，`None` 只表示树不存在）。
+    ///
+    /// **给 service 的写路径用**：节点按"子表随父"判归属，判据在 `Actor`，
+    /// 这里只负责把归属取出来。
+    pub(crate) async fn owner_of_tree(&self, tree_id: i64) -> Result<Option<i64>, ServiceError> {
         let id: Option<i64> =
             sqlx::query_scalar!("SELECT user_id FROM chat_tree WHERE id = ?1", tree_id)
                 .fetch_optional(&self.pool)
@@ -366,13 +401,13 @@ impl ChatRepo {
         Ok(id)
     }
 
-    pub async fn list_presets(&self, user_id: i32) -> Result<Vec<PresetItem>, ServiceError> {
+    pub async fn list_presets(&self, actor: &Actor) -> Result<Vec<PresetItem>, ServiceError> {
         let rows: Vec<PresetRow> = sqlx::query_as!(
             PresetRow,
             r#"SELECT id, name, content,
                       COALESCE(created_at, '') AS "created_at!: String"
-               FROM prompt_preset WHERE user_id = ?1 ORDER BY id"#,
-            user_id
+               FROM prompt_preset WHERE (?1 IS NULL OR user_id = ?1) ORDER BY id"#,
+            actor.owner_scope()
         )
         .fetch_all(&self.pool)
         .await?;
@@ -381,13 +416,13 @@ impl ChatRepo {
 
     pub async fn create_preset(
         &self,
-        user_id: i32,
+        actor: &Actor,
         name: &str,
         content: &str,
     ) -> Result<PresetItem, ServiceError> {
         let id: i64 = sqlx::query!(
             "INSERT INTO prompt_preset (user_id, name, content) VALUES (?1, ?2, ?3)",
-            user_id,
+            actor.user_id,
             name.trim(),
             content.trim()
         )
@@ -408,17 +443,17 @@ impl ChatRepo {
 
     pub async fn update_preset(
         &self,
-        user_id: i32,
+        actor: &Actor,
         id: i64,
         name: &str,
         content: &str,
     ) -> Result<(), ServiceError> {
         let result = sqlx::query!(
-            "UPDATE prompt_preset SET name = ?1, content = ?2 WHERE id = ?3 AND user_id = ?4",
+            "UPDATE prompt_preset SET name = ?1, content = ?2 WHERE id = ?3 AND (?4 IS NULL OR user_id = ?4)",
             name.trim(),
             content.trim(),
             id,
-            user_id
+            actor.owner_scope()
         )
         .execute(&self.pool)
         .await?;
@@ -428,11 +463,11 @@ impl ChatRepo {
         Ok(())
     }
 
-    pub async fn delete_preset(&self, user_id: i32, id: i64) -> Result<(), ServiceError> {
+    pub async fn delete_preset(&self, actor: &Actor, id: i64) -> Result<(), ServiceError> {
         let result = sqlx::query!(
-            "DELETE FROM prompt_preset WHERE id = ?1 AND user_id = ?2",
+            "DELETE FROM prompt_preset WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)",
             id,
-            user_id
+            actor.owner_scope()
         )
         .execute(&self.pool)
         .await?;
@@ -444,7 +479,7 @@ impl ChatRepo {
 
     pub async fn search(
         &self,
-        user_id: i32,
+        actor: &Actor,
         q: &str,
         limit: i64,
     ) -> Result<SearchResponse, ServiceError> {
@@ -457,9 +492,9 @@ impl ChatRepo {
                       COALESCE(n.created_at, CURRENT_TIMESTAMP) AS "created_at!: String"
                FROM chat_node n
                JOIN chat_tree t ON t.id = n.tree_id
-               WHERE t.user_id = ?1 AND n.content LIKE ?2 ESCAPE '\'
+               WHERE (?1 IS NULL OR t.user_id = ?1) AND n.content LIKE ?2 ESCAPE '\'
                ORDER BY n.id DESC LIMIT ?3"#,
-            user_id,
+            actor.owner_scope(),
             kw,
             limit
         )
@@ -484,9 +519,9 @@ impl ChatRepo {
                 r#"SELECT id AS tree_id, title AS tree_title,
                           COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: String"
                    FROM chat_tree
-                   WHERE user_id = ?1 AND title LIKE ?2 ESCAPE '\'
+                   WHERE (?1 IS NULL OR user_id = ?1) AND title LIKE ?2 ESCAPE '\'
                    ORDER BY updated_at DESC LIMIT ?3"#,
-                user_id,
+                actor.owner_scope(),
                 kw,
                 limit - hits.len() as i64
             )
@@ -513,16 +548,16 @@ impl ChatRepo {
 
     pub async fn search_hits(
         &self,
-        user_id: i32,
+        actor: &Actor,
         like: &str,
         cap: i64,
     ) -> Result<Vec<GlobalSearchHit>, ServiceError> {
         let title_hits: Vec<GlobalChatTitleHitRow> = sqlx::query_as!(
             GlobalChatTitleHitRow,
             r#"SELECT id, title FROM chat_tree
-               WHERE (user_id = ?1 OR user_id IS NULL) AND title LIKE ?2 ESCAPE '\'
+               WHERE (?1 IS NULL OR user_id = ?1) AND title LIKE ?2 ESCAPE '\'
                ORDER BY id DESC LIMIT ?3"#,
-            user_id,
+            actor.owner_scope(),
             like,
             cap
         )
@@ -534,9 +569,9 @@ impl ChatRepo {
             GlobalChatNodeHitRow,
             r#"SELECT n.id AS node_id, t.id AS tree_id, t.title, n.content
                FROM chat_node n JOIN chat_tree t ON t.id = n.tree_id
-               WHERE (t.user_id = ?1 OR t.user_id IS NULL) AND n.content LIKE ?2 ESCAPE '\'
+               WHERE (?1 IS NULL OR t.user_id = ?1) AND n.content LIKE ?2 ESCAPE '\'
                ORDER BY n.id DESC LIMIT ?3"#,
-            user_id,
+            actor.owner_scope(),
             like,
             node_cap
         )
@@ -570,16 +605,16 @@ impl ChatRepo {
 
     pub async fn search_hits_fts(
         &self,
-        user_id: i32,
+        actor: &Actor,
         fts_query: &str,
         cap: i64,
     ) -> Result<Vec<GlobalSearchHit>, ServiceError> {
         let title_hits: Vec<GlobalChatTitleHitRow> = sqlx::query_as!(
             GlobalChatTitleHitRow,
             r#"SELECT id, title FROM chat_tree
-               WHERE (user_id = ?1 OR user_id IS NULL) AND title LIKE ?2 ESCAPE '\'
+               WHERE (?1 IS NULL OR user_id = ?1) AND title LIKE ?2 ESCAPE '\'
                ORDER BY id DESC LIMIT ?3"#,
-            user_id,
+            actor.owner_scope(),
             fts_query,
             cap
         )
@@ -594,10 +629,10 @@ impl ChatRepo {
                JOIN chat_node n ON n.id = fts.rowid
                JOIN chat_tree t ON t.id = n.tree_id
                WHERE chat_node_fts MATCH ?2
-                 AND (t.user_id = ?1 OR t.user_id IS NULL)
+                 AND (?1 IS NULL OR t.user_id = ?1)
                ORDER BY rank
                LIMIT ?3"#,
-            user_id,
+            actor.owner_scope(),
             fts_query,
             node_cap
         )

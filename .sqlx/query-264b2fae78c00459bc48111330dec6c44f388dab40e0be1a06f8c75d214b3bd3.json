@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT n.id AS node_id, t.id AS tree_id, t.title, n.content\n               FROM chat_node n JOIN chat_tree t ON t.id = n.tree_id\n               WHERE (t.user_id = ?1 OR t.user_id IS NULL) AND n.content LIKE ?2 ESCAPE '\\'\n               ORDER BY n.id DESC LIMIT ?3",
+  "query": "SELECT n.id AS node_id, t.id AS tree_id, t.title, n.content\n               FROM chat_node_fts fts\n               JOIN chat_node n ON n.id = fts.rowid\n               JOIN chat_tree t ON t.id = n.tree_id\n               WHERE chat_node_fts MATCH ?2\n                 AND (?1 IS NULL OR t.user_id = ?1)\n               ORDER BY rank\n               LIMIT ?3",
   "describe": {
     "columns": [
       {
@@ -58,5 +58,5 @@
       false
     ]
   },
-  "hash": "ac604e75187ec2f6a3a9cfcba64f543e6469fe190013e516935e78ce3855ce6d"
+  "hash": "264b2fae78c00459bc48111330dec6c44f388dab40e0be1a06f8c75d214b3bd3"
 }

@@ -1,19 +1,23 @@
 use chrono::{DateTime, Utc};
 
+use crate::shared::actor::Actor;
+use crate::shared::db_query::push_owner_scope;
+
 use super::super::dto::{CreateTaskRequest, QuickCreateTaskRequest, UpdateTaskRequest};
 use super::super::model::{Task, TaskStatus};
 use super::TaskRepository;
 
 impl TaskRepository {
+    /// 全部任务（分页）—— 归属判据见 `shared/actor.rs`：普通用户只看自己创建的，admin 全量
     pub async fn find_all_paginated(
         &self,
-        user_id: i32,
+        actor: &Actor,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Task>, i64), sqlx::Error> {
         let total: i64 = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM task WHERE user_id = ? OR user_id IS NULL",
-            user_id
+            "SELECT COUNT(*) FROM task WHERE (?1 IS NULL OR user_id = ?1)",
+            actor.owner_scope()
         )
         .fetch_one(&*self.db)
         .await?;
@@ -26,9 +30,9 @@ impl TaskRepository {
                       effort_estimate_minutes AS "effort_estimate_minutes?: i32",
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
-               FROM task WHERE (user_id = ?1 OR user_id IS NULL)
+               FROM task WHERE (?1 IS NULL OR user_id = ?1)
                ORDER BY created_at DESC LIMIT ?2 OFFSET ?3"#,
-            user_id,
+            actor.owner_scope(),
             limit,
             offset
         )
@@ -37,15 +41,16 @@ impl TaskRepository {
         Ok((items, total))
     }
 
+    /// 全部任务（分页，排除已归档）
     pub async fn find_all_excluding_archived_paginated(
         &self,
-        user_id: i32,
+        actor: &Actor,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Task>, i64), sqlx::Error> {
         let total: i64 = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM task WHERE status != 'archived' AND (user_id = ? OR user_id IS NULL)",
-            user_id
+            "SELECT COUNT(*) FROM task WHERE status != 'archived' AND (?1 IS NULL OR user_id = ?1)",
+            actor.owner_scope()
         )
         .fetch_one(&*self.db)
         .await?;
@@ -58,9 +63,9 @@ impl TaskRepository {
                       effort_estimate_minutes AS "effort_estimate_minutes?: i32",
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
-               FROM task WHERE status != 'archived' AND (user_id = ?1 OR user_id IS NULL)
+               FROM task WHERE status != 'archived' AND (?1 IS NULL OR user_id = ?1)
                ORDER BY created_at DESC LIMIT ?2 OFFSET ?3"#,
-            user_id,
+            actor.owner_scope(),
             limit,
             offset
         )
@@ -69,7 +74,7 @@ impl TaskRepository {
         Ok((items, total))
     }
 
-    pub async fn find_by_id(&self, user_id: i32, id: i32) -> Result<Option<Task>, sqlx::Error> {
+    pub async fn find_by_id(&self, actor: &Actor, id: i32) -> Result<Option<Task>, sqlx::Error> {
         sqlx::query_as!(
             Task,
             r#"SELECT id AS "id: i32", title, description,
@@ -79,9 +84,9 @@ impl TaskRepository {
                       effort_estimate_minutes AS "effort_estimate_minutes?: i32",
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
-               FROM task WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)"#,
+               FROM task WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)"#,
             id,
-            user_id
+            actor.owner_scope()
         )
         .fetch_optional(&*self.db)
         .await
@@ -102,7 +107,7 @@ impl TaskRepository {
 
     pub async fn create(
         &self,
-        user_id: i32,
+        actor: &Actor,
         request: CreateTaskRequest,
     ) -> Result<Task, sqlx::Error> {
         let now = Utc::now();
@@ -125,7 +130,7 @@ impl TaskRepository {
             TaskStatus::Backlog.as_str(),
             Option::<DateTime<Utc>>::None,
             request.effort_estimate_minutes,
-            user_id,
+            actor.user_id,
             now,
             now
         )
@@ -137,7 +142,7 @@ impl TaskRepository {
 
     pub async fn quick_create(
         &self,
-        user_id: i32,
+        actor: &Actor,
         request: QuickCreateTaskRequest,
     ) -> Result<Task, sqlx::Error> {
         let now = Utc::now();
@@ -156,7 +161,7 @@ impl TaskRepository {
                          COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>""#,
             request.title,
             TaskStatus::Backlog.as_str(),
-            user_id,
+            actor.user_id,
             now,
             now
         )
@@ -168,11 +173,11 @@ impl TaskRepository {
 
     pub async fn update(
         &self,
-        user_id: i32,
+        actor: &Actor,
         id: i32,
         request: UpdateTaskRequest,
     ) -> Result<Task, sqlx::Error> {
-        let Some(current_task) = self.find_by_id(user_id, id).await? else {
+        let Some(current_task) = self.find_by_id(actor, id).await? else {
             return Err(sqlx::Error::RowNotFound);
         };
 
@@ -268,12 +273,11 @@ impl TaskRepository {
         qb.push("updated_at = ");
         qb.push_bind(Utc::now());
 
+        qb.push(" WHERE id = ");
+        qb.push_bind(id);
+        push_owner_scope(&mut qb, actor, "user_id");
+
         let result = qb
-            .push(" WHERE id = ")
-            .push_bind(id)
-            .push(" AND (user_id = ")
-            .push_bind(user_id)
-            .push(" OR user_id IS NULL)")
             .push(" RETURNING id, title, description, parent_task_id, status, completed_at, effort_estimate_minutes, created_at, updated_at")
             .build_query_as::<Task>()
             .fetch_one(&*self.db)
@@ -282,26 +286,27 @@ impl TaskRepository {
         Ok(result)
     }
 
-    pub async fn delete(&self, user_id: i32, id: i32) -> Result<u64, sqlx::Error> {
-        let Some(task) = self.find_by_id(user_id, id).await? else {
+    pub async fn delete(&self, actor: &Actor, id: i32) -> Result<u64, sqlx::Error> {
+        // 归属先过一遍：越权按"不存在"处理（返回 0 行 → handler 回 404）
+        let Some(task) = self.find_by_id(actor, id).await? else {
             return Ok(0);
         };
 
         if task.is_completed() {
             let result = sqlx::query!(
-                "DELETE FROM task WHERE id = ? AND (user_id = ? OR user_id IS NULL)",
+                "DELETE FROM task WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)",
                 id,
-                user_id
+                actor.owner_scope()
             )
             .execute(&*self.db)
             .await?;
             Ok(result.rows_affected())
         } else {
             let result = sqlx::query!(
-                "UPDATE task SET status = 'archived', updated_at = ? WHERE id = ? AND (user_id = ? OR user_id IS NULL)",
+                "UPDATE task SET status = 'archived', updated_at = ?1 WHERE id = ?2 AND (?3 IS NULL OR user_id = ?3)",
                 Utc::now(),
                 id,
-                user_id
+                actor.owner_scope()
             )
             .execute(&*self.db)
             .await?;

@@ -141,8 +141,8 @@ mod tests {
             .execute(&ctx.pool)
             .await
             .unwrap();
-        // task（无 user_id 的旧数据也应命中）
-        sqlx::query("INSERT INTO task (title, user_id) VALUES ('复习费曼笔记', NULL)")
+        // task（user 1 命中；两档判据下只有自己的行会命中）
+        sqlx::query("INSERT INTO task (title, user_id) VALUES ('复习费曼笔记', 1)")
             .execute(&ctx.pool)
             .await
             .unwrap();
@@ -355,10 +355,16 @@ mod tests {
         assert!(hit.snippet.contains("详细说明"));
     }
 
+    /// task 搜索的归属口径：只出调用者自己的行。
+    ///
+    /// 过渡记一笔：`SearchPort` 仍只传 `user_id`，task 侧实现按普通用户口径取行
+    /// （`Actor::user(user_id)`，见 `modules/task/query.rs`），所以 `user_id IS NULL`
+    /// 的老数据（v20 已认领给 admin）在全局搜索里谁都搜不到 —— 等搜索层收 `&Actor`
+    /// 之后 admin 才搜得到。这里钉住现状，别让它悄悄回退成"无主行对所有人可见"。
     #[tokio::test]
-    async fn task_user_scoping_null_visible_to_all() {
+    async fn task_user_scoping_hides_null_owner_rows() {
         let ctx = setup().await;
-        sqlx::query("INSERT INTO task (title, user_id) VALUES ('共享任务', NULL)")
+        sqlx::query("INSERT INTO task (title, user_id) VALUES ('无主任务', NULL)")
             .execute(&ctx.pool)
             .await
             .unwrap();
@@ -378,9 +384,12 @@ mod tests {
             .filter(|h| h.kind == "task")
             .map(|h| h.title.as_str())
             .collect();
-        assert!(titles.contains(&"共享任务"));
         assert!(titles.contains(&"用户一的任务"));
         assert!(!titles.contains(&"用户二的任务"));
+        assert!(
+            !titles.contains(&"无主任务"),
+            "NULL 行只有 admin 看得到，而搜索层还没接 Actor"
+        );
 
         let res = ctx.svc.search(2, "任务", 5).await.unwrap();
         let titles: Vec<&str> = res
@@ -389,9 +398,9 @@ mod tests {
             .filter(|h| h.kind == "task")
             .map(|h| h.title.as_str())
             .collect();
-        assert!(titles.contains(&"共享任务"));
         assert!(titles.contains(&"用户二的任务"));
         assert!(!titles.contains(&"用户一的任务"));
+        assert!(!titles.contains(&"无主任务"));
     }
 
     #[tokio::test]

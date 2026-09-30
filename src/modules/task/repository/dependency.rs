@@ -1,6 +1,8 @@
 use sqlx::FromRow;
 use std::pin::Pin;
 
+use crate::shared::actor::Actor;
+
 use super::TaskRepository;
 
 #[derive(FromRow)]
@@ -15,9 +17,11 @@ struct ParentRow {
 }
 
 impl TaskRepository {
+    /// 插入依赖行 —— **归属检查在 service 层**（`TaskService::add_dependency` 两头都过
+    /// `ensure_task_owned`）：`task_dependency` 没有 `user_id`，它随 `task_id` 那个任务。
     pub async fn add_dependency(
         &self,
-        user_id: i32,
+        actor: &Actor,
         task_id: i32,
         depends_on_task_id: i32,
     ) -> Result<(), sqlx::Error> {
@@ -29,7 +33,7 @@ impl TaskRepository {
         // 检查依赖循环
         let mut visited = std::collections::HashSet::new();
         if self
-            .check_circular_dependency(user_id, depends_on_task_id, task_id, &mut visited)
+            .check_circular_dependency(actor, depends_on_task_id, task_id, &mut visited)
             .await?
         {
             return Err(sqlx::Error::Protocol("Circular dependency detected".into()));
@@ -46,18 +50,20 @@ impl TaskRepository {
         Ok(())
     }
 
+    /// 删除依赖行：归属条件在 SQL 里连父表（0 行 → handler 回 404）
     pub async fn remove_dependency(
         &self,
-        user_id: i32,
+        actor: &Actor,
         task_id: i32,
         depends_on_task_id: i32,
     ) -> Result<u64, sqlx::Error> {
         let result = sqlx::query!(
-            "DELETE FROM task_dependency WHERE task_id = ? AND depends_on_task_id = ? AND EXISTS (SELECT 1 FROM task WHERE id = ? AND (user_id = ? OR user_id IS NULL))",
+            "DELETE FROM task_dependency
+             WHERE task_id = ?1 AND depends_on_task_id = ?2
+               AND EXISTS (SELECT 1 FROM task t WHERE t.id = ?1 AND (?3 IS NULL OR t.user_id = ?3))",
             task_id,
             depends_on_task_id,
-            task_id,
-            user_id
+            actor.owner_scope()
         )
         .execute(&*self.db)
         .await?;
@@ -65,9 +71,10 @@ impl TaskRepository {
         Ok(result.rows_affected())
     }
 
+    /// 某任务的依赖（子表随父：连 `task_dependency.task_id` 的父任务判归属）
     pub async fn get_dependencies(
         &self,
-        user_id: i32,
+        actor: &Actor,
         task_id: i32,
     ) -> Result<Vec<i32>, sqlx::Error> {
         let rows = sqlx::query_as!(
@@ -75,9 +82,9 @@ impl TaskRepository {
             r#"SELECT td.task_id AS "task_id: i32", td.depends_on_task_id AS "depends_on_task_id: i32"
                FROM task_dependency td
                JOIN task t ON t.id = td.task_id
-               WHERE td.task_id = ? AND (t.user_id = ? OR t.user_id IS NULL)"#,
+               WHERE td.task_id = ?1 AND (?2 IS NULL OR t.user_id = ?2)"#,
             task_id,
-            user_id
+            actor.owner_scope()
         )
         .fetch_all(&*self.db)
         .await?;
@@ -88,15 +95,15 @@ impl TaskRepository {
     /// 一次查询返回所有任务的依赖关系 → Map<task_id, Vec<dep_id>>
     pub async fn get_all_dependencies(
         &self,
-        user_id: i32,
+        actor: &Actor,
     ) -> Result<std::collections::HashMap<i32, Vec<i32>>, sqlx::Error> {
         let rows = sqlx::query_as!(
             DependencyRow,
             r#"SELECT td.task_id AS "task_id: i32", td.depends_on_task_id AS "depends_on_task_id: i32"
                FROM task_dependency td
                JOIN task t ON t.id = td.task_id
-               WHERE (t.user_id = ? OR t.user_id IS NULL)"#,
-            user_id
+               WHERE (?1 IS NULL OR t.user_id = ?1)"#,
+            actor.owner_scope()
         )
         .fetch_all(&*self.db)
         .await?;
@@ -112,7 +119,7 @@ impl TaskRepository {
 
     fn check_circular_dependency<'a>(
         &'a self,
-        user_id: i32,
+        actor: &'a Actor,
         start_id: i32,
         target_id: i32,
         visited: &'a mut std::collections::HashSet<i32>,
@@ -129,13 +136,13 @@ impl TaskRepository {
             visited.insert(start_id);
 
             // 获取当前任务依赖的所有任务
-            let dependencies = self.get_dependencies(user_id, start_id).await?;
+            let dependencies = self.get_dependencies(actor, start_id).await?;
 
             // 递归检查每个依赖
             for dep_id in dependencies {
                 let mut new_visited = visited.clone();
                 if self
-                    .check_circular_dependency(user_id, dep_id, target_id, &mut new_visited)
+                    .check_circular_dependency(actor, dep_id, target_id, &mut new_visited)
                     .await?
                 {
                     return Ok(true);
@@ -148,7 +155,7 @@ impl TaskRepository {
 
     pub async fn check_circular_parent(
         &self,
-        user_id: i32,
+        actor: &Actor,
         task_id: i32,
         parent_id: i32,
     ) -> Result<bool, sqlx::Error> {
@@ -166,12 +173,12 @@ impl TaskRepository {
 
             visited.insert(id);
 
-            // 获取当前任务的父任务
+            // 获取当前任务的父任务（看不到的父任务当作链到此为止）
             let parent = sqlx::query_as!(
                 ParentRow,
-                r#"SELECT parent_task_id AS "parent_task_id?: i32" FROM task WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)"#,
+                r#"SELECT parent_task_id AS "parent_task_id?: i32" FROM task WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)"#,
                 id,
-                user_id
+                actor.owner_scope()
             )
             .fetch_optional(&*self.db)
             .await?;

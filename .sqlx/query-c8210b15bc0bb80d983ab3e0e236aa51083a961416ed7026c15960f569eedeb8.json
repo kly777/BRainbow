@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT COUNT(*) FROM task WHERE user_id = ? OR user_id IS NULL",
+  "query": "SELECT COUNT(*) FROM task WHERE status = 'completed' AND (?1 IS NULL OR user_id = ?1)",
   "describe": {
     "columns": [
       {
@@ -17,5 +17,5 @@
       false
     ]
   },
-  "hash": "c19d3e22f51afd38b51b01516300495e9642f3a18ec39691e006e82186db5a3d"
+  "hash": "c8210b15bc0bb80d983ab3e0e236aa51083a961416ed7026c15960f569eedeb8"
 }

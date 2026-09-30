@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT parent_task_id AS \"parent_task_id?: i32\" FROM task WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)",
+  "query": "SELECT parent_task_id AS \"parent_task_id?: i32\" FROM task WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)",
   "describe": {
     "columns": [
       {
@@ -22,5 +22,5 @@
       true
     ]
   },
-  "hash": "e77a576185c66072dae75ee5703660aa60e1072901514de724d9c21f40faca56"
+  "hash": "1a26c7567155ad70f51a87375065694e659055caaf5fbc9d3816f847613b8768"
 }

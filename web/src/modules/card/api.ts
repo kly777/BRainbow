@@ -17,7 +17,7 @@ export const getCardsE = (
 ): Promise<PaginatedResponse<Card>> =>
 	cachedRequest(`/cards?page=${page}&page_size=${pageSize}`);
 
-// 单张卡片缓存 60 秒，不常变
+// 单张卡片走 cards 域默认陈旧时长（30s）；写路径按 entity 精确清它
 export const getCardE = (id: number): Promise<Card> =>
 	cachedRequest(`/cards/${id}`);
 

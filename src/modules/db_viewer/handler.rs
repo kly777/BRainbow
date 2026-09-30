@@ -3,79 +3,14 @@ use axum::{
     http::{HeaderValue, header},
     response::{IntoResponse, Response},
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
+/// 数据契约（查询结果与读取选项）在 `dto.rs`：repository/service 不该反向依赖本文件
+use super::dto::{FilterOp, TableData, TableFilter, TableReadOptions};
 use super::service::DbViewerQueryService;
 use crate::shared::db_query::sanitize_table_name;
-use crate::shared::error_types as error;
+use crate::shared::error_types::{self as error, ServiceError};
 use crate::shared::pagination::Pagination;
-
-#[derive(Debug, Serialize)]
-pub struct ColumnInfo {
-    pub name: String,
-    pub col_type: String,
-    /// 是否主键（复合主键时为第一个组件）
-    pub is_primary: bool,
-    /// 该列引用的目标表（实际外键优先，否则按 `<表名>_id` 启发式识别）
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ref_table: Option<String>,
-    /// 目标表中被引用的列（通常为 id）
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ref_column: Option<String>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum FilterOp {
-    Eq,
-    Ne,
-    Contains,
-    Prefix,
-    IsNull,
-    NotNull,
-    Gt,
-    Lt,
-}
-
-impl FilterOp {
-    pub fn parse(raw: &str) -> Option<Self> {
-        match raw {
-            "eq" => Some(Self::Eq),
-            "ne" => Some(Self::Ne),
-            "contains" => Some(Self::Contains),
-            "prefix" => Some(Self::Prefix),
-            "null" => Some(Self::IsNull),
-            "notnull" => Some(Self::NotNull),
-            "gt" => Some(Self::Gt),
-            "lt" => Some(Self::Lt),
-            _ => None,
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct TableFilter {
-    pub column: String,
-    pub op: FilterOp,
-    pub value: Option<String>,
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct TableReadOptions {
-    /// 跳转过滤：目标行 id
-    pub filter_id: Option<i64>,
-    /// 跳转过滤：目标表中的列名
-    pub filter_col: Option<String>,
-    /// 排序列
-    pub sort_col: Option<String>,
-    /// 是否降序
-    pub sort_desc: bool,
-    /// 文本筛选列（旧版单条件筛选，保留兼容）
-    pub search_col: Option<String>,
-    /// 文本筛选值（子串匹配）
-    pub search: Option<String>,
-    /// 多条件筛选
-    pub filters: Vec<TableFilter>,
-}
 
 #[derive(Debug, Deserialize)]
 pub struct TableDataQuery {
@@ -156,44 +91,6 @@ fn default_db_page() -> i64 {
 
 fn default_db_page_size() -> i64 {
     20
-}
-
-#[derive(Debug, Serialize)]
-pub struct RefPreview {
-    /// 目标表
-    pub table: String,
-    /// 目标行主键/引用键值
-    pub id: i64,
-    /// 目标行的部分信息（用于外键单元格内联展示）
-    pub summary: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct TableData {
-    pub header: Vec<ColumnInfo>,
-    pub rows: Vec<Vec<serde_json::Value>>,
-    pub total: i64,
-    /// 当前页外键值对应的目标行摘要
-    pub refs: Vec<RefPreview>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct BackRefRow {
-    /// 来源表行的主键值（用于点击跳回来源表）
-    pub key: i64,
-    /// 来源行的简短摘要
-    pub summary: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct BackRefGroup {
-    /// 引用当前表的来源表
-    pub source_table: String,
-    /// 来源表中的外键列
-    pub column: String,
-    /// 匹配总数（行数可能被截断到 50 条）
-    pub total: i64,
-    pub rows: Vec<BackRefRow>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -305,7 +202,7 @@ fn build_json(data: &TableData) -> Result<String, serde_json::Error> {
 fn download_response(filename: &str, content_type: HeaderValue, body: String) -> Response {
     let disposition = match HeaderValue::from_str(&format!("attachment; filename=\"{filename}\"")) {
         Ok(v) => v,
-        Err(e) => return error::internal(e, "构造导出响应头"),
+        Err(e) => return ServiceError::Internal(format!("构造导出响应头失败: {e}")).into_response(),
     };
     let mut response = ([(header::CONTENT_TYPE, content_type)], body).into_response();
     response
@@ -340,7 +237,7 @@ pub async fn export_table_data(
         "json" => {
             let body = match build_json(&data) {
                 Ok(body) => body,
-                Err(e) => return error::internal(e, "序列化导出数据"),
+                Err(e) => return ServiceError::Internal(format!("序列化导出数据失败: {e}")).into_response(),
             };
             let filename = format!("{safe_name}.json");
             download_response(
@@ -357,6 +254,8 @@ pub async fn export_table_data(
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
+    // 只在测试里用到的契约类型（生产代码路径不碰）
+    use crate::modules::db_viewer::dto::ColumnInfo;
 
     #[test]
     fn csv_escape_quotes_commas_and_newlines() {

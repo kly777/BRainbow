@@ -252,8 +252,9 @@ fn collect_server_info(paths: &ServerPaths) -> ServerInfo {
         memory: system::memory(),
         disk,
         uploads,
-        thumbs: system::dir_usage(&paths.upload_dir.join("file/thumbs")),
-        favicons: system::dir_usage(&paths.upload_dir.join("favicons")),
+        // 两条"其中"的目录由各自的模块派生后经组合根传进来（见 ServerPaths 的说明）
+        thumbs: system::dir_usage(&paths.thumbs_dir),
+        favicons: system::dir_usage(&paths.favicon_dir),
         backups: paths.backup_dir.as_deref().and_then(system::dir_usage),
         backup_dir: paths.backup_dir.as_ref().map(|p| p.display().to_string()),
     }
@@ -280,6 +281,8 @@ mod tests {
 
         let info = collect_server_info(&ServerPaths {
             upload_dir: root.join("uploads"),
+            thumbs_dir: root.join("uploads/file/thumbs"),
+            favicon_dir: root.join("uploads/favicons"),
             backup_dir: Some(root.join("backup")),
         });
 
@@ -315,6 +318,8 @@ mod tests {
     fn server_info_json_keys_match_the_frontend_contract() {
         let info = collect_server_info(&ServerPaths {
             upload_dir: "uploads".into(),
+            thumbs_dir: "uploads/file/thumbs".into(),
+            favicon_dir: "uploads/favicons".into(),
             backup_dir: None,
         });
         let json = serde_json::to_value(&info).unwrap();
@@ -362,6 +367,8 @@ mod tests {
 
         let info = collect_server_info(&ServerPaths {
             upload_dir: root.join("uploads"),
+            thumbs_dir: root.join("uploads/file/thumbs"),
+            favicon_dir: root.join("uploads/favicons"),
             backup_dir: None,
         });
 

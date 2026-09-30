@@ -42,14 +42,22 @@ impl SettingsService {
     }
 }
 
-/// 系统信息要用的路径（由组合根从 `Config` 传进来，见 `system` 模块）。
+/// 系统信息要用的路径（由组合根从 `Config` 传进来，见 `app/context.rs`）。
 ///
-/// 只拿"报给管理员看"需要的两个：上传根（它的占用就是"文件占用"）与备份目录
-/// （部署工具写的，开发机上通常没有 → `None`）。磁盘用量在**上传根**上探测：
-/// 生产里数据、上传、备份都在同一个根下，问它等于问"那块盘"。
+/// 三条路径都是"报给管理员看"用的：上传根（它的占用就是"文件占用"）、缩略图缓存目录、
+/// favicon 缓存目录，外加部署工具写的备份目录（开发机上通常没有 → `None`）。
+///
+/// **缩略图与 favicon 目录不在这里拼**：它们的名字由各自所属的模块定
+/// （`file::thumb::thumbs_dir` / `bookmark::favicon_dir`），组合根负责取过来。
+/// 早先 admin 自己 `join("file/thumbs")` / `join("favicons")` —— 那是同一个派生写了两遍，
+/// 模块里改了目录名或派生规则，管理页会静默报一个不存在的目录（同为 0 字节，看不出来）。
+///
+/// 磁盘用量在**上传根**上探测：生产里数据、上传、备份都在同一个根下，问它等于问"那块盘"。
 #[derive(Clone, Debug)]
 pub struct ServerPaths {
     pub upload_dir: std::path::PathBuf,
+    pub thumbs_dir: std::path::PathBuf,
+    pub favicon_dir: std::path::PathBuf,
     pub backup_dir: Option<std::path::PathBuf>,
 }
 
@@ -200,6 +208,8 @@ mod tests {
     fn test_paths() -> ServerPaths {
         ServerPaths {
             upload_dir: std::path::PathBuf::from("uploads"),
+            thumbs_dir: std::path::PathBuf::from("uploads/file/thumbs"),
+            favicon_dir: std::path::PathBuf::from("uploads/favicons"),
             backup_dir: None,
         }
     }

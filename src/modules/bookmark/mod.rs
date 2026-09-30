@@ -15,7 +15,7 @@ use axum::{
 };
 use sqlx::SqlitePool;
 
-pub use favicon::{FaviconCacheDir, favicon_handler};
+pub use favicon::{FaviconCacheDir, favicon_dir, favicon_handler};
 pub use handler::{
     batch_delete_handler, check_url_handler, create_bookmark_handler, create_tag_handler,
     delete_bookmark_handler, delete_tag_handler, fetch_url_handler, get_bookmark_handler,

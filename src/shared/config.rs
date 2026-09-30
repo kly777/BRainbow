@@ -63,6 +63,18 @@ impl Config {
         format!("{}/file", self.upload_dir.display())
     }
 
+    /// 测试用：只关心路径的配置（其余字段取开发默认）。
+    ///
+    /// 给"按路径派生的消费方"的测试用（如 `app::context::server_paths`）：
+    /// 不必为一条路径断言去构造整个 `Config` 字面量。
+    #[cfg(test)]
+    pub fn for_test(upload_dir: impl Into<PathBuf>, backup_dir: Option<PathBuf>) -> Self {
+        let mut cfg = Self::from_vars(|_| Err(std::env::VarError::NotPresent));
+        cfg.upload_dir = upload_dir.into();
+        cfg.backup_dir = backup_dir;
+        cfg
+    }
+
     /// ffmpeg 的实际路径：显式配置 > 应用自带的 `bin/ffmpeg` > PATH 里的 `ffmpeg`。
     ///
     /// 自带的那份优先于 PATH，是为了让"随部署产物走的静态二进制"真的被用到 ——

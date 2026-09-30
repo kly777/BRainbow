@@ -1,5 +1,6 @@
 use axum::extract::FromRef;
 use sqlx::SqlitePool;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::app::auth::service::AuthService;
@@ -173,6 +174,23 @@ impl FromRef<AppState> for DbViewerQueryService {
     }
 }
 
+/// /admin 系统信息要用的路径（上传根、缩略图与 favicon 缓存目录、备份目录）。
+///
+/// 组合根是唯一同时认识各模块的地方，所以"取模块的派生"这一步放在这里：
+/// 上传根与备份目录来自 `Config`；缩略图与 favicon 目录分别由 file / bookmark 模块
+/// 的派生函数给出（`admin` 自己拼 `join("file/thumbs")` 的写法已删 —— 那是同一个
+/// 派生写两遍，模块里改了目录名管理页会静默报另一个目录）。
+fn server_paths(config: &Config) -> ServerPaths {
+    ServerPaths {
+        upload_dir: config.upload_dir.clone(),
+        thumbs_dir: PathBuf::from(crate::modules::file::thumb::thumbs_dir(
+            &config.file_upload_dir(),
+        )),
+        favicon_dir: crate::modules::bookmark::favicon_dir(&config.upload_dir),
+        backup_dir: config.backup_dir.clone(),
+    }
+}
+
 impl AppState {
     /// 初始化运行时缓存：DB 中有持久化密钥则优先
     pub async fn init_runtime_cache(&self) {
@@ -207,15 +225,12 @@ impl AppState {
         let mem_repo_for_query = mem_repo.clone();
         let mem_maintenance = DbMemMaintenance::new(db.clone());
 
-        // 管理员服务（带上系统信息要用的路径：上传根与备份目录）
+        // 管理员服务（带上系统信息要用的路径：上传根、缩略图与 favicon 缓存目录、备份目录）
         let admin = AdminService::new(
             db.clone(),
             config.jwt_secret.clone(),
             config.allow_register,
-            ServerPaths {
-                upload_dir: config.upload_dir.clone(),
-                backup_dir: config.backup_dir.clone(),
-            },
+            server_paths(config),
         );
         let auth = AuthService::new(admin.clone(), db.clone());
 
@@ -293,5 +308,32 @@ impl AppState {
             conv: ConvState { service: conv },
             search: SearchState { service: search },
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+
+    /// 管理页的三条路径都由各自模块派生：改了 `UPLOAD_DIR` 它们一起跟着走
+    /// （admin 曾自己拼 `join("file/thumbs")` / `join("favicons")`）。
+    #[test]
+    fn server_paths_derive_from_the_upload_root() {
+        let paths = server_paths(&Config::for_test(
+            "/data/brb/uploads",
+            Some(PathBuf::from("/data/brb/backup")),
+        ));
+
+        assert_eq!(paths.upload_dir, PathBuf::from("/data/brb/uploads"));
+        assert_eq!(
+            paths.thumbs_dir,
+            PathBuf::from("/data/brb/uploads/file/thumbs")
+        );
+        assert_eq!(
+            paths.favicon_dir,
+            PathBuf::from("/data/brb/uploads/favicons")
+        );
+        assert_eq!(paths.backup_dir, Some(PathBuf::from("/data/brb/backup")));
     }
 }

@@ -2,7 +2,7 @@
 //!
 //! 每个子文件实现 `impl super::DBRepo` 的一个方法组。
 
-use super::super::handler::{TableData, TableReadOptions};
+use super::super::dto::{TableData, TableReadOptions};
 use super::*;
 
 impl super::DBRepo {

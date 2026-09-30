@@ -1,6 +1,6 @@
 #![allow(clippy::unwrap_used)]
 use super::*;
-use crate::modules::db_viewer::handler::{TableFilter, TableReadOptions};
+use crate::modules::db_viewer::dto::{TableFilter, TableReadOptions};
 use sqlx::SqlitePool;
 
 async fn setup() -> DBRepo {

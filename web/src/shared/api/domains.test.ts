@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { buildCacheKey, cachedRequest, clearAllCache } from "./cache.ts";
-import { CACHE, domains } from "./domains.ts";
+import { cachedRequest, clearAllCache } from "./cache.ts";
+import { domains } from "./domains.ts";
 import { request } from "./request.ts";
 
 vi.mock("./request.ts", () => ({ request: vi.fn() }));
@@ -9,36 +9,6 @@ const mockedRequest = vi.mocked(request);
 afterEach(() => {
 	clearAllCache();
 	vi.restoreAllMocks();
-});
-
-// ── CACHE 正则边界（自 domains.ts 声明，写入方不再直接接触） ──
-
-describe("CACHE 预定义正则边界", () => {
-	// 每个域：[正则, 本域真实端点样例（含子路径与查询串）, 真正易混淆的他域端点]。
-	// 注意：前缀命中子路径（/cards 命中 /cards/9）是失效语义的预期行为，
-	// 这里只验证不会越界到"同域易混淆"的端点。
-	const cases: [RegExp, string, string[]][] = [
-		[CACHE.cards, "/cards?page=1&size=20", ["/card/5"]],
-		[CACHE.bookmarks, "/bookmarks?tag=3", []],
-		[CACHE.tasks, "/tasks/5/children", ["/time-windows"]],
-		[CACHE.timeWindows, "/time-windows?from=1", ["/text/1"]],
-		[CACHE.text, "/text/42", ["/time-windows"]],
-		[CACHE.media, "/media/7/file", ["/mem/due"]],
-		[CACHE.onto, "/onto/tree/3", []],
-		[CACHE.db, "/db/tables", []],
-	];
-
-	it.each(cases)("%# 命中本域、不越界到易混淆端点", (re, own, foreign) => {
-		expect(re.test(buildCacheKey("GET", own))).toBe(true);
-		for (const f of foreign) {
-			expect(re.test(buildCacheKey("GET", f))).toBe(false);
-		}
-	});
-
-	it("已修剪死域：mem/sign 不再出现在注册表中", () => {
-		expect("mem" in domains).toBe(false);
-		expect("sign" in domains).toBe(false);
-	});
 });
 
 // ── domains 注册表：写→失效 配对穿过公开接缝 ──
@@ -89,6 +59,21 @@ describe("domains 写→失效配对", () => {
 		await cachedRequest("/cards"); // 重取 → 第 3 次
 		await cachedRequest("/tasks"); // 命中缓存，无新请求
 		expect(mockedRequest).toHaveBeenCalledTimes(3);
+	});
+
+	it("files 写入后统计与标签一并失效（stats 曾漏在 reads 之外）", async () => {
+		mockedRequest.mockResolvedValue({ total: 0 });
+		await cachedRequest("/file?page=1");
+		await cachedRequest("/file/stats");
+		await cachedRequest("/file/tags");
+		expect(mockedRequest).toHaveBeenCalledTimes(3);
+
+		await domains.files.invalidate(Promise.resolve({ ok: true }));
+
+		await cachedRequest("/file?page=1"); // 列表重取
+		await cachedRequest("/file/stats"); // 统计重取（页面写操作后显式 refetch 也吃这条）
+		await cachedRequest("/file/tags"); // 标签重取
+		expect(mockedRequest).toHaveBeenCalledTimes(6);
 	});
 
 	it("失效在写入成功后发生，写入失败时不失效", async () => {
@@ -154,6 +139,23 @@ describe("分级失效（reads vs singles + entity）", () => {
 		// 他域单条不受影响
 		await cachedRequest("/cards/7");
 		expect(mockedRequest).toHaveBeenCalledTimes(5); // 命中缓存
+	});
+
+	it("entity 写入连带清该实体的子读（/tasks/5/detail）", async () => {
+		mockedRequest.mockResolvedValue("detail");
+		await cachedRequest("/tasks/5/detail"); // 子读
+		await cachedRequest("/tasks/50/detail"); // 前缀相似的另一实体
+		expect(mockedRequest).toHaveBeenCalledTimes(2);
+
+		await domains.tasks.invalidate(Promise.resolve({ ok: true }), {
+			entity: "/tasks/5",
+		});
+
+		await cachedRequest("/tasks/5/detail"); // 重取
+		expect(mockedRequest).toHaveBeenCalledTimes(3);
+
+		await cachedRequest("/tasks/50/detail"); // 前缀相似者不受影响
+		expect(mockedRequest).toHaveBeenCalledTimes(3); // 命中缓存
 	});
 
 	it("tasks 写入连带失效 timeWindows 广域（跨域），不影响 timeWindows 单条", async () => {

@@ -227,10 +227,10 @@ describe("task API", () => {
 		// 调用搜索任务API
 		const result = await searchTasksE("测试");
 
-		// 验证cachedRequest被调用
+		// 验证cachedRequest被调用（搜索结果同样显式带分页参数，不吃后端缺省的 20 条）
 		expect(mockCachedRequest).toHaveBeenCalledTimes(1);
 		expect(mockCachedRequest).toHaveBeenCalledWith(
-			"/tasks/search?q=%E6%B5%8B%E8%AF%95",
+			"/tasks/search?q=%E6%B5%8B%E8%AF%95&page=1&page_size=100",
 		);
 
 		// 验证返回结果

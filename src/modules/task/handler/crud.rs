@@ -25,7 +25,7 @@ pub async fn get_tasks_handler(
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
-        Err(e) => error::internal(e, "获取任务列表"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -42,7 +42,7 @@ pub async fn get_all_tasks_handler(
             let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
             Json(PaginatedResponse::new(items, total, &pagination)).into_response()
         }
-        Err(e) => error::internal(e, "获取全部任务"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -54,7 +54,7 @@ pub async fn get_task_handler(
     match query.by_id(claims.sub, id).await {
         Ok(Some(task)) => Json(TaskResponse::from(task)).into_response(),
         Ok(None) => error::not_found("任务不存在"),
-        Err(e) => error::internal(e, "获取任务"),
+        Err(e) => e.into_response(),
     }
 }
 
@@ -66,7 +66,7 @@ pub async fn get_task_detail_handler(
     match query.detail(claims.sub, id).await {
         Ok(Some(detail)) => Json(detail).into_response(),
         Ok(None) => error::not_found("任务不存在"),
-        Err(e) => error::internal(e, "获取任务详情"),
+        Err(e) => e.into_response(),
     }
 }
 

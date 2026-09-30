@@ -3,7 +3,8 @@
 import { AsyncSection, Button, DetailPage } from "@components/ui";
 import { Copy, Download, Lock, Pencil, Unlock } from "@components/ui/icons";
 import { copyTextWithToast, strParam, useUrlParams } from "@shared/utils";
-import { Show } from "solid-js";
+import { createResource, Show } from "solid-js";
+import { type FileTag, listFileTags } from "./api.ts";
 import FileEditForm from "./components/FileEditForm.tsx";
 import FileInfoList from "./components/FileInfoList.tsx";
 import styles from "./FileDetail.module.css";
@@ -15,6 +16,9 @@ import { ViewLinkContext } from "./viewers/viewLink.ts";
 
 export default function FileDetail() {
 	const m = useFileDetail();
+
+	// 标签候选由页面持有（编辑表单的输入建议用；同 FileList 的口径 —— 组件不自己取数）
+	const [tags] = createResource<FileTag[]>(() => listFileTags());
 
 	/**
 	 * 查看器内部状态的深链（P4-5）：`?view=<查看器id>:<状态串>`。
@@ -131,7 +135,7 @@ export default function FileDetail() {
 								when={m.editing()}
 								fallback={<FileInfoList item={item()} />}
 							>
-								<FileEditForm m={m} />
+								<FileEditForm m={m} tagOptions={tags() ?? []} />
 							</Show>
 						</aside>
 					</>

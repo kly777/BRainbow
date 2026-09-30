@@ -1,4 +1,9 @@
-import { confirmAndDelete, notifyError, tryAsync } from "@shared/utils";
+import {
+	confirmAndDelete,
+	notifyError,
+	notifyWarning,
+	tryAsync,
+} from "@shared/utils";
 import {
 	createContext,
 	createSignal,
@@ -11,8 +16,8 @@ import {
 	createTaskE as apiCreateTask,
 	deleteTaskE as apiDeleteTask,
 	updateTaskE as apiUpdateTask,
+	fetchAllTasks,
 	getTaskStatsE,
-	getTasksE,
 	searchTasksE,
 } from "../api.ts";
 import { makeTemp, STATUS_API } from "../lib/task-provider-utils.ts";
@@ -52,9 +57,15 @@ export function TaskProvider(props: { children: JSX.Element }) {
 
 	const reload = async () => {
 		setLoading(true);
-		const result = await tryAsync(() => getTasksE());
+		// 拉全量（后端分页缺省 20 条，只取第一页会让第 21 条起在界面上消失）
+		const result = await tryAsync(() => fetchAllTasks());
 		if (result.ok) {
-			setTasks([...result.value.items]);
+			setTasks(result.value.items);
+			if (result.value.truncated) {
+				notifyWarning(
+					`任务过多：只载入前 ${result.value.items.length} 条（共 ${result.value.total} 条）`,
+				);
+			}
 		} else {
 			notifyError("加载任务失败", result.error);
 		}
@@ -164,9 +175,17 @@ export function TaskProvider(props: { children: JSX.Element }) {
 			return;
 		}
 		setLoading(true);
-		const result = await tryAsync(() => searchTasksE(query));
+		// 搜索结果同样逐页取全（后端缺省 20 条，只取第一页会漏掉靠后的匹配）
+		const result = await tryAsync(() =>
+			fetchAllTasks((page, size) => searchTasksE(query, page, size)),
+		);
 		if (result.ok) {
-			setTasks([...result.value.items]);
+			setTasks(result.value.items);
+			if (result.value.truncated) {
+				notifyWarning(
+					`匹配过多：只载入前 ${result.value.items.length} 条（共 ${result.value.total} 条）`,
+				);
+			}
 		} else {
 			notifyError("搜索任务失败", result.error);
 		}

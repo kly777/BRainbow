@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "UPDATE file SET original_name = ?, updated_at = CURRENT_TIMESTAMP WHERE stored_id = ?\n               RETURNING id AS \"id!: i64\", stored_id, original_name, mime_type,\n                         category AS \"file_category!: String\",\n                         size_bytes AS \"size_bytes!: i64\",\n                         width AS \"width?: i64\", height AS \"height?: i64\",\n                         duration_ms AS \"duration_ms?: i64\", user_id AS \"user_id?: i64\",\n                         is_private AS \"is_private!: i64\",\n                         content_hash AS \"content_hash?: String\",\n                         COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                         COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"",
+  "query": "UPDATE file SET original_name = ?,\n                      updated_at = strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')\n               WHERE stored_id = ?\n               RETURNING id AS \"id!: i64\", stored_id, original_name, mime_type,\n                         category AS \"file_category!: String\",\n                         size_bytes AS \"size_bytes!: i64\",\n                         width AS \"width?: i64\", height AS \"height?: i64\",\n                         duration_ms AS \"duration_ms?: i64\", user_id AS \"user_id?: i64\",\n                         is_private AS \"is_private!: i64\",\n                         content_hash AS \"content_hash?: String\",\n                         COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                         COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"",
   "describe": {
     "columns": [
       {
@@ -138,13 +138,13 @@
       {
         "name": "created_at!: chrono::DateTime<chrono::Utc>",
         "ordinal": 12,
-        "type_info": "Null",
+        "type_info": "Datetime",
         "origin": "Expression"
       },
       {
         "name": "updated_at!: chrono::DateTime<chrono::Utc>",
         "ordinal": 13,
-        "type_info": "Null",
+        "type_info": "Text",
         "origin": "Expression"
       }
     ],
@@ -152,21 +152,21 @@
       "Right": 2
     },
     "nullable": [
-      null,
+      false,
+      false,
+      false,
       false,
       false,
       false,
       true,
+      true,
+      true,
+      true,
       false,
       true,
-      true,
-      true,
-      true,
       false,
-      true,
-      null,
-      null
+      false
     ]
   },
-  "hash": "b198da68c1818f6d8f202871ce0c53f5a9a6fe48759653e2dd912e8b7c8846fe"
+  "hash": "3598188f1af6289cea4b63a96fb0508861bc66d9ff7b1c94a6d48bc8c9b4977d"
 }

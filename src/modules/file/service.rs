@@ -693,7 +693,8 @@ impl FileRepository {
         duration_ms: Option<i64>,
     ) -> Result<(), sqlx::Error> {
         sqlx::query!(
-            "UPDATE file SET width = ?, height = ?, duration_ms = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            "UPDATE file SET width = ?, height = ?, duration_ms = ?, \
+             updated_at = strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id = ?",
             width,
             height,
             duration_ms,

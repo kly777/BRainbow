@@ -252,7 +252,9 @@ impl FileRepository {
     ) -> Result<Option<FileRow>, sqlx::Error> {
         let row = sqlx::query_as!(
             FileRow,
-            r#"UPDATE file SET original_name = ?, updated_at = CURRENT_TIMESTAMP WHERE stored_id = ?
+            r#"UPDATE file SET original_name = ?,
+                      updated_at = strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')
+               WHERE stored_id = ?
                RETURNING id AS "id!: i64", stored_id, original_name, mime_type,
                          category AS "file_category!: String",
                          size_bytes AS "size_bytes!: i64",
@@ -293,7 +295,8 @@ impl FileRepository {
         is_private: bool,
     ) -> Result<(), sqlx::Error> {
         sqlx::query!(
-            "UPDATE file SET is_private = ?, updated_at = CURRENT_TIMESTAMP WHERE stored_id = ?",
+            "UPDATE file SET is_private = ?, \
+             updated_at = strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE stored_id = ?",
             is_private as i64,
             stored_id
         )
@@ -1391,6 +1394,58 @@ mod tests {
             .expect("file should exist");
         assert_eq!(updated.original_name, "renamed.png");
         assert!(repo.update_name("missing", "x").await.unwrap().is_none());
+    }
+
+    /// 三处写路径（改名 / 可见性 / 元数据）落库的 `updated_at` 必须是规范形态。
+    ///
+    /// 它们曾写 `CURRENT_TIMESTAMP`（SQLite 那是空格分隔、无时区的形态），把脏格式直接
+    /// 落进 file 表 —— v21 就是为这个补的归一化触发器（dev 库当时有 11 行脏值）。
+    ///
+    /// 注意这条**不能**单独证明源头写法正确：归一化触发器会兜底，把源头改回
+    /// `CURRENT_TIMESTAMP` 它也不会红。源头由 `TIME_COLUMNS` 覆盖测试与 v21 迁移测试
+    /// 一起守住；这条是黑盒保证 —— 无论谁写，写完之后库里是规范形态。
+    #[tokio::test]
+    async fn write_paths_leave_canonical_updated_at() {
+        let repo = setup().await;
+        let created = insert(&repo, "ts-me").await;
+
+        repo.update_name("ts-me", "renamed.png")
+            .await
+            .unwrap()
+            .expect("file should exist");
+        assert_eq!(
+            canonical_updated_at(&repo.db, created.id).await,
+            1,
+            "改名后不规范"
+        );
+
+        repo.update_visibility("ts-me", true).await.unwrap();
+        assert_eq!(
+            canonical_updated_at(&repo.db, created.id).await,
+            1,
+            "切换可见性后不规范"
+        );
+
+        repo.update_metadata(created.id, Some(10), Some(20), None)
+            .await
+            .unwrap();
+        assert_eq!(
+            canonical_updated_at(&repo.db, created.id).await,
+            1,
+            "写元数据后不规范"
+        );
+    }
+
+    /// `updated_at` 是否为规范形态（`+00:00`）—— 用 SQL 判，省得在 Rust 侧解析
+    async fn canonical_updated_at(db: &SqlitePool, id: i64) -> i64 {
+        sqlx::query_scalar(
+            "SELECT COUNT(*) FROM file WHERE id = ? \
+             AND updated_at GLOB '????-??-??T??:??:??*+00:00'",
+        )
+        .bind(id)
+        .fetch_one(db)
+        .await
+        .unwrap()
     }
 
     #[tokio::test]

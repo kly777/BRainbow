@@ -10,7 +10,7 @@ use sqlx::SqlitePool;
 use std::sync::Arc;
 use tracing::{error, info, warn};
 
-use crate::db::verify::{self, SchemaCheck};
+use crate::db::verify::{self, SchemaCheck, TimestampCheck};
 use crate::modules::file::consistency::{self, ConsistencyReport};
 use crate::modules::file::repository::FileRepository;
 use crate::modules::file::service::{
@@ -23,6 +23,8 @@ pub struct SelfCheckReport {
     pub db: SchemaCheck,
     /// `PRAGMA quick_check` 结果；`None` 表示本次未跑深检查
     pub integrity: Option<String>,
+    /// 时间戳格式扫描结果；`None` 表示本次未跑深检查（全表扫描不进启动路径）
+    pub timestamps: Option<TimestampCheck>,
     pub upload_dir: UploadDirCheck,
     pub storage: ConsistencyReport,
     /// 缩略图缓存（派生文件；不可写也只是"缓存不生效"，不进 is_fatal）
@@ -38,35 +40,38 @@ impl SelfCheckReport {
             || self.integrity.as_deref().is_some_and(|s| s != "ok")
     }
 
-    /// 完全正常：无致命问题、存储也一致（`--check` 的退出码依据）
+    /// 完全正常：无致命问题、存储一致、时间戳全是规范形态（`--check` 的退出码依据）。
+    /// 未跑深检查时（启动路径）时间戳一项按"没发现问题"算。
     pub fn is_clean(&self) -> bool {
-        !self.is_fatal() && !self.storage.has_issues()
+        !self.is_fatal()
+            && !self.storage.has_issues()
+            && self.timestamps.as_ref().is_none_or(TimestampCheck::is_ok)
     }
 
     /// 逐项输出报告：问题用 error/warn，正常项用 info
     pub fn log(&self) {
         if self.db.is_ok() {
-            info!("[1/5] 数据库 schema: {}", self.db.summary());
+            info!("[1/6] 数据库 schema: {}", self.db.summary());
         } else {
-            error!("[1/5] 数据库 schema: {}", self.db.summary());
+            error!("[1/6] 数据库 schema: {}", self.db.summary());
         }
 
         match &self.integrity {
-            Some(result) if result == "ok" => info!("[2/5] 完整性 quick_check: ok"),
-            Some(result) => error!("[2/5] 完整性 quick_check: {result}"),
+            Some(result) if result == "ok" => info!("[2/6] 完整性 quick_check: ok"),
+            Some(result) => error!("[2/6] 完整性 quick_check: {result}"),
             None => info!(
-                "[2/5] 完整性 quick_check: 未检查（启动不跑全库扫描，部署/排查时用 --check 触发）"
+                "[2/6] 完整性 quick_check: 未检查（启动不跑全库扫描，部署/排查时用 --check 触发）"
             ),
         }
 
         if self.upload_dir.is_usable() {
-            info!("[3/5] 上传目录: {}", self.upload_dir.summary());
+            info!("[3/6] 上传目录: {}", self.upload_dir.summary());
         } else {
-            error!("[3/5] 上传目录: {}", self.upload_dir.summary());
+            error!("[3/6] 上传目录: {}", self.upload_dir.summary());
         }
 
         if self.storage.has_issues() {
-            warn!("[4/5] 存储一致性: {}", self.storage.summary());
+            warn!("[4/6] 存储一致性: {}", self.storage.summary());
             if !self.storage.missing_samples.is_empty() {
                 warn!(
                     "        缺失文件（数据库有记录、磁盘无文件）样本: {}",
@@ -92,15 +97,25 @@ impl SelfCheckReport {
                 );
             }
         } else {
-            info!("[4/5] 存储一致性: {}", self.storage.summary());
+            info!("[4/6] 存储一致性: {}", self.storage.summary());
         }
 
         // 派生缓存只报状态：写不进去等于"缩略图每次重算"，不影响功能，
         // 所以不致命、也不进 is_clean（那是"能不能放心退出 0"的判据）
         if self.thumbs.writable || !self.thumbs.exists {
-            info!("[5/5] 缩略图缓存: {}", self.thumbs.summary());
+            info!("[5/6] 缩略图缓存: {}", self.thumbs.summary());
         } else {
-            warn!("[5/5] 缩略图缓存: {}", self.thumbs.summary());
+            warn!("[5/6] 缩略图缓存: {}", self.thumbs.summary());
+        }
+
+        // 时间戳格式：数据不规范不阻断启动（重启修不了），但进 is_clean ——
+        // 它是 `--check` 的退出码依据，部署收尾那一次会把它当问题报出来
+        match &self.timestamps {
+            Some(check) if check.is_ok() => info!("[6/6] 时间戳格式: {}", check.summary()),
+            Some(check) => warn!("[6/6] 时间戳格式: {}", check.summary()),
+            None => {
+                info!("[6/6] 时间戳格式: 未检查（启动不跑全表扫描，部署/排查时用 --check 触发）")
+            }
         }
     }
 }
@@ -120,6 +135,12 @@ pub async fn run(pool: &SqlitePool, upload_dir: &str, deep: bool) -> SelfCheckRe
         None
     };
 
+    let timestamps = if deep {
+        Some(verify::check_timestamp_formats(pool).await)
+    } else {
+        None
+    };
+
     let upload_dir_check = check_upload_dir(upload_dir);
 
     let repo = FileRepository::new(Arc::new(pool.clone()));
@@ -134,6 +155,7 @@ pub async fn run(pool: &SqlitePool, upload_dir: &str, deep: bool) -> SelfCheckRe
     SelfCheckReport {
         db,
         integrity,
+        timestamps,
         upload_dir: upload_dir_check,
         storage,
         thumbs: check_thumb_cache(upload_dir),
@@ -208,6 +230,44 @@ mod tests {
         let report = run(&ctx.pool, &missing.to_string_lossy(), false).await;
         assert!(report.is_fatal());
         assert!(!report.upload_dir.is_usable());
+
+        let _ = std::fs::remove_dir_all(&ctx.dir);
+    }
+
+    /// 时间戳格式：启动路径不跑（全表扫描），`--check` 跑；脏行不致命但不干净
+    #[tokio::test]
+    async fn deep_check_reports_non_canonical_timestamps() {
+        let ctx = setup().await;
+        sqlx::query("INSERT INTO user (id, name, password_hash) VALUES (1, 'u', 'x')")
+            .execute(&ctx.pool)
+            .await
+            .unwrap();
+        // 造一条脏行：先摘掉归一化触发器（模拟 v21 之前的库）
+        sqlx::query("DROP TRIGGER trg_tag_time_iso_ins")
+            .execute(&ctx.pool)
+            .await
+            .unwrap();
+        sqlx::query(
+            "INSERT INTO tag (name, user_id, created_at) VALUES ('x', 1, '2026-09-10 14:53:50')",
+        )
+        .execute(&ctx.pool)
+        .await
+        .unwrap();
+
+        let shallow = run(&ctx.pool, &ctx.dir.to_string_lossy(), false).await;
+        assert!(shallow.timestamps.is_none(), "启动路径不跑全表扫描");
+        assert!(shallow.is_clean(), "{}", shallow.db.summary());
+
+        let deep = run(&ctx.pool, &ctx.dir.to_string_lossy(), true).await;
+        let timestamps = deep.timestamps.as_ref().expect("深检查应跑时间戳扫描");
+        assert!(!timestamps.is_ok());
+        assert_eq!(
+            timestamps.offenders,
+            vec![("tag.created_at".to_string(), 1)]
+        );
+        assert!(timestamps.summary().contains("tag.created_at"));
+        assert!(!deep.is_fatal(), "数据不规范不该阻断启动");
+        assert!(!deep.is_clean(), "--check 的退出码要能反映它");
 
         let _ = std::fs::remove_dir_all(&ctx.dir);
     }

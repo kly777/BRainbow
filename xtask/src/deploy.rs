@@ -256,10 +256,10 @@ fn strip_ansi(line: &str) -> String {
     out
 }
 
-/// 自检输出里的分段小结行，形如 `[1/5] 数据库 schema: …`。
+/// 自检输出里的分段小结行，形如 `[1/6] 数据库 schema: …`。
 ///
 /// 按**形状**判断（中括号里是 `数字/数字`），不写死段数：段数会随版本变
-/// （加"缩略图缓存"那段就从 /4 变成了 /5）。
+/// （加"缩略图缓存"那段从 /4 变成 /5，再加"时间戳格式"从 /5 变成 /6）。
 fn is_summary_line(line: &str) -> bool {
     let line = strip_ansi(line);
     let line = line.as_str();

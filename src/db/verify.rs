@@ -157,6 +157,117 @@ pub async fn check_schema(pool: &SqlitePool) -> SchemaCheck {
     check
 }
 
+/// 规范时间戳形态（与 `shared/time_text::ISO_UTC_FORMAT` 同形）。
+///
+/// 用 GLOB 而不是 LIKE：`_`/`%` 在 LIKE 里是通配符，`?` 在 GLOB 里才是；
+/// 这里的 `?` 是"任意单字符"，`*` 是"任意串"。
+const ISO_UTC_GLOB: &str = "????-??-??T??:??:??*+00:00";
+
+/// 时间戳格式扫描结果
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct TimestampCheck {
+    /// 扫描到的 TIMESTAMP 列数
+    pub columns: usize,
+    /// 不规范的列：(表.列, 行数)，按行数降序
+    pub offenders: Vec<(String, i64)>,
+    /// 扫描本身失败的原因（查询出错等）
+    pub error: Option<String>,
+}
+
+impl TimestampCheck {
+    pub fn is_ok(&self) -> bool {
+        self.error.is_none() && self.offenders.is_empty()
+    }
+
+    /// 一行摘要，供 `--check` 输出
+    pub fn summary(&self) -> String {
+        if let Some(err) = &self.error {
+            return format!("自检失败: {err}");
+        }
+        if self.offenders.is_empty() {
+            return format!("{} 个时间戳列全为 +00:00 规范形态", self.columns);
+        }
+        let bad: i64 = self.offenders.iter().map(|(_, count)| *count).sum();
+        let samples: Vec<String> = self
+            .offenders
+            .iter()
+            .take(5)
+            .map(|(column, count)| format!("{column}({count} 行)"))
+            .collect();
+        format!("{bad} 行不是 +00:00 规范形态: {}", samples.join(", "))
+    }
+}
+
+/// 扫描所有 `TIMESTAMP` 列，报出不规范的行数。
+///
+/// 为什么需要这项：老库的**列默认值**是改不掉的（SQLite 不能改列定义），而历史上基线
+/// 写过 `CURRENT_TIMESTAMP`（空格分隔、无时区）/ `…Z` / `…+00:00` 三种形态。正常情况下
+/// 写入会被时间归一化触发器改写成规范形态 —— "默认值不同"因此无害；一旦某列没有触发器
+/// 兜底，默认值的原始格式就会**原样落库**：`file.updated_at` 就这么漏了 11 行
+/// （v21 才补上触发器，覆盖完整性由 `db::tests::time_columns_cover_every_timestamp_column`
+/// 盯着）。这项扫描是它的事后兜底 —— 触发器漏了、或有人绕过应用直接写库，都跑不掉。
+///
+/// 逐列 `COUNT(*)`（34 列），实测 178MB 开发库约 30ms。仍然与 [`quick_check`] 一样
+/// **只在 `--check` 里跑**：它随行数线性变慢，而启动路径只留毫秒级的结构检查
+/// （部署收尾那次 `--check` 会跑到它）。
+pub async fn check_timestamp_formats(pool: &SqlitePool) -> TimestampCheck {
+    let columns: Vec<(String, String)> = match sqlx::query_as(
+        "SELECT m.name, x.name FROM sqlite_master m JOIN pragma_table_xinfo(m.name) x \
+         WHERE m.type = 'table' AND m.name NOT LIKE 'sqlite_%' \
+           AND upper(x.type) LIKE '%TIMESTAMP%' \
+         ORDER BY m.name, x.name",
+    )
+    .fetch_all(pool)
+    .await
+    {
+        Ok(rows) => rows,
+        Err(e) => {
+            return TimestampCheck {
+                error: Some(format!("扫描时间戳列失败: {e}")),
+                ..Default::default()
+            };
+        }
+    };
+
+    if columns.is_empty() {
+        return TimestampCheck {
+            error: Some("一个 TIMESTAMP 列都没扫到，schema 异常".into()),
+            ..Default::default()
+        };
+    }
+
+    // 逐列一条 COUNT 拼成 UNION ALL：一次往返，SQLite 侧逐列全表扫描。
+    // 表名/列名取自 sqlite_master（我们自己的 schema），加双引号即可。
+    let mut sql = String::from("SELECT col, bad FROM (");
+    for (index, (table, column)) in columns.iter().enumerate() {
+        if index > 0 {
+            sql.push_str(" UNION ALL ");
+        }
+        sql.push_str(&format!(
+            "SELECT '{table}.{column}' AS col, COUNT(*) AS bad FROM \"{table}\" \
+             WHERE \"{column}\" IS NOT NULL AND \"{column}\" <> '' \
+               AND NOT (\"{column}\" GLOB '{ISO_UTC_GLOB}')"
+        ));
+    }
+    sql.push_str(") WHERE bad > 0 ORDER BY bad DESC");
+
+    match sqlx::query_as::<_, (String, i64)>(sqlx::AssertSqlSafe(sql))
+        .fetch_all(pool)
+        .await
+    {
+        Ok(offenders) => TimestampCheck {
+            columns: columns.len(),
+            offenders,
+            error: None,
+        },
+        Err(e) => TimestampCheck {
+            columns: columns.len(),
+            offenders: Vec::new(),
+            error: Some(format!("时间戳扫描失败: {e}")),
+        },
+    }
+}
+
 /// 深度完整性检查（`PRAGMA quick_check`）：页级损坏、索引与表不一致。
 ///
 /// 实测 178MB 库约 4s，不适合放进启动路径 —— 由 `--check` 或运维手动触发。
@@ -204,6 +315,19 @@ mod tests {
     async fn quick_check_returns_ok_on_healthy_database() {
         let pool = setup().await;
         assert_eq!(quick_check(&pool).await.unwrap(), "ok");
+    }
+
+    #[tokio::test]
+    async fn timestamp_formats_are_clean_on_fresh_database() {
+        let pool = setup().await;
+        let check = check_timestamp_formats(&pool).await;
+        assert!(check.is_ok(), "{}", check.summary());
+        assert!(
+            check.columns >= 30,
+            "应覆盖全部时间戳列，实际 {} 列",
+            check.columns
+        );
+        assert!(check.summary().contains("+00:00"));
     }
 
     /// 漂移场景：表被删掉但 user_version 仍是最新 → 迁移不会补，必须靠自检发现

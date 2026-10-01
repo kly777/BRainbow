@@ -35,6 +35,13 @@ export const MODE_PLACEHOLDER: Record<Mode, string> = {
 	cmd: "输入指令…",
 };
 
+/**
+ * 可选项在 DOM 里的 id：输入框的 `aria-activedescendant` 指向它，
+ * 读屏才知道当前高亮的是哪一条（DOM 焦点始终留在输入框里）。
+ * 列表渲染与这里必须用同一个拼法 —— 所以只此一处。
+ */
+export const optionDomId = (index: number) => `palette-option-${index}`;
+
 function detectMode(value: string): Mode {
 	if (value.startsWith("/")) return "nav";
 	if (value.startsWith("?")) return "search";
@@ -77,6 +84,8 @@ export function usePalette() {
 
 	let inputRef!: HTMLInputElement;
 	let sugScrollRef: HTMLDivElement | undefined;
+	/** 打开面板前焦点在哪：关闭时还回去，键盘用户不会"丢在原地" */
+	let lastFocused: HTMLElement | null = null;
 
 	const mode = createMemo(() => detectMode(value()));
 	const query = () => value().slice(1);
@@ -84,6 +93,14 @@ export function usePalette() {
 	const close = () => {
 		setOpen(false);
 		setValue("");
+		// 面板卸载会把焦点丢到 body —— 还回打开前的元素。
+		// 用微任务：等 Solid 把 <Show> 的 DOM 移除批处理完再聚焦，否则会被移除动作打断。
+		// 元素可能已经不在了（跳转到了别的页面），先查 isConnected
+		const target = lastFocused;
+		lastFocused = null;
+		queueMicrotask(() => {
+			if (target?.isConnected) target.focus();
+		});
 	};
 
 	const commands = createMemo(() => {
@@ -171,9 +188,30 @@ export function usePalette() {
 	};
 
 	const openPalette = (prefix = "") => {
+		lastFocused = document.activeElement as HTMLElement | null;
 		setOpen(true);
 		setValue(prefix);
 		setSelectedIndex(0);
+	};
+
+	/**
+	 * 选中项必须落在**可选项**上：分组标题不可选，落在标题上时回车会静默关掉面板
+	 * （多分组搜索结果的第一项正是标题，而输入后我们会把选中重置为 0）。
+	 * 列表一变就重新定位 —— 打字筛小、结果刷新都走这里。
+	 */
+	createEffect(() => {
+		const items = currentItems();
+		if (items.length === 0) return;
+		const current = items[selectedIndex()];
+		if (current && !current.isHeader) return;
+		const first = items.findIndex((item) => !item.isHeader);
+		if (first >= 0) setSelectedIndex(first);
+	});
+
+	/** 当前高亮项在 DOM 里的 id：给 combobox 的 `aria-activedescendant` 用（标题不是选项） */
+	const activeOptionId = () => {
+		const item = currentItems()[selectedIndex()];
+		return item && !item.isHeader ? optionDomId(selectedIndex()) : undefined;
 	};
 
 	// 打开时立即聚焦
@@ -194,6 +232,12 @@ export function usePalette() {
 		if (isImeComposing(e)) return;
 		if (e.key === "Escape") {
 			close();
+			return;
+		}
+		if (e.key === "Tab") {
+			// 面板声明了 aria-modal：Tab 不许把焦点带到面板背后的页面上。
+			// 本面板全靠方向键导航（每行都是按钮，但由 ↑↓ 驱动），焦点留在输入框即可
+			e.preventDefault();
 			return;
 		}
 		if (e.key === "Enter") {
@@ -274,6 +318,7 @@ export function usePalette() {
 		onInputKey,
 		openPalette,
 		close,
+		activeOptionId,
 		/** 组字状态由输入框的 composition 事件驱动（见 usePaletteSearch 的搜索闸门） */
 		onCompositionStart: () => setComposing(true),
 		onCompositionEnd: () => setComposing(false),

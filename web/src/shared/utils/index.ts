@@ -9,6 +9,7 @@ export * from "./format/angle.ts";
 export * from "./format/bytes.ts";
 export * from "./format/color.ts";
 export * from "./format/delimited.ts";
+export * from "./format/text.ts";
 export * from "./format/time.ts";
 export * from "./greeting.ts";
 export * from "./icon.ts";

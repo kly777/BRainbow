@@ -58,29 +58,29 @@ describe("fmtRelative", () => {
 		expect(fmtRelative(past(60))).toBe("待复习");
 	});
 
-	it('returns "1分钟" for < 2 min', () => {
-		expect(fmtRelative(future(30))).toBe("1分钟");
-		expect(fmtRelative(future(90))).toBe("1分钟");
+	it('returns "1 分钟" for < 2 min', () => {
+		expect(fmtRelative(future(30))).toBe("1 分钟");
+		expect(fmtRelative(future(90))).toBe("1 分钟");
 	});
 
 	it("returns X分钟 for < 1 hour", () => {
 		const result = fmtRelative(future(600)); // 10 min
-		expect(result).toBe("10分钟");
+		expect(result).toBe("10 分钟");
 	});
 
 	it("returns X小时 for < 1 day", () => {
 		const result = fmtRelative(future(7200)); // 2 hours
-		expect(result).toBe("2小时");
+		expect(result).toBe("2 小时");
 	});
 
 	it("returns X天后 for >= 1 day", () => {
 		const result = fmtRelative(future(172800)); // 2 days
-		expect(result).toBe("2天后");
+		expect(result).toBe("2 天后");
 	});
 
 	it("returns X天后 for 7 days", () => {
 		const result = fmtRelative(future(604800));
-		expect(result).toBe("7天后");
+		expect(result).toBe("7 天后");
 	});
 
 	it("handles exactly 0 seconds (now = just happened)", () => {
@@ -88,39 +88,39 @@ describe("fmtRelative", () => {
 		// 避免调用间隙跨过毫秒边界导致 diff 恰好为负的偶发失败。
 		const now = Math.ceil(Date.now() / 1000) * 1000;
 		vi.spyOn(Date, "now").mockReturnValue(now);
-		expect(fmtRelative(new Date(now).toISOString())).toBe("1分钟");
+		expect(fmtRelative(new Date(now).toISOString())).toBe("1 分钟");
 		vi.restoreAllMocks();
 	});
 });
 
 describe("fmtInterval", () => {
-	it('returns "1分钟" for < 120s', () => {
-		expect(fmtInterval(0)).toBe("1分钟");
-		expect(fmtInterval(60)).toBe("1分钟");
-		expect(fmtInterval(119)).toBe("1分钟");
+	it('returns "1 分钟" for < 120s', () => {
+		expect(fmtInterval(0)).toBe("1 分钟");
+		expect(fmtInterval(60)).toBe("1 分钟");
+		expect(fmtInterval(119)).toBe("1 分钟");
 	});
 
 	it("returns X分钟 for < 3600s", () => {
-		expect(fmtInterval(600)).toBe("10分钟");
-		expect(fmtInterval(3540)).toBe("59分钟");
+		expect(fmtInterval(600)).toBe("10 分钟");
+		expect(fmtInterval(3540)).toBe("59 分钟");
 	});
 
 	it("returns X小时 for < 86400s", () => {
-		expect(fmtInterval(3600)).toBe("1小时");
-		expect(fmtInterval(7200)).toBe("2小时");
-		expect(fmtInterval(86399)).toBe("24小时");
+		expect(fmtInterval(3600)).toBe("1 小时");
+		expect(fmtInterval(7200)).toBe("2 小时");
+		expect(fmtInterval(86399)).toBe("24 小时");
 	});
 
 	it("returns X天 for < 2592000s", () => {
-		expect(fmtInterval(86400)).toBe("1天");
-		expect(fmtInterval(604800)).toBe("7天");
-		expect(fmtInterval(2591999)).toBe("30天");
+		expect(fmtInterval(86400)).toBe("1 天");
+		expect(fmtInterval(604800)).toBe("7 天");
+		expect(fmtInterval(2591999)).toBe("30 天");
 	});
 
 	it("returns X个月 for >= 2592000s", () => {
-		expect(fmtInterval(2592000)).toBe("1个月");
-		expect(fmtInterval(5184000)).toBe("2个月");
-		expect(fmtInterval(31536000)).toBe("12个月");
+		expect(fmtInterval(2592000)).toBe("1 个月");
+		expect(fmtInterval(5184000)).toBe("2 个月");
+		expect(fmtInterval(31536000)).toBe("12 个月");
 	});
 });
 

@@ -184,7 +184,7 @@ export function ImportTagInput(props: {
 			<Input
 				id="import-default-tags"
 				type="text"
-				placeholder="标签1; 标签2"
+				placeholder="标签 1; 标签 2"
 				value={props.value}
 				onInput={(e) => props.onChange(e.currentTarget.value)}
 				tone="bg"

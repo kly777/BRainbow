@@ -26,7 +26,7 @@ export interface CardEditApi {
 }
 
 /** 无效 id 时暴露的错误（页面据此显示文案，且不发起请求） */
-const INVALID_ID_ERROR = new Error("无效ID");
+const INVALID_ID_ERROR = new Error("无效 ID");
 
 /**
  * 编辑器页的取数：与 useCardDetail 同源，都走 `useDetailResource`

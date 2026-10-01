@@ -89,7 +89,7 @@ describe("CardEdit", () => {
 		const host = mount();
 		await settle(() => (host.textContent ?? "").includes("无效"));
 
-		expect(host.textContent).toContain("无效ID");
+		expect(host.textContent).toContain("无效 ID");
 		expect(host.querySelector('[role="status"]')).toBeNull();
 		expect(mockedGet).not.toHaveBeenCalled();
 	});

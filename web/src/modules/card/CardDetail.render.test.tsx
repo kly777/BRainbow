@@ -51,7 +51,7 @@ describe("CardDetail：无效 id", () => {
 		const host = mount();
 		await settle(() => (host.textContent ?? "").includes("无效"));
 
-		expect(host.textContent).toContain("无效ID");
+		expect(host.textContent).toContain("无效 ID");
 		// 骨架屏必须已让位 —— 修复前它才是唯一可见的东西
 		expect(host.querySelector('[class*="skeletonWrap"]')).toBeNull();
 		// 不应发起请求
@@ -73,7 +73,7 @@ describe("CardDetail：无效 id", () => {
 		expect(mockedGet).toHaveBeenCalledWith(42);
 		// 不应出现错误态
 		await settle(() => true);
-		expect(host.textContent).not.toContain("无效ID");
+		expect(host.textContent).not.toContain("无效 ID");
 		// 卡片正文走 Markdown（懒加载 chunk）：不等它落地，环境拆除时会冒
 		// EnvironmentTeardownError（import 还在飞、module runner 已经关了）
 		await vi.dynamicImportSettled();

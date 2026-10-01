@@ -17,7 +17,7 @@ export interface CardDetailApi {
 }
 
 /** 无效 id 时暴露的错误（页面据此显示文案，且不发起请求） */
-const INVALID_ID_ERROR = new Error("无效ID");
+const INVALID_ID_ERROR = new Error("无效 ID");
 
 /**
  * 取数走共享的 `useDetailResource`：错误消化、无效 id 判定、"首次加载 vs 后台刷新"

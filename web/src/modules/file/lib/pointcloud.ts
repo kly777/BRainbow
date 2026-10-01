@@ -10,6 +10,10 @@
 //
 // 上限：文本点云按行解析很慢，超过 MAX_TEXT_POINTS 截断（预览够用，完整数据交给本地工具）。
 
+// 深引到文件，不走 @shared/utils 桶：桶里含 DOM 相关模块（clipboard / toast 之类），
+// 而这里是纯解析器、测试跑在 node 环境 —— 引桶会让 `window is not defined` 直接把
+// 整个测试文件打挂。
+import { cjkSpace } from "@shared/utils/format/text.ts";
 import {
 	boundsFromPositions,
 	fitSample,
@@ -82,7 +86,7 @@ class PointSink {
 	/** 打包成引擎用的紧凑数组（小圆点 + 单位四元数），无点时抛可读错误 */
 	finish(what: string): SplatData {
 		const count = this.positions.length / 3;
-		if (count === 0) throw new PlyError(`${what}里没有可用的点`);
+		if (count === 0) throw new PlyError(cjkSpace(`${what}里没有可用的点`));
 		const bytes = new Uint8Array(count * SPLAT_ROW_BYTES);
 		const view = new DataView(bytes.buffer);
 		const positions32 = new Float32Array(count * 3);

@@ -74,7 +74,7 @@ export function useTaskCalendar(): TaskCalendarApi {
 
 	const monthTitle = () => {
 		const date = currentDate();
-		return `${date.getFullYear()}年${date.getMonth() + 1}月`;
+		return `${date.getFullYear()} 年 ${date.getMonth() + 1} 月`;
 	};
 
 	return {

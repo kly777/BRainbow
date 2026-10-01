@@ -17,7 +17,7 @@ vi.mock("@modules/task/api.ts", () => ({
 describe("useTaskCalendar", () => {
 	beforeEach(() => {
 		vi.useFakeTimers();
-		vi.setSystemTime(new Date(2024, 0, 15)); // 2024年1月15日
+		vi.setSystemTime(new Date(2024, 0, 15)); // 2024 年 1 月15日
 	});
 
 	afterEach(() => {
@@ -34,7 +34,7 @@ describe("useTaskCalendar", () => {
 				expect(calendar.currentDate()).toEqual(new Date(2024, 0, 15));
 
 				// 验证月份标题
-				expect(calendar.monthTitle()).toBe("2024年1月");
+				expect(calendar.monthTitle()).toBe("2024 年 1 月");
 			} finally {
 				dispose();
 			}
@@ -47,11 +47,11 @@ describe("useTaskCalendar", () => {
 			try {
 				const calendar = useTaskCalendar();
 
-				// 验证2024年1月的天数
+				// 验证2024 年 1 月的天数
 				const days = calendar.daysInMonth();
 				expect(days.length).toBe(35); // 1月有31天，但需要填充到7的倍数
 
-				// 验证第一天是周一（2024年1月1日是周一）
+				// 验证第一天是周一（2024 年 1 月1日是周一）
 				expect(days[0]).toBeNull(); // 周日
 
 				// 验证最后一天
@@ -73,14 +73,14 @@ describe("useTaskCalendar", () => {
 
 				// 验证日期更新
 				expect(calendar.currentDate().getMonth()).toBe(1); // 2月
-				expect(calendar.monthTitle()).toBe("2024年2月");
+				expect(calendar.monthTitle()).toBe("2024 年 2 月");
 
 				// 切换到上个月
 				calendar.changeMonth(-1);
 
 				// 验证日期更新
 				expect(calendar.currentDate().getMonth()).toBe(0); // 1月
-				expect(calendar.monthTitle()).toBe("2024年1月");
+				expect(calendar.monthTitle()).toBe("2024 年 1 月");
 			} finally {
 				dispose();
 			}

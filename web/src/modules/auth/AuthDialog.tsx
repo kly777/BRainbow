@@ -115,7 +115,7 @@ export default function AuthStatus() {
 					/>
 					<Input
 						type="password"
-						placeholder="新密码（至少4位）"
+						placeholder="新密码（至少 4 位）"
 						aria-label="新密码"
 						autocomplete="new-password"
 						value={newPassword()}

@@ -49,22 +49,25 @@ export function fmtHm(ts: string): string {
 	return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-/** 格式化为相对时间 "3天后" / "待复习" */
+/** 格式化为相对时间 "3 天后" / "待复习"
+ *
+ * 数字与汉字之间留空格：这是中文文案的既有约定（《中文文案排版指北》
+ * 「中文與數字之間需要增加空格」），别处也照这个来。 */
 export function fmtRelative(ts: string): string {
 	const d = parseUtc(ts);
 	const diff = (d.getTime() - Date.now()) / 1000;
 	if (diff < 0) return `待复习`;
-	if (diff < 120) return "1分钟";
-	if (diff < 3600) return `${Math.round(diff / 60)}分钟`;
-	if (diff < 86400) return `${Math.round(diff / 3600)}小时`;
-	return `${Math.round(diff / 86400)}天后`;
+	if (diff < 120) return "1 分钟";
+	if (diff < 3600) return `${Math.round(diff / 60)} 分钟`;
+	if (diff < 86400) return `${Math.round(diff / 3600)} 小时`;
+	return `${Math.round(diff / 86400)} 天后`;
 }
 
-/** 秒数 → 人类可读 "3天" / "1分钟" */
+/** 秒数 → 人类可读 "3 天" / "1 分钟" */
 export function fmtInterval(secs: number): string {
-	if (secs < 120) return "1分钟";
-	if (secs < 3600) return `${Math.round(secs / 60)}分钟`;
-	if (secs < 86400) return `${Math.round(secs / 3600)}小时`;
-	if (secs < 2592000) return `${Math.round(secs / 86400)}天`;
-	return `${Math.round(secs / 2592000)}个月`;
+	if (secs < 120) return "1 分钟";
+	if (secs < 3600) return `${Math.round(secs / 60)} 分钟`;
+	if (secs < 86400) return `${Math.round(secs / 3600)} 小时`;
+	if (secs < 2592000) return `${Math.round(secs / 86400)} 天`;
+	return `${Math.round(secs / 2592000)} 个月`;
 }

@@ -96,7 +96,7 @@ describe("validateUploadFile", () => {
 		const msg = validateUploadFile(
 			candidate("icon.svg", "image/svg+xml", 30 * MIB),
 		);
-		expect(msg).toContain("SVG上限 20 MB");
+		expect(msg).toContain("SVG 上限 20 MB");
 		expect(msg).toContain("30 MB");
 	});
 

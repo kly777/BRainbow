@@ -8,7 +8,7 @@
 // 判断原则：**只拦明确超限的**。判不出类型就按 `other` 档（4GB）放行 ——
 // 前端误判会直接把用户的文件挡在门外，漏放最多让后端再拒一次，代价小得多。
 
-import { formatBytes } from "@shared/utils";
+import { cjkSpace, formatBytes } from "@shared/utils";
 import type { FileCategory } from "../api.ts";
 
 const MIB = 1024 * 1024;
@@ -151,7 +151,10 @@ export function validateUploadFile(file: UploadCandidate): string | null {
 	if (file.size === 0) return "空文件（0 字节）无法上传";
 	const tier = uploadTierFor(file);
 	if (file.size > tier.maxBytes) {
-		return `${tier.label}上限 ${formatLimitBytes(tier.maxBytes)}，该文件 ${formatLimitBytes(file.size)}`;
+		// 档位标签里中文（图片/视频）与拉丁（SVG）都有，所以按最终字符串补空格
+		return cjkSpace(
+			`${tier.label}上限 ${formatLimitBytes(tier.maxBytes)}，该文件 ${formatLimitBytes(file.size)}`,
+		);
 	}
 	return null;
 }

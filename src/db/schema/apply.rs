@@ -368,3 +368,31 @@ async fn requires_met(conn: &mut SqliteConnection, decl: &Decl) -> Result<bool, 
     }
     Ok(true)
 }
+
+/// 声明里每张表有哪些列（表名 → 列名集合）。
+///
+/// 在**内存库**里照声明建一遍再读 `pragma_table_xinfo` —— 自检拿它做只读比对，
+/// **不碰真库**（真库那侧走 `declared_columns` 的临时表法，两者列名必然同源）。
+pub(crate) async fn declared_columns_index()
+-> Result<std::collections::BTreeMap<String, std::collections::BTreeSet<String>>, sqlx::Error> {
+    use sqlx::Connection;
+
+    let mut conn = SqliteConnection::connect("sqlite::memory:").await?;
+    let mut index = std::collections::BTreeMap::new();
+    for decl in tables::DECLS
+        .iter()
+        .filter(|decl| decl.kind == DeclKind::Table)
+    {
+        // 内存库照声明建表：外键指向的表可能还没建，SQLite 建表时不校验，无妨
+        sqlx::query(sqlx::AssertSqlSafe(decl.ddl.to_string()))
+            .execute(&mut conn)
+            .await?;
+        let names: Vec<String> = sqlx::query_scalar("SELECT name FROM pragma_table_xinfo(?1)")
+            .bind(decl.name)
+            .fetch_all(&mut conn)
+            .await?;
+        index.insert(decl.name.to_string(), names.into_iter().collect());
+    }
+    conn.close().await?;
+    Ok(index)
+}

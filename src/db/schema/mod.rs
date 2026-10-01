@@ -11,10 +11,8 @@ pub(crate) mod repairs;
 pub(crate) mod tables;
 pub(crate) mod time;
 
-// 对外仍以 `db::schema::XXX` 暴露（`create_tables` 与测试都用这个路径）
-#[cfg(test)]
-pub(crate) use fts::FTS_SPECS;
-pub(crate) use fts::create_fts_indexes;
+// 对外仍以 `db::schema::XXX` 暴露（`create_tables`、`verify` 与测试都用这个路径）
+pub(crate) use fts::{FTS_SPECS, create_fts_indexes};
 pub(crate) use time::{TIME_COLUMNS, create_time_iso_triggers};
 
 use sqlx::{SqliteConnection, SqlitePool};
@@ -101,6 +99,60 @@ impl Decl {
     ) -> Self {
         Self { generated: exprs, ..self }
     }
+}
+
+/// 程序支持的 schema 代次（存进 `PRAGMA user_version`）。
+///
+/// **每次改声明就 +1**。它决定老库要不要跑一次 [`apply::reconcile`]
+/// （`user_version < SCHEMA_VERSION` 才跑），也是 `just rollback` 判断"要不要连数据库
+/// 一起回滚"的依据（xtask 在部署前后各读一次 `user_version`）。
+///
+/// 这是整个 schema 体系里**唯一一个手写的数字** —— 过去要同步维护：基线 DDL、20 个迁移
+/// 文件、模块列表、分发 match、`LATEST_USER_VERSION`、`ADDED_COLUMNS`。
+///
+/// 漏抬的后果是被**自检**兜住的：声明改了、版本号没动时，老库不会去 reconcile，
+/// 而启动自检会报出"声明里有、库里没有的列"（见 `verify::check_schema`）。
+pub const SCHEMA_VERSION: i64 = 21;
+
+/// schema 入口：把库带到当前代次。
+///
+/// - **真正的新库**（`user_version = 0` 且一张表都没有）：[`create_tables`] 直建最新 schema；
+/// - **其余一切**（老库、`user_version = 0` 但有表的历史库、被删过表的库）：
+///   [`apply::reconcile`] 按形状补齐 —— 结构、废弃清理、数据修复一次跑完；
+/// - `user_version` 高于程序支持版本：报错（防止旧程序破坏新库）。
+pub async fn migrate(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    let current: i64 = sqlx::query_scalar("PRAGMA user_version")
+        .fetch_one(pool)
+        .await?;
+    if current > SCHEMA_VERSION {
+        return Err(schema_error(format!(
+            "数据库 schema 版本 {current} 高于程序支持的 {SCHEMA_VERSION}"
+        )));
+    }
+
+    // 新库判定要在 create_tables **之前**做：它自己会建表，建完就分不出"本来就有表"了
+    let is_fresh = current == 0
+        && sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table'")
+            .fetch_one(pool)
+            .await?
+            == 0;
+
+    if is_fresh {
+        // 空库直建 = 最新 schema（结构只有声明一处来源），也就不必重放什么历史。
+        // 这条快路径值得留着：实测后端测试执行 51s → 20s
+        create_tables(pool).await?;
+    } else if current < SCHEMA_VERSION {
+        apply::reconcile(pool, current).await?;
+    }
+
+    if current != SCHEMA_VERSION {
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "PRAGMA user_version = {SCHEMA_VERSION}"
+        )))
+        .execute(pool)
+        .await?;
+    }
+    Ok(())
 }
 
 /// 创建基线 schema（v1）：顺序执行声明，再建时间归一化触发器与 FTS 虚拟表。

@@ -1,189 +1,148 @@
-//! 数据库 schema 与版本化迁移。
+//! 数据库 schema、迁移与自检。
 //!
-//! `migrate` 是唯一的 schema 入口：生产启动与各模块测试共用同一份 DDL 与迁移，
-//! 避免测试建表与生产 schema 漂移。app/modules 都不应自行拼 CREATE TABLE。
+//! `migrate` 是唯一的 schema 入口：生产启动与各模块测试共用同一份声明，
+//! app/modules 都不应自行拼 CREATE TABLE。
+//!
+//! ## 模型：一份声明，三处消费
+//!
+//! 结构只在 [`schema`] 里声明一次（表/索引 DDL、时间列清单、FTS 清单、废弃清单），
+//! 由三个消费者共用：
+//!
+//! - **新库**：`schema::create_tables` 直建（`user_version = 0` 且无表）；
+//! - **老库**：`schema::apply::reconcile` 按**形状**补齐 —— 缺表建、缺列 ALTER、
+//!   废弃的清掉、数据修一遍。它不重放历史，所以"迁移"只是它的一类输入（数据修复）；
+//! - **自检**：[`verify`] 用同一份声明做只读比对（缺表、漂移）。
+//!
+//! "基线 ≡ 基线 + 完整迁移链"那类不变量在这里是**结构性**成立的 —— 结构只有一份来源，
+//! 不再靠测试盯着两份手写 DDL 别漂移。
 //!
 //! ## 模块结构
 //!
-//! - [`schema`] — 基线 DDL（v1 create_tables）
-//! - [`migrations`] — 版本化迁移（v2-v12，各自独立文件）
-//! - [`helpers`] — 迁移共享工具函数
+//! - [`schema`] — 声明与落地（tables / time / fts / legacy / repairs / apply）
 //! - [`connect`] — 连接选项与 PRAGMA 显式声明
 //! - [`verify`] — 启动自检（schema 漂移、外键一致性、完整性）
-//! - [`query`] — 动态查询工具（sanitize_table_name 等）
+//! - `helpers` — 列存在性查询（测试用）
+//!
+//! ## 要改 schema 时
+//!
+//! 1. 在 `schema/tables.rs`（或 `time.rs` / `fts.rs`）改声明 —— **只此一处**；
+//! 2. `schema::SCHEMA_VERSION += 1`（老库据此跑一次 reconcile；xtask 回滚配对也看它）；
+//! 3. 要动数据就再加一条幂等修复（`schema/repairs.rs`）；删东西登记进 `schema/legacy.rs`。
 
 pub mod connect;
-pub mod helpers;
-pub mod migrations;
-pub mod query;
 pub mod schema;
 pub mod verify;
 
-// Re-export 公开 API，保持向后兼容
-pub use migrations::migrate;
+/// 列存在性查询：目前只有测试在用（自检走的是 `verify`）
+#[cfg(test)]
+pub mod helpers;
+
+pub use schema::migrate;
 
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::helpers::column_exists;
-    use super::migrations::{
-        ADDED_COLUMNS, ADDED_COLUMNS_UNDROPPABLE, CHAIN_VERSIONS, LATEST_USER_VERSION,
-        apply_full_chain_for_test, migrate,
-    };
+    use super::schema::tables;
+    use super::schema::{DeclKind, SCHEMA_VERSION, migrate};
     use super::schema::{FTS_SPECS, TIME_COLUMNS, create_tables};
     use sqlx::SqlitePool;
 
-    /// `sqlite_master` 的结构快照（表 / 索引 / 触发器 / 视图 + 各自的 DDL），
-    /// **按创建顺序**（rowid）—— 顺序有意义：AFTER 触发器按创建顺序触发，
-    /// 时间归一化触发器（嵌套 UPDATE）建在 FTS 触发器之前才是对的。
-    async fn schema_dump(pool: &SqlitePool) -> Vec<(String, String, String)> {
-        sqlx::query_as(
-            "SELECT type, name, COALESCE(sql, '') FROM sqlite_master \
-             WHERE name NOT LIKE 'sqlite_%' ORDER BY rowid",
-        )
-        .fetch_all(pool)
-        .await
-        .unwrap()
-    }
+    // 这里原本有两条"两份书写别漂移"的守卫：链的版本号必须连续、基线 ≡ 基线 + 完整迁移链。
+    // 结构现在只有一份来源（`schema` 的声明），两条都成了结构性事实；接替它们的是：
+    // - `reconcile_restores_pre_v18_shape_to_fresh_equivalent`（老形状补齐 ≡ 新建库）
+    // - `upgrade_path_reproduces_column_definitions`（补齐写进库里的列定义 ≡ 新建库）
 
-    /// 链的登记处只有一处（`migration_chain!`）：版本号必须从 v2 起连续递增，
-    /// 且 `LATEST_USER_VERSION` 就是链尾（它由链尾派生）。
+    /// **升级路径 ≡ 新建库**：`reconcile` 补进库里的列定义，必须与新建库里的逐项一致
+    /// （类型 / NOT NULL / 默认值 / 生成列）。
     ///
-    /// 盯的是"漏登记/写错版本号"：`migrate` 按链上的版本号逐个升级，链上缺一版
-    /// 不会被编译器发现 —— 只有这里能拦。
-    #[test]
-    fn chain_versions_are_sorted_and_contiguous() {
-        assert_eq!(
-            CHAIN_VERSIONS.first().copied(),
-            Some(2),
-            "链从 v2 开始（v1 是 create_tables 基线，不在链里）"
-        );
-        assert_eq!(
-            CHAIN_VERSIONS.last().copied(),
-            Some(LATEST_USER_VERSION),
-            "LATEST_USER_VERSION 必须等于链尾：{CHAIN_VERSIONS:?}"
-        );
-        for pair in CHAIN_VERSIONS.windows(2) {
-            assert_eq!(
-                pair[1],
-                pair[0] + 1,
-                "版本号必须连续递增，链是：{CHAIN_VERSIONS:?}"
-            );
-        }
-    }
-
-    /// **基线 ≡ 基线 + 完整迁移链**：`migrate()` 正是靠这条才敢在全新库上跳过迁移链
-    /// （跳过后后端测试执行从 51s 降到 6s）。
+    /// 做法：把声明里的列从库里**逐列删掉**（SQLite 拒绝删的列自然跳过：主键、被
+    /// CHECK/触发器/FTS 索引引用的），让 `migrate()` 真的去 ALTER 补齐，再与"纯基线"库比对。
     ///
-    /// 它同时把 AGENTS.md「新增列/表四步」里的第 ①④ 步变成**可执行**的约束：
-    /// 只加了迁移、忘了往基线补，这条会红 —— 在此之前那条约定是纯人工的，
-    /// 而 v12（FTS）、v13/v14 的列都已经漂移过一轮。
+    /// 清单是**推导**出来的，没有人工登记 —— 过去靠 `ADDED_COLUMNS` 手抄，漏登记就等于
+    /// 漏验（而且那种漏是静默的）。
+    ///
+    /// 来历：迁移里的列定义曾经**从来没被执行过一次**（等价性测试两侧都先跑 create_tables，
+    /// ALTER 全被跳过），于是"迁移写 `DEFAULT 0`、基线写 `DEFAULT 7`"无人发现。
     #[tokio::test]
-    async fn fresh_db_baseline_equals_the_full_migration_chain() {
-        let baseline = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        create_tables(&baseline).await.unwrap();
-
-        let chained = SqlitePool::connect("sqlite::memory:").await.unwrap();
-        // 迁移链假定基线已建（旧库路径就是"先有表、再加列"），所以这侧也要先建基线
-        create_tables(&chained).await.unwrap();
-        apply_full_chain_for_test(&chained).await.unwrap();
-
-        let base = schema_dump(&baseline).await;
-        let chain = schema_dump(&chained).await;
-
-        // ① 结构全等：对象清单 + 各自 DDL（顺序无关）
-        let mut sorted_base = base.clone();
-        let mut sorted_chain = chain.clone();
-        sorted_base.sort();
-        sorted_chain.sort();
-        let names = |dump: &[(String, String, String)]| -> Vec<String> {
-            dump.iter().map(|(t, n, _)| format!("{t} {n}")).collect()
-        };
-        assert_eq!(
-            names(&sorted_base),
-            names(&sorted_chain),
-            "基线与「基线 + 完整迁移链」的对象清单不一致"
-        );
-        assert_eq!(sorted_base, sorted_chain, "同名对象的 DDL 不一致");
-
-        // ② 触发器**创建顺序**也要一致：AFTER 触发器按创建顺序触发，
-        // 而时间归一化触发器（内含 UPDATE）与 FTS 触发器的先后是能撞出
-        // "database disk image is malformed" 的（见 create_tables 里的注释）
-        let trigger_order = |dump: &[(String, String, String)]| -> Vec<String> {
-            dump.iter()
-                .filter(|(t, _, _)| t == "trigger")
-                .map(|(_, n, _)| n.clone())
-                .collect()
-        };
-        assert_eq!(
-            trigger_order(&base),
-            trigger_order(&chain),
-            "触发器的创建顺序不一致（决定 AFTER 触发器的触发顺序）"
-        );
-    }
-
-    /// **升级路径 ≡ 新建库**：迁移链里那些 `ALTER TABLE … ADD COLUMN` 的列定义，
-    /// 在此之前**从来没被执行过一次**（见 [`ADDED_COLUMNS`] 的说明）。
-    ///
-    /// 做法：把迁移加过的列从基线库里删掉（连引用它的索引），`user_version` 退回 1，
-    /// 让 `migrate()` 真的跑 v2…v20，再与「纯基线」的库逐列比对。
-    /// 它把「迁移里写的列定义 == 基线里的列定义」从人工约定变成可执行断言：
-    /// 类型、NOT NULL、默认值、生成列表达式，任何一项漂了都会红。
-    #[tokio::test]
-    async fn upgrade_path_reproduces_migrated_column_definitions() {
+    async fn upgrade_path_reproduces_column_definitions() {
         let fresh = SqlitePool::connect("sqlite::memory:").await.unwrap();
         create_tables(&fresh).await.unwrap();
 
         let upgraded = SqlitePool::connect("sqlite::memory:").await.unwrap();
         create_tables(&upgraded).await.unwrap();
 
-        for (table, column) in ADDED_COLUMNS {
-            drop_column(&upgraded, table, column).await;
+        // 逐列试着删（只碰**声明里的表** —— FTS 影子表不是声明的一部分，删它的列会
+        // 打坏索引，而且那样的形状本来也不会出现）。SQLite 拒绝删的列自动跳过。
+        let mut dropped = 0;
+        for decl in tables::DECLS
+            .iter()
+            .filter(|decl| decl.kind == DeclKind::Table)
+        {
+            let columns: Vec<String> =
+                sqlx::query_scalar("SELECT name FROM pragma_table_xinfo(?1) WHERE pk = 0")
+                    .bind(decl.name)
+                    .fetch_all(&upgraded)
+                    .await
+                    .unwrap();
+            for column in columns {
+                if try_drop_column(&upgraded, decl.name, &column).await {
+                    dropped += 1;
+                }
+            }
         }
+        assert!(
+            dropped > 20,
+            "只删掉 {dropped} 列 —— 这条测试快退化成空转了（检查删列逻辑）"
+        );
 
-        // 例外清单只许装时间列：它们由归一化触发器兜底，默认值文本无关紧要。
-        for (table, column) in ADDED_COLUMNS_UNDROPPABLE {
-            assert!(
-                TIME_COLUMNS
-                    .iter()
-                    .any(|(t, _, cols)| t == table && cols.contains(column)),
-                "{table}.{column} 既不能删列验证、也不在 TIME_COLUMNS 里 —— 没有任何守卫覆盖它"
-            );
-        }
-
-        // v19 之前的老库里 file 是 `file_category` 普通列，v15 的索引 DDL 也引用它。
-        // 补回这一列，链就能在"老形状"上跑完（v19 会把它删掉换成生成列）。
-        sqlx::query("ALTER TABLE file ADD COLUMN file_category TEXT NOT NULL DEFAULT 'other'")
-            .execute(&upgraded)
-            .await
-            .unwrap();
-
-        sqlx::query("PRAGMA user_version = 1")
-            .execute(&upgraded)
-            .await
-            .unwrap();
         migrate(&upgraded).await.unwrap();
 
         let fresh_defs = column_defs(&fresh).await;
         let upgraded_defs = column_defs(&upgraded).await;
         assert!(
             fresh_defs == upgraded_defs,
-            "老库升级后的列定义与新建库不一致（迁移里的 ALTER 与基线漂移了）\n\
-             只有新建库: {:?}\n只有升级库: {:?}",
+            "补齐后的列定义与新建库不一致\n只有新建库: {:?}\n只有升级库: {:?}",
             only_in(&fresh_defs, &upgraded_defs),
             only_in(&upgraded_defs, &fresh_defs)
         );
 
-        // 对象清单（表/索引/触发器/视图）也要齐 —— 删列时连带删掉的索引必须被链重建
+        // 对象清单（表/索引/触发器/视图）也要齐 —— 删列时连带删掉的索引必须被重建
         let fresh_objects = object_names(&fresh).await;
         let upgraded_objects = object_names(&upgraded).await;
         assert!(
             fresh_objects == upgraded_objects,
-            "老库升级后的对象清单与新建库不一致\n\
-             只有新建库: {:?}\n只有升级库: {:?}",
+            "补齐后的对象清单与新建库不一致\n只有新建库: {:?}\n只有升级库: {:?}",
             only_in(&fresh_objects, &upgraded_objects),
             only_in(&upgraded_objects, &fresh_objects)
         );
+    }
+
+    /// 试着删一列（连引用它的显式索引一起删）。
+    ///
+    /// SQLite 拒绝删的行列按 `false` 返回 —— 拒绝是常有的事（主键、CHECK 约束、
+    /// 触发器或 FTS 索引引用的列），测试据此跳过该列。
+    async fn try_drop_column(pool: &SqlitePool, table: &str, column: &str) -> bool {
+        let indexes: Vec<String> = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+            "SELECT il.name FROM pragma_index_list('{table}') il \
+             JOIN pragma_index_info(il.name) ii \
+             WHERE ii.name = '{column}' AND il.origin = 'c'"
+        )))
+        .fetch_all(pool)
+        .await
+        .unwrap();
+        for index in indexes {
+            sqlx::query(sqlx::AssertSqlSafe(format!("DROP INDEX \"{index}\"")))
+                .execute(pool)
+                .await
+                .unwrap();
+        }
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "ALTER TABLE {table} DROP COLUMN {column}"
+        )))
+        .execute(pool)
+        .await
+        .is_ok()
     }
 
     /// 只报差异 —— 两边各 300+ 列，整份打出来没人看得下去。
@@ -191,7 +150,8 @@ mod tests {
         left.iter().filter(|item| !right.contains(item)).collect()
     }
 
-    /// 每列的定义快照（按 `表.列` 排序）。    ///
+    /// 每列的定义快照（按 `表.列` 排序）。
+    ///
     /// **不比列顺序**：老库的列是 `ALTER` 追加在末尾的（真实老库本来就如此），
     /// 而代码一律按列名取值，顺序无关。
     async fn column_defs(pool: &SqlitePool) -> Vec<String> {
@@ -261,12 +221,12 @@ mod tests {
     async fn reconcile_restores_pre_v18_shape_to_fresh_equivalent() {
         let fresh = SqlitePool::connect("sqlite::memory:").await.unwrap();
         migrate(&fresh).await.unwrap();
-        assert_eq!(user_version(&fresh).await, LATEST_USER_VERSION);
+        assert_eq!(user_version(&fresh).await, SCHEMA_VERSION);
 
         let old = SqlitePool::connect("sqlite::memory:").await.unwrap();
         pre_v18_shape(&old).await;
         migrate(&old).await.unwrap();
-        assert_eq!(user_version(&old).await, LATEST_USER_VERSION);
+        assert_eq!(user_version(&old).await, SCHEMA_VERSION);
 
         assert_eq!(
             column_defs(&old).await,
@@ -329,31 +289,6 @@ mod tests {
         }
     }
 
-    /// 删列：SQLite 不允许删被索引引用的列，先把引用它的显式索引删掉
-    /// （reconcile 会把它们重建回来 —— 对象清单断言盯着这一点）。
-    async fn drop_column(pool: &SqlitePool, table: &str, column: &str) {
-        let indexes: Vec<String> = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
-            "SELECT il.name FROM pragma_index_list('{table}') il \
-             JOIN pragma_index_info(il.name) ii \
-             WHERE ii.name = '{column}' AND il.origin = 'c'"
-        )))
-        .fetch_all(pool)
-        .await
-        .unwrap();
-        for index in indexes {
-            sqlx::query(sqlx::AssertSqlSafe(format!("DROP INDEX \"{index}\"")))
-                .execute(pool)
-                .await
-                .unwrap();
-        }
-        sqlx::query(sqlx::AssertSqlSafe(format!(
-            "ALTER TABLE {table} DROP COLUMN {column}"
-        )))
-        .execute(pool)
-        .await
-        .unwrap();
-    }
-
     async fn user_version(pool: &SqlitePool) -> i64 {
         sqlx::query_scalar("PRAGMA user_version")
             .fetch_one(pool)
@@ -387,7 +322,7 @@ mod tests {
     async fn migrate_fresh_db_reaches_latest_version() {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
         migrate(&pool).await.unwrap();
-        assert_eq!(user_version(&pool).await, LATEST_USER_VERSION);
+        assert_eq!(user_version(&pool).await, SCHEMA_VERSION);
         // 新库走 create_tables 后直接具备最新列
         for (table, col) in [
             ("chat_tree", "kind"),
@@ -469,7 +404,7 @@ mod tests {
         .unwrap();
 
         migrate(&pool).await.unwrap();
-        assert_eq!(user_version(&pool).await, LATEST_USER_VERSION);
+        assert_eq!(user_version(&pool).await, SCHEMA_VERSION);
 
         let card_times: (String, String) =
             sqlx::query_as("SELECT created_at, updated_at FROM card WHERE id = 1")
@@ -530,7 +465,7 @@ mod tests {
         .unwrap();
 
         migrate(&pool).await.unwrap();
-        assert_eq!(user_version(&pool).await, LATEST_USER_VERSION);
+        assert_eq!(user_version(&pool).await, SCHEMA_VERSION);
 
         let created: String = sqlx::query_scalar("SELECT created_at FROM card WHERE id = 1")
             .fetch_one(&pool)
@@ -627,7 +562,7 @@ mod tests {
         .unwrap();
 
         migrate(&pool).await.unwrap();
-        assert_eq!(user_version(&pool).await, LATEST_USER_VERSION);
+        assert_eq!(user_version(&pool).await, SCHEMA_VERSION);
 
         let (created, updated): (String, String) =
             sqlx::query_as("SELECT created_at, updated_at FROM file WHERE stored_id = 's1'")
@@ -691,7 +626,7 @@ mod tests {
 
         migrate(&pool).await.unwrap();
 
-        assert_eq!(user_version(&pool).await, LATEST_USER_VERSION);
+        assert_eq!(user_version(&pool).await, SCHEMA_VERSION);
         for (table, col) in [
             ("chat_tree", "kind"),
             ("chat_node", "reasoning"),
@@ -758,7 +693,7 @@ mod tests {
         }
 
         migrate(&pool).await.unwrap();
-        assert_eq!(user_version(&pool).await, LATEST_USER_VERSION);
+        assert_eq!(user_version(&pool).await, SCHEMA_VERSION);
 
         // 最早一条保留哈希，重复的那条被置 NULL（数据不丢）
         let first: Option<String> =
@@ -800,7 +735,7 @@ mod tests {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
         migrate(&pool).await.unwrap();
         migrate(&pool).await.unwrap();
-        assert_eq!(user_version(&pool).await, LATEST_USER_VERSION);
+        assert_eq!(user_version(&pool).await, SCHEMA_VERSION);
     }
 
     #[tokio::test]
@@ -860,7 +795,7 @@ mod tests {
         legacy_db_with_orphans(&pool).await;
 
         migrate(&pool).await.unwrap();
-        assert_eq!(user_version(&pool).await, LATEST_USER_VERSION);
+        assert_eq!(user_version(&pool).await, SCHEMA_VERSION);
 
         for table in [
             "card",
@@ -929,7 +864,7 @@ mod tests {
 
         migrate(&pool).await.unwrap();
 
-        assert_eq!(user_version(&pool).await, LATEST_USER_VERSION);
+        assert_eq!(user_version(&pool).await, SCHEMA_VERSION);
         assert_eq!(null_user_id_count(&pool, "card").await, 1);
     }
 
@@ -1002,7 +937,7 @@ mod tests {
         }
 
         migrate(&pool).await.unwrap();
-        assert_eq!(user_version(&pool).await, LATEST_USER_VERSION);
+        assert_eq!(user_version(&pool).await, SCHEMA_VERSION);
 
         // 存量文件保持公开（默认 0）
         let private: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM file WHERE is_private = 0")

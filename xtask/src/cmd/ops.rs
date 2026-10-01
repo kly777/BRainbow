@@ -80,7 +80,7 @@ pub fn run_rollback(
 
     // 只回代码是有前提的：现网库的 schema 不能比这版代码新。对应的部署跑过
     // 迁移时恰好就是"旧代码 + 新库"，而库版本高于程序支持版本会拒绝启动
-    // （见 src/db/migrations）—— 那样恢复完也起不来，得连数据库一起回。
+    // （见 src/db/schema 的 SCHEMA_VERSION）—— 那样恢复完也起不来，得连数据库一起回。
     if pair.code.is_some() && pair.db.is_none() {
         ui::warn(
             "只回代码：若对应的部署跑过数据库迁移，旧二进制会拒绝启动；\

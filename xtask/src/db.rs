@@ -111,10 +111,10 @@ impl<'a> Db<'a> {
         }
     }
 
-    /// 远端库的 `PRAGMA user_version`（schema 版本）。
+    /// 远端库的 `PRAGMA user_version`（schema 代次）。
     ///
     /// 部署用它判断"这次动过 schema 没有"：动过的话，回滚代码必须连数据库一起回
-    /// —— 库版本高于程序支持版本时启动会直接失败（见 `db::migrations`），
+    /// —— 库版本高于程序支持版本时启动会直接失败（见 `db::schema::SCHEMA_VERSION`），
     /// 于是"旧代码 + 新库"这个组合必然起不来。
     ///
     /// 远端没有 sqlite3、或输出认不出来时返回 `None`：调用方按"动过"处理。

@@ -11,68 +11,34 @@ use std::collections::BTreeSet;
 
 use sqlx::SqlitePool;
 
-use super::migrations::LATEST_USER_VERSION;
+use super::schema::{FTS_SPECS, SCHEMA_VERSION, tables};
 
-/// 程序期望存在的表：基线 DDL + 各版本迁移新增 + FTS5 虚拟表。
+/// 程序期望存在的表：**从声明派生**（表声明 + FTS 虚拟表），不再手抄。
 ///
-/// 新增表时同步更新这里（有测试断言"库里的业务表都在清单中"兜底）。
-pub const REQUIRED_TABLES: &[&str] = &[
-    // ── 基线（v1）──
-    "ai_settings",
-    "api_key",
-    "app_settings",
-    "articles",
-    "bookmark",
-    "bookmark_tag",
-    "bookmark_tag_rel",
-    "card",
-    "chat_node",
-    "chat_tree",
-    "chunk",
-    "conv_titles",
-    "file",
-    "file_meta",
-    "file_tag",
-    "file_tag_rel",
-    "mem",
-    "mem_mnemonic",
-    "mem_prerequisite",
-    "mem_tag",
-    "onto",
-    "prompt_preset",
-    "reading_article",
-    "reading_article_word",
-    "reading_user_word",
-    "revlog",
-    "signifier_signified",
-    "tag",
-    "task",
-    "task_decomposition",
-    "task_dependency",
-    "task_time_allocation",
-    "text_note",
-    "time_window",
-    "user",
-    // ── FTS5 虚拟表（v12 建立，v14 改 trigram）──
-    "articles_fts",
-    "bookmark_fts",
-    "card_fts",
-    "chat_node_fts",
-    "chunk_fts",
-    "conv_titles_fts",
-    "onto_fts",
-    "reading_article_fts",
-    "task_fts",
-    "text_note_fts",
-];
+/// 过去这里是 45 行手抄清单，靠一条"库里的表都登记了吗"的测试兜底；现在清单就是声明
+/// 本身，那条测试改成盯"库里有没有声明之外的表"（见 `required_tables_cover_all_business_tables`）。
+pub fn required_tables() -> Vec<&'static str> {
+    let mut names: Vec<&'static str> = tables::DECLS
+        .iter()
+        .filter(|decl| decl.kind == super::schema::DeclKind::Table)
+        .map(|decl| decl.name)
+        .collect();
+    names.extend(FTS_SPECS.iter().map(|(fts, ..)| *fts));
+    names.sort_unstable();
+    names
+}
 
 /// schema 自检结果
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SchemaCheck {
     pub user_version: i64,
     pub expected_version: i64,
-    /// 缺失的表（相对 [`REQUIRED_TABLES`]）
+    /// 缺失的表（相对 [`required_tables`]）
     pub missing_tables: Vec<String>,
+    /// 声明里有、库里没有的列（`表.列`）—— 与缺表同级：这类库跑下去必然出错
+    pub missing_columns: Vec<String>,
+    /// 库里多出来、声明里没有的列（`表.列`）—— 漂移，报出来但不致命
+    pub extra_columns: Vec<String>,
     /// `PRAGMA foreign_key_check` 的违规行数
     pub foreign_key_violations: usize,
     /// 自检本身失败的原因（查询出错等）
@@ -83,6 +49,7 @@ impl SchemaCheck {
     pub fn is_ok(&self) -> bool {
         self.error.is_none()
             && self.missing_tables.is_empty()
+            && self.missing_columns.is_empty()
             && self.foreign_key_violations == 0
             && self.user_version == self.expected_version
     }
@@ -96,22 +63,39 @@ impl SchemaCheck {
             "schema 版本 {}/{}",
             self.user_version, self.expected_version
         )];
-        if self.missing_tables.is_empty() {
-            parts.push("表齐全".into());
+        if self.missing_tables.is_empty() && self.missing_columns.is_empty() {
+            parts.push("表与列齐全".into());
         } else {
-            parts.push(format!("缺失表: {}", self.missing_tables.join(", ")));
+            if !self.missing_tables.is_empty() {
+                parts.push(format!("缺失表: {}", self.missing_tables.join(", ")));
+            }
+            if !self.missing_columns.is_empty() {
+                parts.push(format!("缺失列: {}", self.missing_columns.join(", ")));
+            }
+        }
+        if !self.extra_columns.is_empty() {
+            parts.push(format!(
+                "声明之外的列（漂移）: {}",
+                self.extra_columns.join(", ")
+            ));
         }
         parts.push(format!("外键违规 {} 行", self.foreign_key_violations));
         parts.join("；")
     }
 }
 
-/// 启动用轻量自检：版本号 + 必需表清单 + 外键一致性（毫秒级，可同步调用）。
+/// 启动用轻量自检：版本号 + 表与列的形状 + 外键一致性（毫秒级，可同步调用）。
+///
+/// 列比对用的是**声明**（在内存库里照声明建一遍再读 `pragma_table_xinfo`），所以
+/// "库在声明之外还多几列"也能报出来 —— 这正是 `SCHEMA_VERSION` 漏抬时的症状：
+/// 声明改了、版本号没动，老库就不会去补齐，启动自检在这里拦下。
 pub async fn check_schema(pool: &SqlitePool) -> SchemaCheck {
     let mut check = SchemaCheck {
         user_version: -1,
-        expected_version: LATEST_USER_VERSION,
+        expected_version: SCHEMA_VERSION,
         missing_tables: Vec::new(),
+        missing_columns: Vec::new(),
+        extra_columns: Vec::new(),
         foreign_key_violations: 0,
         error: None,
     };
@@ -140,11 +124,42 @@ pub async fn check_schema(pool: &SqlitePool) -> SchemaCheck {
         }
     };
     let existing: BTreeSet<String> = existing.into_iter().collect();
-    check.missing_tables = REQUIRED_TABLES
-        .iter()
-        .filter(|name| !existing.contains(**name))
-        .map(|name| (*name).to_string())
+    check.missing_tables = required_tables()
+        .into_iter()
+        .filter(|name| !existing.contains(*name))
+        .map(str::to_string)
         .collect();
+
+    // 列比对：声明（内存库照声明建一遍）vs 实际。只比表已存在的那些 —— 缺表已经报过了
+    match super::schema::apply::declared_columns_index().await {
+        Ok(declared) => {
+            for (table, wanted) in &declared {
+                if !existing.contains(table) {
+                    continue;
+                }
+                let actual: BTreeSet<String> = match sqlx::query_scalar(
+                    "SELECT name FROM pragma_table_xinfo(?1)",
+                )
+                .bind(table)
+                .fetch_all(pool)
+                .await
+                {
+                    Ok(names) => names.into_iter().collect(),
+                    Err(e) => {
+                        check.error = Some(format!("读取 {table} 的列失败: {e}"));
+                        return check;
+                    }
+                };
+                for column in wanted.difference(&actual) {
+                    check.missing_columns.push(format!("{table}.{column}"));
+                }
+                for column in actual.difference(wanted) {
+                    check.extra_columns.push(format!("{table}.{column}"));
+                }
+            }
+        }
+        Err(e) => check.error = Some(format!("构建声明镜像失败: {e}")),
+    }
 
     match sqlx::query("PRAGMA foreign_key_check")
         .fetch_all(pool)
@@ -306,7 +321,7 @@ mod tests {
         let pool = setup().await;
         let check = check_schema(&pool).await;
         assert!(check.is_ok(), "{}", check.summary());
-        assert_eq!(check.user_version, LATEST_USER_VERSION);
+        assert_eq!(check.user_version, SCHEMA_VERSION);
         assert!(check.missing_tables.is_empty());
         assert_eq!(check.foreign_key_violations, 0);
     }
@@ -342,8 +357,45 @@ mod tests {
         let check = check_schema(&pool).await;
         assert!(!check.is_ok());
         assert_eq!(check.missing_tables, vec!["file_tag".to_string()]);
-        assert_eq!(check.user_version, LATEST_USER_VERSION);
+        assert_eq!(check.user_version, SCHEMA_VERSION);
         assert!(check.summary().contains("缺失表"));
+    }
+
+    /// **漏抬 `SCHEMA_VERSION` 的症状**：声明里有、库里没有的列 —— 老库不会去补齐，
+    /// 启动自检必须拦下（过去这类漂移只会在某个查询上炸出来）
+    #[tokio::test]
+    async fn detects_missing_column_while_version_unchanged() {
+        let pool = setup().await;
+        // 模拟"声明加了列、版本号没动"：库里少一列（先删引用它的索引，SQLite 才让删列）
+        sqlx::query("DROP INDEX idx_file_visibility")
+            .execute(&pool)
+            .await
+            .unwrap();
+        sqlx::query("ALTER TABLE file DROP COLUMN is_private")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let check = check_schema(&pool).await;
+        assert!(!check.is_ok());
+        assert_eq!(check.user_version, SCHEMA_VERSION, "版本号没变，漂移是唯一线索");
+        assert_eq!(check.missing_columns, vec!["file.is_private".to_string()]);
+        assert!(check.summary().contains("缺失列"));
+    }
+
+    /// 声明之外的列（漂移）报出来但不致命 —— reconcile 也只删登记过的那几个
+    #[tokio::test]
+    async fn reports_extra_column_without_failing() {
+        let pool = setup().await;
+        sqlx::query("ALTER TABLE card ADD COLUMN mystery TEXT")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        let check = check_schema(&pool).await;
+        assert!(check.is_ok(), "多余的列不该让自检失败：{}", check.summary());
+        assert_eq!(check.extra_columns, vec!["card.mystery".to_string()]);
+        assert!(check.summary().contains("声明之外的列"));
     }
 
     /// 外键违规检测：绕过外键约束插入孤儿行后必须被报出来
@@ -373,35 +425,37 @@ mod tests {
         assert!(check.summary().contains("外键违规 2 行"));
     }
 
-    /// 清单兜底：库里的业务表（排除 FTS 影子表）都必须登记在 REQUIRED_TABLES，
-    /// 否则将来新增表却忘记更新清单时，自检会漏检
+    /// 清单兜底（方向与过去相反）：库里的表都必须在**声明**里 —— 清单现在从声明派生，
+    /// 所以这条盯的是"有没有表绕过声明被建出来"（迁移里手写 DDL、外部工具建表这类）。
+    /// FTS 影子表按 `<fts 表名> + 后缀` 排除。
     #[tokio::test]
     async fn required_tables_cover_all_business_tables() {
         let pool = setup().await;
-        let tables: Vec<String> =
+        let names: Vec<String> =
             sqlx::query_scalar("SELECT name FROM sqlite_master WHERE type = 'table'")
                 .fetch_all(&pool)
                 .await
                 .unwrap();
 
+        let required = required_tables();
         let shadow_suffixes = ["_data", "_idx", "_content", "_docsize", "_config"];
-        let unlisted: Vec<&String> = tables
+        let unlisted: Vec<&String> = names
             .iter()
             .filter(|name| !name.starts_with("sqlite_"))
             .filter(|name| {
                 // FTS5 影子表：<fts 表名> + 后缀
-                !REQUIRED_TABLES.iter().any(|fts| {
+                !required.iter().any(|fts| {
                     shadow_suffixes
                         .iter()
                         .any(|s| name.as_str() == format!("{fts}{s}"))
                 })
             })
-            .filter(|name| !REQUIRED_TABLES.contains(&name.as_str()))
+            .filter(|name| !required.contains(&name.as_str()))
             .collect();
 
         assert!(
             unlisted.is_empty(),
-            "这些表没有登记进 REQUIRED_TABLES: {unlisted:?}"
+            "这些表不在 schema 声明里（绕过声明建的表？）: {unlisted:?}"
         );
     }
 }

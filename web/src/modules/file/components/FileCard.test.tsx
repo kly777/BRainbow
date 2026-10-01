@@ -158,6 +158,20 @@ describe("FileCard", () => {
 		));
 		expect(host.textContent).toContain("文件缺失");
 	});
+
+	it("搜索命中正文时补一行上下文，没命中就不显示", () => {
+		const hit = mount(() => (
+			<FileCard
+				{...cardProps({
+					item: item({ match_snippet: "会上定了三件事：报销、排期" }),
+				})}
+			/>
+		));
+		expect(hit.textContent).toContain("会上定了三件事：报销、排期");
+
+		const plain = mount(() => <FileCard {...cardProps()} />);
+		expect(plain.textContent).not.toContain("会上定了三件事");
+	});
 });
 
 describe("FileRow", () => {
@@ -196,5 +210,14 @@ describe("FileRow", () => {
 			/>
 		));
 		expect(host.querySelector("input[type='checkbox']")).toBeNull();
+	});
+
+	it("搜索命中正文时补一行上下文", () => {
+		const host = mount(() => (
+			<FileRow
+				{...rowProps({ item: item({ match_snippet: "会上定了三件事：报销" }) })}
+			/>
+		));
+		expect(host.textContent).toContain("会上定了三件事：报销");
 	});
 });

@@ -474,6 +474,24 @@
 	color: var(--t-color-accent);
 }
 
+/* 搜索命中**正文**的上下文片段（卡片与列表行共用）：
+   单行截断 —— 只回答"为什么搜到它"，抽出的全文不出接口、也不在列表里展示 */
+.match-snippet {
+	margin: 0;
+	font-size: var(--text-xs);
+	line-height: 1.4;
+	color: var(--t-color-ink-muted);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.match-snippet-label {
+	font-weight: 600;
+	color: var(--t-color-accent);
+	margin-right: var(--space-2xs);
+}
+
 /* 列表行的行内缺失标记 */
 .missing-tag {
 	color: var(--t-color-danger);

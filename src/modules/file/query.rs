@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -9,7 +10,7 @@ use super::repository::{FileRepository, FileSearchHit};
 use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
-use crate::shared::search::{SearchHit, SearchPort, SearchTarget, normalize_search};
+use crate::shared::search::{SearchHit, SearchPort, SearchTarget, normalize_search, snippet};
 
 /// 可见性判定：公开文件人人可见；私密文件仅上传者与 admin。
 /// `viewer` 为 `None`（未认证）时只能看到公开文件。
@@ -215,8 +216,10 @@ impl FileQueryService {
         let offset = pagination.offset();
         let limit = pagination.limit();
 
-        // 根据查询条件获取总数和列表
+        // 根据查询条件获取总数和列表；`snippets` 只在搜索模式下有内容，
+        // 装的是"正文命中"那几行的上下文片段（`file_id` → 片段）
         let name_query = query.q.as_deref().filter(|s| !s.trim().is_empty());
+        let mut snippets: HashMap<i64, String> = HashMap::new();
         let (total, rows) = if let Some(tag_name) = &query.tag {
             // 标签筛选只走认证端点（guest 没有这一档），因此这里要一个确定的 actor
             let actor = viewer.ok_or_else(|| ServiceError::InvalidInput("需要登录".into()))?;
@@ -232,18 +235,27 @@ impl FileQueryService {
                 .map_err(ServiceError::Db)?;
             (total, rows)
         } else if let Some(q) = name_query {
-            // 搜索模式：按文件名模糊匹配
+            // 搜索模式：文件名或**正文**模糊匹配（正文是上传时 / 启动回填抽出的纯文本）
             let total = self
                 .repo
-                .count_by_name(q, viewer)
+                .count_by_name_or_text(q, viewer)
                 .await
                 .map_err(ServiceError::Db)?;
-            let rows = self
+            let hits = self
                 .repo
-                .search_by_name(q, viewer, limit, offset, query.sort)
+                .search_by_name_or_text(q, viewer, limit, offset, query.sort)
                 .await
                 .map_err(ServiceError::Db)?;
-            (total, rows)
+            for hit in &hits {
+                // 文件名命中的行 `text_hit` 是 NULL：标题已经说明白了，不必再给片段
+                if let Some(text) = &hit.text_hit {
+                    snippets.insert(hit.file.id, snippet(text, q));
+                }
+            }
+            (
+                total,
+                hits.into_iter().map(|hit| hit.file).collect::<Vec<_>>(),
+            )
         } else {
             let total = self
                 .repo
@@ -291,6 +303,7 @@ impl FileQueryService {
                 updated_at: row.updated_at,
                 missing: missing_flags.next().unwrap_or(false),
                 is_private: row.is_private != 0,
+                match_snippet: snippets.remove(&row.id),
             });
         }
 
@@ -317,8 +330,12 @@ impl FileQueryService {
 // ── 全局搜索端口 ──
 
 /// 搜索结果片段：文件名已经作为标题展示，片段给出补充信息 ——
-/// 仅标签命中时展示命中的标签，否则展示「分类 · 大小」规格。
-fn search_snippet(hit: &FileSearchHit) -> String {
+/// **正文命中最优先**（原文上下文最能说明"为什么搜到它"），其次是命中的标签 /
+/// 元信息键，都没有才展示「分类 · 大小」规格。
+fn search_snippet(hit: &FileSearchHit, kw: &str) -> String {
+    if let Some(text) = &hit.text_content {
+        return snippet(text, kw);
+    }
     if hit.name_hit != 0 {
         if let Some(tag) = hit.matched_tag.as_deref() {
             return format!("#{tag}");
@@ -350,16 +367,18 @@ fn human_size(bytes: i64) -> String {
 
 #[async_trait]
 impl SearchPort for FileQueryService {
-    /// 全局搜索：文件名或标签名命中；文件名命中排在标签命中之前（打分更高）。
+    /// 全局搜索：文件名、标签名、元信息值或**正文**命中；文件名命中排在前面
+    /// （正文命中又排在标签/元信息前，打分见下）。
     ///
-    /// 文件内容不入库，因此不搜正文 —— 但文件名通常带扩展名（搜 "pdf" 能筛出 PDF）。
+    /// 正文是上传时 / 启动回填抽出的纯文本（`file.text_content`，见 `extract.rs`）——
+    /// 文件名通常带扩展名，所以搜 "pdf" 仍然能筛出 PDF。
     async fn search(
         &self,
         actor: &Actor,
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
-        let Some((like, _kw, cap)) = normalize_search(q, limit) else {
+        let Some((like, kw, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
         };
         let rows = self
@@ -374,11 +393,16 @@ impl SearchPort for FileQueryService {
                 kind: "file".into(),
                 id: row.id,
                 title: row.original_name.clone(),
-                snippet: search_snippet(&row),
+                snippet: search_snippet(&row, kw),
                 target: SearchTarget::File {
                     stored_id: row.stored_id.clone(),
                 },
-                score: if row.name_hit == 0 { 1.0 } else { 0.5 },
+                // 文件名 > 正文 > 标签/元信息：越具体的命中越靠前
+                score: match (row.name_hit, row.content_hit) {
+                    (0, _) => 1.0,
+                    (_, 1) => 0.6,
+                    _ => 0.5,
+                },
             })
             .collect())
     }
@@ -769,6 +793,68 @@ mod tests {
         assert_eq!(tags[1].name, "八的标签");
     }
 
+    /// 列表搜索命中正文：文件名不含关键字也要搜出来，并带上正文上下文片段
+    #[tokio::test]
+    async fn list_search_matches_file_content_and_adds_snippet() {
+        let (query, repo, _pool) = setup().await;
+        let f1 = seed(&repo).await;
+        repo.set_text_content(f1, "本季度的重点是回款与库存周转")
+            .await
+            .unwrap();
+
+        let search = |q: &str| {
+            let query = query.clone();
+            let q = q.to_string();
+            async move {
+                query
+                    .list(
+                        FileListQuery {
+                            page: None,
+                            page_size: None,
+                            category: None,
+                            tag: None,
+                            q: Some(q),
+                            sort: SortOrder::default(),
+                        },
+                        Some(&Actor::user(7)),
+                    )
+                    .await
+                    .unwrap()
+            }
+        };
+
+        // 只在正文里命中：total 记得上，片段给出关键字前后文
+        let by_content = search("回款").await;
+        assert_eq!(by_content.total, 1);
+        assert_eq!(by_content.items[0].stored_id, "doc-1");
+        assert_eq!(
+            by_content.items[0].match_snippet.as_deref(),
+            Some("本季度的重点是回款与库存周转")
+        );
+
+        // 文件名与正文同时命中：标题已经说明白了，不再给片段
+        let by_name = search("季度").await;
+        assert_eq!(by_name.total, 1);
+        assert_eq!(by_name.items[0].match_snippet, None);
+
+        // 没搜的时候（普通列表）不该有片段
+        let plain = query
+            .list(
+                FileListQuery {
+                    page: None,
+                    page_size: None,
+                    category: None,
+                    tag: None,
+                    q: None,
+                    sort: SortOrder::default(),
+                },
+                Some(&Actor::user(7)),
+            )
+            .await
+            .unwrap();
+        assert!(plain.items.iter().all(|f| f.match_snippet.is_none()));
+    }
+
     // ── 全局搜索端口 ──
 
     #[tokio::test]
@@ -796,6 +882,27 @@ mod tests {
         assert_eq!(hits[1].title, "风景.png");
         assert_eq!(hits[1].snippet, "#报告配图");
         assert!(hits[0].score > hits[1].score);
+    }
+
+    /// 全局搜索命中正文：片段给的是正文上下文（而不是「分类 · 大小」），
+    /// 文件名命中的行排在正文命中之前
+    #[tokio::test]
+    async fn search_port_matches_content_with_context_snippet() {
+        let (query, repo, _pool) = setup().await;
+        let doc = seed(&repo).await;
+        repo.set_text_content(doc, "会上定了三件事：报销、排期、调休")
+            .await
+            .unwrap();
+
+        let hits = query.search(&Actor::user(7), "调休", 5).await.unwrap();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].title, "季度报告.md");
+        assert_eq!(hits[0].snippet, "会上定了三件事：报销、排期、调休");
+        assert!(hits[0].score > 0.5, "正文命中要排在标签命中之前");
+
+        // 文件名与正文同时命中时，片段仍走规格（标题已经命中，位置留给别的信息）
+        let hits = query.search(&Actor::user(7), "报告", 5).await.unwrap();
+        assert_eq!(hits[0].snippet, "文档 · 100 B");
     }
 
     #[tokio::test]
@@ -842,7 +949,7 @@ mod tests {
     }
 
     #[test]
-    fn search_snippet_shows_tag_only_for_tag_hits() {
+    fn search_snippet_prefers_content_then_tag() {
         let name_hit = FileSearchHit {
             id: 1,
             stored_id: "abc123".into(),
@@ -852,15 +959,28 @@ mod tests {
             matched_tag: Some("设计".into()),
             matched_meta: None,
             name_hit: 0,
+            content_hit: 0,
+            text_content: None,
         };
         // 文件名命中：给出「分类 · 大小」
-        assert_eq!(search_snippet(&name_hit), "图片 · 2.0 KB");
+        assert_eq!(search_snippet(&name_hit, "设计"), "图片 · 2.0 KB");
         // 仅标签命中：给出命中的标签
         let tag_hit = FileSearchHit {
             name_hit: 1,
             ..name_hit
         };
-        assert_eq!(search_snippet(&tag_hit), "#设计");
+        assert_eq!(search_snippet(&tag_hit, "设计"), "#设计");
+        // 正文命中：给出关键字前后文（比标签更能说明"为什么搜到它"）
+        let content_hit = FileSearchHit {
+            name_hit: 1,
+            content_hit: 1,
+            text_content: Some("会上定了三件事：报销、排期、调休".into()),
+            ..tag_hit
+        };
+        assert_eq!(
+            search_snippet(&content_hit, "调休"),
+            "会上定了三件事：报销、排期、调休"
+        );
     }
 
     /// 可见性判定（详情/搜索用）与访问判定（内容路由用）：四态 × 公开/私密的矩阵。

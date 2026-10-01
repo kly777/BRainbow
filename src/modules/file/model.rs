@@ -130,6 +130,9 @@ pub struct FileSummary {
     pub missing: bool,
     /// 私密文件：仅上传者可见（见 [`File::is_private`]）
     pub is_private: bool,
+    /// 搜索时命中**正文**的上下文片段（只有"文件名没命中、正文命中"才有）。
+    /// 文件名已经作为标题展示，这个字段回答"这个文件为什么被搜出来"
+    pub match_snippet: Option<String>,
 }
 
 /// 更新文件请求

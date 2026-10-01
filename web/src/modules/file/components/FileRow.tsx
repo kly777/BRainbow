@@ -100,6 +100,15 @@ const FileRow: Component<{
 					<FileTags tags={props.item.tags} />
 				</Show>
 			</div>
+			{/* 搜索命中正文时补一行上下文（名字命中不会有它，见后端 match_snippet） */}
+			<Show when={props.item.match_snippet}>
+				{(snippet) => (
+					<p class={styles.matchSnippet}>
+						<span class={styles.matchSnippetLabel}>正文</span>
+						{snippet()}
+					</p>
+				)}
+			</Show>
 		</div>
 
 		<FileItemActions

@@ -29,6 +29,16 @@ export default function FileCardView(props: {
 					</p>
 				</Show>
 				<FileMeta item={props.item} />
+				{/* 搜索命中正文时补一行上下文：回答"这个文件为什么被搜出来"。
+				    名字命中不会出现它（标题已经说明白了），见后端 match_snippet */}
+				<Show when={props.item.match_snippet}>
+					{(snippet) => (
+						<p class={styles.matchSnippet}>
+							<span class={styles.matchSnippetLabel}>正文</span>
+							{snippet()}
+						</p>
+					)}
+				</Show>
 				<Show when={props.item.tags.length > 0}>
 					<div class={styles.tags}>
 						<FileTags tags={props.item.tags} />

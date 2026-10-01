@@ -197,8 +197,13 @@ pub struct Sheet {
 
 // ── .docx ──
 
-/// 解析 `.docx` 正文。失败给可读原因（调用方直接给用户看）
-pub fn parse_docx(bytes: &[u8]) -> Result<DocxPreview, String> {
+/// docx 的两块输入：(正文 XML, 样式表, 正文 XML 是否因上限被截断)。
+///
+/// 预览与正文抽取（搜索用，见 `extract.rs`）共用这一份读法 —— 各自解一遍 zip 的话，
+/// "哪个条目的 XML 算正文"（以及解压上限）就会有两个答案。
+fn read_docx_parts(
+    bytes: &[u8],
+) -> Result<(String, std::collections::HashMap<String, u8>, bool), String> {
     let mut zip = zip::ZipArchive::new(Cursor::new(bytes))
         .map_err(|e| format!("不是有效的 docx（打不开压缩包）：{e}"))?;
     let Some((raw, truncated)) = read_zip_text(&mut zip, "word/document.xml") else {
@@ -208,11 +213,26 @@ pub fn parse_docx(bytes: &[u8]) -> Result<DocxPreview, String> {
     let styles = read_zip_text(&mut zip, "word/styles.xml")
         .map(|(xml, _)| parse_style_headings(&xml))
         .unwrap_or_default();
+    Ok((raw, styles, truncated))
+}
+
+/// 解析 `.docx` 正文。失败给可读原因（调用方直接给用户看）
+pub fn parse_docx(bytes: &[u8]) -> Result<DocxPreview, String> {
+    let (raw, styles, truncated) = read_docx_parts(bytes)?;
     // 不因为个别坏字节整篇失败：坏字节换成替换字符，能读的部分照读
     Ok(DocxPreview {
         html: docx_xml_to_html(&raw, &styles),
         truncated,
     })
+}
+
+/// 抽 `.docx` 正文的纯文本（搜索用，`budget` 是字节上限）。
+///
+/// 与预览共用同一套解析（同一个 [`DocParser`]），只是渲染成文字：标题层级、加粗
+/// 这些格式在搜索里没有意义，段落与表格结构降级成换行与制表符。
+pub fn docx_text(bytes: &[u8], budget: usize) -> Result<String, String> {
+    let (raw, styles, _) = read_docx_parts(bytes)?;
+    Ok(docx_xml_to_text(&raw, &styles, budget))
 }
 
 /// 读一个 zip 条目为文本，返回 (内容, 是否因为超过上限被截断)。
@@ -371,6 +391,23 @@ enum Block {
 /// 这类一律不进输出 —— 预览要的是"这文档写了什么"，而每一个额外特性都是一处
 /// 需要防注入的面。
 fn docx_xml_to_html(xml: &str, styles: &std::collections::HashMap<String, u8>) -> String {
+    parse_docx_blocks(xml, styles).render()
+}
+
+/// 正文 XML → 纯文本（搜索用，`budget` 是字节上限）
+fn docx_xml_to_text(
+    xml: &str,
+    styles: &std::collections::HashMap<String, u8>,
+    budget: usize,
+) -> String {
+    parse_docx_blocks(xml, styles).render_text(budget)
+}
+
+/// 正文 XML → 块序列。HTML 与纯文本两种渲染共用这一遍解析。
+fn parse_docx_blocks<'a>(
+    xml: &str,
+    styles: &'a std::collections::HashMap<String, u8>,
+) -> DocParser<'a> {
     use quick_xml::events::Event;
 
     let mut doc = DocParser::new(styles);
@@ -410,7 +447,7 @@ fn docx_xml_to_html(xml: &str, styles: &std::collections::HashMap<String, u8>) -
             _ => {}
         }
     }
-    doc.render()
+    doc
 }
 
 /// 取标签的本地名（忽略 `w:` 前缀）
@@ -600,6 +637,49 @@ impl<'a> DocParser<'a> {
         }
         html
     }
+
+    /// 块序列 → 纯文本（搜索用）：段落一行，表格一行一行、单元格用制表符分隔。
+    ///
+    /// `budget` 是字节上限：到量就停（超出的部分在调用方按字符边界再截一次）。
+    fn render_text(&self, budget: usize) -> String {
+        let mut out = String::new();
+        for block in &self.blocks {
+            if out.len() >= budget {
+                break;
+            }
+            match block {
+                Block::Para(p) => {
+                    push_para_text(&mut out, p);
+                    out.push('\n');
+                }
+                Block::Table(rows) => {
+                    for row in rows {
+                        for (index, cell) in row.iter().enumerate() {
+                            if index > 0 {
+                                out.push('\t');
+                            }
+                            for para in cell {
+                                push_para_text(&mut out, para);
+                            }
+                        }
+                        out.push('\n');
+                    }
+                }
+            }
+        }
+        out
+    }
+}
+
+/// 段落 → 文本（就地追加，不加分隔符 —— 分隔由调用方按"段落还是单元格"决定）。
+/// 与 [`render_para`] 同一判据：没有实际文字的空段落直接跳过
+fn push_para_text(out: &mut String, para: &Para) {
+    if para.runs.iter().all(|r| r.text.trim().is_empty()) {
+        return;
+    }
+    for run in &para.runs {
+        out.push_str(&run.text);
+    }
 }
 
 /// 段落 → HTML。没有实际文字的空段落直接跳过（Word 里到处是空的占位段）
@@ -727,6 +807,45 @@ pub fn parse_book(bytes: &[u8], cursor: Option<&cursor::Cursor>) -> Result<Sheet
     })
 }
 
+/// 抽表格（`.xlsx` / `.xls`）里所有工作表的文字（搜索用，`budget` 是字节上限）。
+///
+/// 与 [`parse_book`] 的口径**刻意不同**：预览每张表只取前 `MAX_ROWS` 行（还带游标
+/// 分页），而搜索要回答的是"整张表里有没有这个词" —— 所以这里从第一行走到最后
+/// 一行，只在预算处停。行内单元格用制表符分隔，免得相邻两格粘成一个不存在的词。
+pub fn sheet_text(bytes: &[u8], budget: usize) -> Result<String, String> {
+    let mut book = calamine::open_workbook_auto_from_rs(Cursor::new(bytes))
+        .map_err(|e| format!("无法解析这个表格文件：{e}"))?;
+    let names = book.sheet_names().to_vec();
+    let mut out = String::new();
+    for (index, name) in names.iter().enumerate() {
+        if out.len() >= budget {
+            break;
+        }
+        let Some(Ok(range)) = book.worksheet_range_at(index) else {
+            continue;
+        };
+        // 工作表名本身也算文字：搜"第二季度"应该能找到那张同名的表
+        out.push_str(name);
+        out.push('\n');
+        for row in range.rows() {
+            let line_start = out.len();
+            for cell in row {
+                if out.len() > line_start {
+                    out.push('\t');
+                }
+                out.push_str(&cell_text(cell));
+            }
+            if out.len() > line_start {
+                out.push('\n');
+            }
+            if out.len() >= budget {
+                break;
+            }
+        }
+    }
+    Ok(out)
+}
+
 /// 单元格 → 显示用文本（`Data` 的 Display 已按"数字不带尾零、日期按显示形态"处理）
 fn cell_text(cell: &calamine::Data) -> String {
     match cell {
@@ -768,10 +887,64 @@ pub fn parse_pptx(bytes: &[u8]) -> Result<SlidesPreview, String> {
     let mut zip = zip::ZipArchive::new(Cursor::new(bytes))
         .map_err(|e| format!("不是有效的 pptx（打不开压缩包）：{e}"))?;
 
-    let order = read_zip_text(&mut zip, "ppt/presentation.xml")
+    let paths = slide_paths(&mut zip);
+    let truncated = paths.len() > MAX_SLIDES;
+    let mut slides = Vec::new();
+    for path in paths.iter().take(MAX_SLIDES) {
+        let Some((xml, _)) = read_zip_text(&mut zip, path) else {
+            continue;
+        };
+        let text = parse_slide_xml(&xml);
+        slides.push(Slide {
+            title: text.title,
+            lines: text.lines,
+            notes: slide_notes(&mut zip, path),
+        });
+    }
+    Ok(SlidesPreview { slides, truncated })
+}
+
+/// 抽 `.pptx` 全部幻灯片的文字（搜索用，`budget` 是字节上限）：标题 + 正文 + 备注。
+///
+/// 与 [`parse_pptx`] 同一条放映顺序，但**不受预览那套 `MAX_SLIDES` / 每页行数上限
+/// 约束** —— 搜索要能命中第 150 张幻灯片的备注。
+pub fn pptx_text(bytes: &[u8], budget: usize) -> Result<String, String> {
+    let mut zip = zip::ZipArchive::new(Cursor::new(bytes))
+        .map_err(|e| format!("不是有效的 pptx（打不开压缩包）：{e}"))?;
+    let mut out = String::new();
+    for path in slide_paths(&mut zip) {
+        if out.len() >= budget {
+            break;
+        }
+        let Some((xml, _)) = read_zip_text(&mut zip, &path) else {
+            continue;
+        };
+        let text = parse_slide_xml(&xml);
+        out.push_str(&text.title);
+        out.push('\n');
+        for line in &text.lines {
+            out.push_str(line);
+            out.push('\n');
+        }
+        let notes = slide_notes(&mut zip, &path);
+        if !notes.is_empty() {
+            out.push_str(&notes);
+            out.push('\n');
+        }
+    }
+    if out.trim().is_empty() {
+        return Err("这个演示文稿里没抽出文字（可能全是图片）".to_string());
+    }
+    Ok(out)
+}
+
+/// 放映顺序的 slide 路径：`presentation.xml` 的 `sldIdLst` → rels 里的实际文件。
+/// 解析不出顺序时退回数字序（总比没有强）。预览与抽正文共用。
+fn slide_paths(zip: &mut zip::ZipArchive<Cursor<&[u8]>>) -> Vec<String> {
+    let order = read_zip_text(zip, "ppt/presentation.xml")
         .map(|(xml, _)| slide_rids(&xml))
         .unwrap_or_default();
-    let rels = read_zip_text(&mut zip, "ppt/_rels/presentation.xml.rels")
+    let rels = read_zip_text(zip, "ppt/_rels/presentation.xml.rels")
         .map(|(xml, _)| relationship_targets(&xml))
         .unwrap_or_default();
     let mut paths: Vec<String> = order
@@ -780,36 +953,24 @@ pub fn parse_pptx(bytes: &[u8]) -> Result<SlidesPreview, String> {
         .map(|target| resolve_target("ppt", target))
         .collect();
     if paths.is_empty() {
-        paths = slide_paths_by_number(&mut zip);
+        paths = slide_paths_by_number(zip);
     }
+    paths
+}
 
-    let truncated = paths.len() > MAX_SLIDES;
-    let mut slides = Vec::new();
-    for path in paths.iter().take(MAX_SLIDES) {
-        let Some((xml, _)) = read_zip_text(&mut zip, path) else {
-            continue;
-        };
-        let text = parse_slide_xml(&xml);
-        // 备注：slide 的 rels 里指向 notesSlide
-        let notes = slide_rels_path(path)
-            .and_then(|rels_path| read_zip_text(&mut zip, &rels_path))
-            .and_then(|(rels_xml, _)| {
-                relationship_targets(&rels_xml)
-                    .values()
-                    .find(|target| target.contains("notesSlide"))
-                    .map(|target| resolve_target(parent_dir(path), target))
-            })
-            .and_then(|notes_path| read_zip_text(&mut zip, &notes_path))
-            .map(|(notes_xml, _)| text_of(&notes_xml).join(" "))
-            .unwrap_or_default();
-
-        slides.push(Slide {
-            title: text.title,
-            lines: text.lines,
-            notes,
-        });
-    }
-    Ok(SlidesPreview { slides, truncated })
+/// 一页幻灯片的备注文字（讲稿往往比正文有用）：slide 的 rels 里指向 notesSlide
+fn slide_notes(zip: &mut zip::ZipArchive<Cursor<&[u8]>>, slide_path: &str) -> String {
+    slide_rels_path(slide_path)
+        .and_then(|rels_path| read_zip_text(zip, &rels_path))
+        .and_then(|(rels_xml, _)| {
+            relationship_targets(&rels_xml)
+                .values()
+                .find(|target| target.contains("notesSlide"))
+                .map(|target| resolve_target(parent_dir(slide_path), target))
+        })
+        .and_then(|notes_path| read_zip_text(zip, &notes_path))
+        .map(|(notes_xml, _)| text_of(&notes_xml).join(" "))
+        .unwrap_or_default()
 }
 
 /// `ppt/presentation.xml` 里 `sldId` 的 r:id 顺序
@@ -1536,6 +1697,57 @@ pub fn parse_epub(bytes: &[u8]) -> Result<BookPreview, String> {
     })
 }
 
+/// 抽 `.epub` 全书的纯文本（搜索用，`budget` 是字节上限）。
+///
+/// 与 [`parse_epub`] 共用清单解析（container → OPF → spine），但**没有预览那套
+/// 章数 / 体量上限**：搜索要的是整本书，截断交给预算。书名与作者也一并带上 ——
+/// 搜作者名应该能找到这本书。
+pub fn epub_text(bytes: &[u8], budget: usize) -> Result<String, String> {
+    let mut zip = zip::ZipArchive::new(Cursor::new(bytes))
+        .map_err(|e| format!("不是有效的 epub（打不开压缩包）：{e}"))?;
+
+    let container = read_zip_text(&mut zip, "META-INF/container.xml")
+        .ok_or_else(|| "epub 里没有 META-INF/container.xml（文件可能已损坏）".to_string())?
+        .0;
+    let opf_path = rootfile_path(&container)
+        .ok_or_else(|| "epub 的 container.xml 里没有 rootfile".to_string())?;
+    let opf = read_zip_text(&mut zip, &opf_path)
+        .ok_or_else(|| format!("epub 里找不到 {opf_path}"))?
+        .0;
+
+    let base = parent_dir(&opf_path).to_string();
+    let manifest = opf_manifest(&opf);
+    let mut out = String::new();
+    for part in [
+        element_text(&opf, "title").unwrap_or_default(),
+        element_text(&opf, "creator").unwrap_or_default(),
+    ] {
+        if !part.trim().is_empty() {
+            out.push_str(part.trim());
+            out.push('\n');
+        }
+    }
+
+    for idref in opf_spine(&opf) {
+        if out.len() >= budget {
+            break;
+        }
+        let Some(href) = manifest.get(&idref) else {
+            continue;
+        };
+        let path = resolve_target(&base, href);
+        let Some((xhtml, _)) = read_zip_text(&mut zip, &path) else {
+            continue;
+        };
+        out.push_str(&html_source_to_text(&xhtml));
+        out.push('\n');
+    }
+    if out.trim().is_empty() {
+        return Err("这本书里没抽出正文（可能是纯图片版）".to_string());
+    }
+    Ok(out)
+}
+
 /// 章节标题取文件里第一个 h1..h6 的文字；没有就用"第 N 章"
 fn chunks_push(chapters: &mut Vec<BookChapter>, path: &str, html: String) {
     let heading = first_heading_text(&html);
@@ -1581,6 +1793,70 @@ fn is_plate_only(html: &str) -> bool {
     }
     rest.push_str(cursor);
     rest.trim().is_empty()
+}
+
+/// HTML / XHTML 源码 → 纯文本（搜索用，见 `extract.rs`）。
+///
+/// 与预览走同一条路：先 [`xhtml_to_html`] 收敛成受限 HTML（白名单标签 + 文本转义、
+/// script/style 连内容一起丢），再 [`html_to_text`] 去标签、还原实体。
+pub fn html_source_to_text(source: &str) -> String {
+    html_to_text(&xhtml_to_html(source))
+}
+
+/// 受限 HTML → 纯文本：去标签、还原实体，块级标签落成换行（表格单元格落成制表符），
+/// 免得两段话在片段里粘成一句、或相邻单元格粘出一个不存在的词。
+///
+/// 只认 [`escape_html`] 产出过的那几个实体（外加数字引用）；认不出的原样保留。
+fn html_to_text(html: &str) -> String {
+    let mut out = String::with_capacity(html.len());
+    let mut tag = String::new();
+    let mut depth = 0_usize;
+    for ch in html.chars() {
+        match ch {
+            '<' => {
+                depth += 1;
+                tag.clear();
+            }
+            '>' => {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    match tag.trim_end_matches('/').trim() {
+                        "br" | "p" | "tr" | "hr" | "li" | "pre" | "blockquote" | "h1" | "h2"
+                        | "h3" | "h4" | "h5" | "h6" => out.push('\n'),
+                        "td" | "th" => out.push('\t'),
+                        _ => {}
+                    }
+                }
+            }
+            c if depth == 0 => out.push(c),
+            c => tag.push(c),
+        }
+    }
+    unescape_entities(&out)
+}
+
+/// 还原 HTML 实体。实体名不会长（`&#x1F600;` 也不过 9 个字符），
+/// 扫描窗口限制在 12 字节内，免得把正文里孤零零的 `&` 一路找到句尾。
+fn unescape_entities(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(start) = rest.find('&') {
+        out.push_str(&rest[..start]);
+        let tail = &rest[start..];
+        let resolved = tail[1..]
+            .find(';')
+            .filter(|end| *end <= 12)
+            .and_then(|end| entity_text(&tail[1..1 + end]).map(|text| (end, text)));
+        if let Some((end, text)) = resolved {
+            out.push_str(&text);
+            rest = &tail[end + 2..];
+        } else {
+            out.push('&');
+            rest = &tail[1..];
+        }
+    }
+    out.push_str(rest);
+    out
 }
 
 /// 去掉标签，只留文字（给标题用）
@@ -1809,33 +2085,12 @@ fn normalize_tag(tag: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write as _;
-
-    /// 用 zip 现造一份最小 docx：只有一个 word/document.xml
-    fn zip_with(entries: &[(&str, &str)]) -> Vec<u8> {
-        let mut buf = Vec::new();
-        {
-            let mut zip = zip::ZipWriter::new(Cursor::new(&mut buf));
-            let options = zip::write::SimpleFileOptions::default()
-                .compression_method(zip::CompressionMethod::Stored);
-            for (name, content) in entries {
-                zip.start_file(name, options)
-                    .expect("测试里写 zip 不该失败");
-                zip.write_all(content.as_bytes())
-                    .expect("测试里写 zip 不该失败");
-            }
-            zip.finish().expect("测试里收尾 zip 不该失败");
-        }
-        buf
-    }
-
-    const DOC_HEAD: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>"#;
-    const DOC_TAIL: &str = "</w:body></w:document>";
-
-    fn docx(body: &str) -> Vec<u8> {
-        zip_with(&[("word/document.xml", &format!("{DOC_HEAD}{body}{DOC_TAIL}"))])
-    }
+    // 造件与 extract 的抽文测试共用一份（见 test_support）：解析器的输入只有一处来源，
+    // 免得两边各造一个"最小 docx"，改了一边另一边成假绿
+    use crate::modules::file::test_support::{
+        DOC_HEAD, DOC_TAIL, docx_bytes as docx, epub_bytes as epub, pptx_bytes as pptx,
+        xlsx_bytes as xlsx, zip_with,
+    };
 
     #[test]
     fn docx_paragraphs_headings_and_formatting() {
@@ -1936,109 +2191,6 @@ mod tests {
         let bytes = zip_with(&[("hello.txt", "hi")]);
         let err = parse_docx(&bytes).expect_err("要报错");
         assert!(err.contains("word/document.xml"), "{err}");
-    }
-
-    /// 最小 xlsx：workbook.xml 指向一张表，单元格一半是共享字符串一半是数字
-    fn xlsx(sheet_xml: &str) -> Vec<u8> {
-        let shared = r#"<?xml version="1.0" encoding="UTF-8"?>
-<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="2" uniqueCount="2"><si><t>姓名</t></si><si><t>张三</t></si></sst>"#;
-        let workbook = r#"<?xml version="1.0" encoding="UTF-8"?>
-<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-<sheets><sheet name="第一张" sheetId="1" r:id="rId1"/></sheets></workbook>"#;
-        let rels = r#"<?xml version="1.0" encoding="UTF-8"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
-<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
-</Relationships>"#;
-        let content_types = r#"<?xml version="1.0" encoding="UTF-8"?>
-<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
-<Default Extension="xml" ContentType="application/xml"/>
-<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
-<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
-<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
-<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
-</Types>"#;
-        let root_rels = r#"<?xml version="1.0" encoding="UTF-8"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
-</Relationships>"#;
-        zip_with(&[
-            ("[Content_Types].xml", content_types),
-            ("_rels/.rels", root_rels),
-            ("xl/workbook.xml", workbook),
-            ("xl/_rels/workbook.xml.rels", rels),
-            ("xl/sharedStrings.xml", shared),
-            ("xl/worksheets/sheet1.xml", sheet_xml),
-        ])
-    }
-
-    /// 最小 pptx：两页 + 一页备注。**故意让数字序与放映顺序相反**，
-    /// 钉住"顺序看 presentation.xml 而不是看文件名"这条
-    fn pptx() -> Vec<u8> {
-        let presentation = r#"<?xml version="1.0" encoding="UTF-8"?>
-<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-<p:sldIdLst><p:sldId id="256" r:id="rId2"/><p:sldId id="257" r:id="rId3"/></p:sldIdLst></p:presentation>"#;
-        let pres_rels = r#"<?xml version="1.0" encoding="UTF-8"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide2.xml"/>
-<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
-</Relationships>"#;
-        let slide1 = r#"<?xml version="1.0" encoding="UTF-8"?>
-<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><p:cSld><p:spTree>
-<p:sp><p:nvSpPr><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr><p:txBody><a:p><a:r><a:t>第一页标题</a:t></a:r></a:p></p:txBody></p:sp>
-<p:sp><p:nvSpPr><p:nvPr/></p:nvSpPr><p:txBody><a:p><a:r><a:t>要点一</a:t></a:r></a:p><a:p><a:r><a:t>要点二</a:t></a:r></a:p></p:txBody></p:sp>
-</p:spTree></p:cSld></p:sld>"#;
-        let slide2 = r#"<?xml version="1.0" encoding="UTF-8"?>
-<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><p:cSld><p:spTree>
-<p:sp><p:nvSpPr><p:nvPr><p:ph type="ctrTitle"/></p:nvPr></p:nvSpPr><p:txBody><a:p><a:r><a:t>封面</a:t></a:r></a:p></p:txBody></p:sp>
-</p:spTree></p:cSld></p:sld>"#;
-        let slide1_rels = r#"<?xml version="1.0" encoding="UTF-8"?>
-<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide" Target="../notesSlides/notesSlide1.xml"/>
-</Relationships>"#;
-        let notes1 = r#"<?xml version="1.0" encoding="UTF-8"?>
-<p:notes xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><p:cSld><p:spTree>
-<p:sp><p:nvSpPr><p:nvPr><p:ph type="body"/></p:nvPr></p:nvSpPr><p:txBody><a:p><a:r><a:t>这是讲稿</a:t></a:r></a:p></p:txBody></p:sp>
-</p:spTree></p:cSld></p:notes>"#;
-        zip_with(&[
-            ("ppt/presentation.xml", presentation),
-            ("ppt/_rels/presentation.xml.rels", pres_rels),
-            ("ppt/slides/slide1.xml", slide1),
-            ("ppt/slides/slide2.xml", slide2),
-            ("ppt/slides/_rels/slide1.xml.rels", slide1_rels),
-            ("ppt/notesSlides/notesSlide1.xml", notes1),
-        ])
-    }
-
-    /// 最小 epub：mimetype + container.xml + OPF + 两章
-    fn epub() -> Vec<u8> {
-        let container = r#"<?xml version="1.0"?>
-<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container" version="1.0">
-<rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles>
-</container>"#;
-        let opf = r#"<?xml version="1.0"?>
-<package xmlns="http://www.idpf.org/2007/opf" version="3.0">
-<metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>测试书</dc:title><dc:creator>某作者</dc:creator></metadata>
-<manifest>
-<item id="c1" href="ch1.xhtml" media-type="application/xhtml+xml"/>
-<item id="c2" href="sub/ch2.xhtml" media-type="application/xhtml+xml"/>
-</manifest>
-<spine><itemref idref="c1"/><itemref idref="c2"/></spine>
-</package>"#;
-        let ch1 = r#"<?xml version="1.0"?>
-<html xmlns="http://www.w3.org/1999/xhtml"><head><title>不该出现</title><style>p{color:red}</style></head>
-<body><h1>第一章</h1><p>正文一</p><p>&lt;不是标签&gt; &amp; 实体</p>
-<script>alert(1)</script><img src="x.png"/><ul><li>条目</li></ul></body></html>"#;
-        let ch2 = r#"<?xml version="1.0"?>
-<html xmlns="http://www.w3.org/1999/xhtml"><body><h2>第二章</h2><p>正文二</p></body></html>"#;
-        // mimetype 必须是**第一个**条目且不压缩（规范要求，也是我们识别 epub 的判据）
-        zip_with(&[
-            ("mimetype", "application/epub+zip"),
-            ("META-INF/container.xml", container),
-            ("OEBPS/content.opf", opf),
-            ("OEBPS/ch1.xhtml", ch1),
-            ("OEBPS/sub/ch2.xhtml", ch2),
-        ])
     }
 
     #[test]

@@ -2,9 +2,9 @@
 //!
 //! 分层里的中间一层：`mime.rs` 回答"这是什么"（字节 → MIME，纯函数），这张表回答
 //! "这种类型能干什么"（MIME → 声明式能力），真正的行为由策略枚举分派到各自的实现
-//! （`thumb/image.rs`、`thumb/video.rs`、`preview.rs` 的解析器）。四个消费者
-//! （`limits` 的上限、`thumb` 的缩略图、`preview` 的解析器、`content` 的内联策略）
-//! 都只查这张表，不再各自 `matches!`。
+//! （`thumb/image.rs`、`thumb/video.rs`、`preview.rs` 的解析器）。五个消费者
+//! （`limits` 的上限、`thumb` 的缩略图、`preview` 的解析器、`content` 的内联策略、
+//! `extract` 的正文抽取）都只查这张表，不再各自 `matches!`。
 //!
 //! 三条边界：
 //! 1. 这里只有**数据**：无 I/O、不依赖其它模块（这样谁都能查它而不成环）；
@@ -14,10 +14,15 @@
 //!    白名单外的 `image/avif` 今天走的是 `other` 档（4 GiB），这里保持原样。
 //!    把分档也统一到家族上是个独立决定，要有意识地改，别顺手带上。
 //!
-//! 加一种格式：这里加一行（+ 有解析器就挂策略 + 前端 `viewers/registry.ts` 挂查看器）。
+//! 加一种格式：这里加一行（+ 有解析器就挂策略 + 前端 `viewers/registry.ts` 挂查看器）；
+//! 能抽出正文的格式还要在 `extract.rs` 的策略分派里接上。
 
 use InlinePolicy::{Attachment, Inline};
 use PreviewStrategy::{Book, Docx, None as NoPreview, Sheet, Slides};
+use TextStrategy::{
+    Book as BookText, Docx as DocxText, None as NoText, Plain, Sheet as SheetText,
+    Slides as SlidesText,
+};
 use ThumbStrategy::{Bitmap, None as NoThumb, Video};
 use Tier::{Audio, Document, Fallback, Image, Svg};
 
@@ -61,6 +66,21 @@ pub enum PreviewStrategy {
     None,
 }
 
+/// 能不能从这种类型里抽出正文（搜索用的 `file.text_content` 列，见 `extract.rs`）
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TextStrategy {
+    /// 抽不出：没有正文（图片 / 音视频 / 压缩包），或服务端没有解析器
+    /// （PDF 的首屏缩略图在前端 pdf.js 那边，不在这个进程里；老 `.doc` 同理）
+    None,
+    /// 就是文本本身；`text/html` 只留可见文字（标签与 script/style 丢掉）
+    Plain,
+    Docx,
+    /// `.xls` 与 `.xlsx` 同走表格解析（单元格里的文字都算）
+    Sheet,
+    Slides,
+    Book,
+}
+
 /// 内容路由的处置：能不能作为子资源 / 同源 iframe 内联
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum InlinePolicy {
@@ -80,9 +100,10 @@ pub struct Kind {
     pub thumb: ThumbStrategy,
     pub preview: PreviewStrategy,
     pub inline: InlinePolicy,
+    pub text: TextStrategy,
 }
 
-/// 表行的简写：**`kind(MIME, 上限档, 缩略图, 预览, 内联策略)`**。
+/// 表行的简写：**`kind(MIME, 上限档, 缩略图, 预览, 内联策略, 正文抽取)`**。
 ///
 /// 用位置参数是为了让每种类型只占**一行**（字段名逐行写会撑成八行，表就没法一眼扫完）。
 /// 参数类型都由枚举把着，写错位置编译不过；顺序见上面这行说明。
@@ -92,6 +113,7 @@ const fn kind(
     thumb: ThumbStrategy,
     preview: PreviewStrategy,
     inline: InlinePolicy,
+    text: TextStrategy,
 ) -> Kind {
     Kind {
         mime,
@@ -99,6 +121,7 @@ const fn kind(
         thumb,
         preview,
         inline,
+        text,
     }
 }
 
@@ -112,48 +135,82 @@ const FALLBACK: Kind = kind(
     ThumbStrategy::None,
     PreviewStrategy::None,
     InlinePolicy::Attachment,
+    TextStrategy::None,
 );
 
 /// 表：**精确行在前**（它们同时是"已知类型"的口径），家族模式在后补漏
 /// （表外成员的能力），最后是兜底行。
 const KINDS: &[Kind] = &[
-    // ── 图片 ──
+    // ── 图片（没有正文可抽） ──
     // 出缩略图的只有 `image` crate 真能解、浏览器也真能显示的那几种
-    kind("image/png", Image, Bitmap, NoPreview, Inline),
-    kind("image/jpeg", Image, Bitmap, NoPreview, Inline),
-    kind("image/gif", Image, Bitmap, NoPreview, Inline),
-    kind("image/webp", Image, Bitmap, NoPreview, Inline),
-    kind("image/bmp", Image, Bitmap, NoPreview, Inline),
+    kind("image/png", Image, Bitmap, NoPreview, Inline, NoText),
+    kind("image/jpeg", Image, Bitmap, NoPreview, Inline, NoText),
+    kind("image/gif", Image, Bitmap, NoPreview, Inline, NoText),
+    kind("image/webp", Image, Bitmap, NoPreview, Inline, NoText),
+    kind("image/bmp", Image, Bitmap, NoPreview, Inline, NoText),
     // TIFF / AVIF / HEIC 解不出、浏览器也渲染不了，列表里给后缀徽章
-    kind("image/tiff", Image, NoThumb, NoPreview, Inline),
-    // SVG 是 XML 文本、能带脚本：强制下载；仍归 image 类别以便当图片预览
-    kind("image/svg+xml", Svg, NoThumb, NoPreview, Attachment),
+    kind("image/tiff", Image, NoThumb, NoPreview, Inline, NoText),
+    // SVG 是 XML 文本、能带脚本：强制下载；仍归 image 类别以便当图片预览。
+    // 不抽正文：SVG 的"文字"几乎全是路径与坐标标记，抽出来只会污染搜索
+    kind("image/svg+xml", Svg, NoThumb, NoPreview, Attachment, NoText),
     // ── 视频（出海报帧；上限走兜底档 4 GiB） ──
-    kind("video/mp4", Fallback, Video, NoPreview, Inline),
-    kind("video/webm", Fallback, Video, NoPreview, Inline),
-    kind("video/ogg", Fallback, Video, NoPreview, Inline),
-    kind("video/quicktime", Fallback, Video, NoPreview, Inline),
+    kind("video/mp4", Fallback, Video, NoPreview, Inline, NoText),
+    kind("video/webm", Fallback, Video, NoPreview, Inline, NoText),
+    kind("video/ogg", Fallback, Video, NoPreview, Inline, NoText),
+    kind(
+        "video/quicktime",
+        Fallback,
+        Video,
+        NoPreview,
+        Inline,
+        NoText,
+    ),
     // ── 音频 ──
-    kind("audio/mpeg", Audio, NoThumb, NoPreview, Inline),
-    kind("audio/ogg", Audio, NoThumb, NoPreview, Inline),
-    kind("audio/wav", Audio, NoThumb, NoPreview, Inline),
-    kind("audio/webm", Audio, NoThumb, NoPreview, Inline),
-    kind("audio/flac", Audio, NoThumb, NoPreview, Inline),
-    kind("audio/aac", Audio, NoThumb, NoPreview, Inline),
+    kind("audio/mpeg", Audio, NoThumb, NoPreview, Inline, NoText),
+    kind("audio/ogg", Audio, NoThumb, NoPreview, Inline, NoText),
+    kind("audio/wav", Audio, NoThumb, NoPreview, Inline, NoText),
+    kind("audio/webm", Audio, NoThumb, NoPreview, Inline, NoText),
+    kind("audio/flac", Audio, NoThumb, NoPreview, Inline, NoText),
+    kind("audio/aac", Audio, NoThumb, NoPreview, Inline, NoText),
     // ── 文档 ──
-    kind("application/pdf", Document, NoThumb, NoPreview, Inline),
-    kind("text/plain", Document, NoThumb, NoPreview, Attachment),
-    // HTML 能执行脚本：与 SVG 同理强制下载（前端用文本查看器看它）
-    kind("text/html", Document, NoThumb, NoPreview, Attachment),
-    kind("text/csv", Document, NoThumb, NoPreview, Attachment),
-    kind("text/markdown", Document, NoThumb, NoPreview, Attachment),
-    // 老 Word 是二进制 OLE 复合文档，另需一套解析器，暂不预览（前端也"只下载"）
+    // PDF 没有服务端解析器（首屏缩略图在前端 pdf.js），抽不出正文
+    kind(
+        "application/pdf",
+        Document,
+        NoThumb,
+        NoPreview,
+        Inline,
+        NoText,
+    ),
+    kind(
+        "text/plain",
+        Document,
+        NoThumb,
+        NoPreview,
+        Attachment,
+        Plain,
+    ),
+    // HTML 能执行脚本：与 SVG 同理强制下载（前端用文本查看器看它）；
+    // 抽正文时只留可见文字
+    kind("text/html", Document, NoThumb, NoPreview, Attachment, Plain),
+    kind("text/csv", Document, NoThumb, NoPreview, Attachment, Plain),
+    kind(
+        "text/markdown",
+        Document,
+        NoThumb,
+        NoPreview,
+        Attachment,
+        Plain,
+    ),
+    // 老 Word 是二进制 OLE 复合文档，另需一套解析器，暂不预览也抽不出正文
+    // （前端同样"只下载"）
     kind(
         "application/msword",
         Document,
         NoThumb,
         NoPreview,
         Attachment,
+        NoText,
     ),
     kind(
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
@@ -161,6 +218,7 @@ const KINDS: &[Kind] = &[
         NoThumb,
         Docx,
         Attachment,
+        DocxText,
     ),
     kind(
         "application/vnd.ms-excel",
@@ -168,6 +226,7 @@ const KINDS: &[Kind] = &[
         NoThumb,
         Sheet,
         Attachment,
+        SheetText,
     ),
     kind(
         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -175,6 +234,7 @@ const KINDS: &[Kind] = &[
         NoThumb,
         Sheet,
         Attachment,
+        SheetText,
     ),
     kind(
         "application/vnd.openxmlformats-officedocument.presentationml.presentation",
@@ -182,13 +242,21 @@ const KINDS: &[Kind] = &[
         NoThumb,
         Slides,
         Attachment,
+        SlidesText,
     ),
     // epub 不在文件服务的类别规则里（归"其他"），但服务端按书解析它
-    kind("application/epub+zip", Fallback, NoThumb, Book, Attachment),
+    kind(
+        "application/epub+zip",
+        Fallback,
+        NoThumb,
+        Book,
+        Attachment,
+        BookText,
+    ),
     // ── 家族模式：补白名单外成员的能力，上限仍走兜底档（见文件头第 3 条） ──
-    kind("image/*", Fallback, NoThumb, NoPreview, Inline),
-    kind("video/*", Fallback, Video, NoPreview, Inline),
-    kind("audio/*", Fallback, NoThumb, NoPreview, Inline),
+    kind("image/*", Fallback, NoThumb, NoPreview, Inline, NoText),
+    kind("video/*", Fallback, Video, NoPreview, Inline, NoText),
+    kind("audio/*", Fallback, NoThumb, NoPreview, Inline, NoText),
     // ── 兜底：未知格式 ──
     FALLBACK,
 ];
@@ -266,12 +334,13 @@ mod tests {
         // 最后一行必须是兜底，否则 kind_of 的 last() 会给出个具体类型
         assert_eq!(KINDS.last().map(|k| k.mime), Some("*"));
         assert_eq!(KINDS.last(), Some(&FALLBACK));
-        // 兜底行不能出缩略图、不能内联、不给预览
+        // 兜底行不能出缩略图、不能内联、不给预览、抽不出正文
         let fallback = kind_of("application/x-unknown-nothing");
         assert_eq!(fallback.mime, "*");
         assert_eq!(fallback.thumb, NoThumb);
         assert_eq!(fallback.inline, Attachment);
         assert_eq!(fallback.preview, NoPreview);
+        assert_eq!(fallback.text, NoText);
     }
 
     /// 已知类型的类别由 `FileCategory::from_mime` 现算（唯一口径），本表不声明。
@@ -369,5 +438,44 @@ mod tests {
         assert_eq!(kind_of("text/markdown").limit, Document);
         assert_eq!(kind_of("application/epub+zip").limit, Fallback);
         assert_eq!(kind_of("model/gltf+json").limit, Fallback);
+    }
+
+    /// 正文抽取的口径：四种文本 + 四种服务端解析器认的文档；其余一律抽不出。
+    /// 与 `extract.rs` 的分派表一一对应 —— 这里多一行、那边少一支，搜索就会
+    /// 静默漏掉一种格式。
+    #[test]
+    fn text_extraction_covers_text_and_parsed_documents_only() {
+        // 文本族：原文（HTML 只留可见文字，见 extract.rs）
+        for mime in ["text/plain", "text/markdown", "text/csv", "text/html"] {
+            assert_eq!(kind_of(mime).text, Plain, "{mime}");
+        }
+        assert_eq!(kind_of("application/vnd.ms-excel").text, SheetText);
+        assert_eq!(
+            kind_of("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet").text,
+            SheetText
+        );
+        assert_eq!(
+            kind_of("application/vnd.openxmlformats-officedocument.wordprocessingml.document").text,
+            DocxText
+        );
+        assert_eq!(
+            kind_of("application/vnd.openxmlformats-officedocument.presentationml.presentation")
+                .text,
+            SlidesText
+        );
+        assert_eq!(kind_of("application/epub+zip").text, BookText);
+        // 抽不出的：没有正文的、以及服务端没有解析器的（PDF / 老 doc / SVG 标记）
+        for mime in [
+            "image/png",
+            "image/svg+xml",
+            "video/mp4",
+            "audio/mpeg",
+            "application/zip",
+            "application/pdf",
+            "application/msword",
+            "model/gltf+json",
+        ] {
+            assert_eq!(kind_of(mime).text, NoText, "{mime} 不该有正文可抽");
+        }
     }
 }

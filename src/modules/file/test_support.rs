@@ -89,33 +89,144 @@ pub async fn setup_service() -> Ctx {
     }
 }
 
-/// 造一份 epub：首个条目必须是未压缩的 `mimetype`，内容 application/epub+zip。
-/// 再塞一个 container.xml 把文件撑过 256 字节 —— `preview::looks_like_epub` 只看
-/// 前 256 字节（真实 epub 远大于此，测试造件太小会落到判据之外，成假绿）
-pub fn epub_bytes() -> Vec<u8> {
+// ── 文档造件：preview 的解析器测试与 extract 的抽文测试共用同一批最小样本 ──
+//
+// 都用 zip 现造：条目名与 XML 都是**结构证据**（"这是 docx 不是 xlsx"全靠它），
+// 造件里的每个名字都对应解析器读的那个条目。
+
+/// 把一个 zip 造进内存（条目一律不压缩：够小，且能一眼看出内容）
+pub fn zip_with(entries: &[(&str, &str)]) -> Vec<u8> {
     use std::io::Write as _;
     let mut buf = Vec::new();
     {
         let mut zip = zip::ZipWriter::new(std::io::Cursor::new(&mut buf));
         let options = zip::write::SimpleFileOptions::default()
             .compression_method(zip::CompressionMethod::Stored);
-        zip.start_file("mimetype", options).expect("写 epub");
-        zip.write_all(b"application/epub+zip").expect("写 epub");
-        zip.start_file("META-INF/container.xml", options)
-            .expect("写 epub");
-        zip.write_all(
-            br#"<?xml version="1.0" encoding="UTF-8"?>
-<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
-  <rootfiles>
-    <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
-  </rootfiles>
-</container>
-"#,
-        )
-        .expect("写 epub");
-        zip.finish().expect("收尾 epub");
+        for (name, content) in entries {
+            zip.start_file(name, options)
+                .expect("测试里写 zip 不该失败");
+            zip.write_all(content.as_bytes())
+                .expect("测试里写 zip 不该失败");
+        }
+        zip.finish().expect("测试里收尾 zip 不该失败");
     }
     buf
+}
+
+/// `word/document.xml` 的头尾（包住正文片段）
+pub const DOC_HEAD: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>"#;
+pub const DOC_TAIL: &str = "</w:body></w:document>";
+
+/// 用 zip 现造一份最小 docx：只有一个 word/document.xml
+pub fn docx_bytes(body: &str) -> Vec<u8> {
+    zip_with(&[("word/document.xml", &format!("{DOC_HEAD}{body}{DOC_TAIL}"))])
+}
+
+/// 最小 xlsx：workbook.xml 指向一张表，单元格一半是共享字符串一半是数字
+pub fn xlsx_bytes(sheet_xml: &str) -> Vec<u8> {
+    let shared = r#"<?xml version="1.0" encoding="UTF-8"?>
+<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="2" uniqueCount="2"><si><t>姓名</t></si><si><t>张三</t></si></sst>"#;
+    let workbook = r#"<?xml version="1.0" encoding="UTF-8"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<sheets><sheet name="第一张" sheetId="1" r:id="rId1"/></sheets></workbook>"#;
+    let rels = r#"<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/>
+</Relationships>"#;
+    let content_types = r#"<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="xml" ContentType="application/xml"/>
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
+<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+<Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/>
+</Types>"#;
+    let root_rels = r#"<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/>
+</Relationships>"#;
+    zip_with(&[
+        ("[Content_Types].xml", content_types),
+        ("_rels/.rels", root_rels),
+        ("xl/workbook.xml", workbook),
+        ("xl/_rels/workbook.xml.rels", rels),
+        ("xl/sharedStrings.xml", shared),
+        ("xl/worksheets/sheet1.xml", sheet_xml),
+    ])
+}
+
+/// 最小 pptx：两页 + 一页备注。**故意让数字序与放映顺序相反**，
+/// 钉住"顺序看 presentation.xml 而不是看文件名"这条
+pub fn pptx_bytes() -> Vec<u8> {
+    let presentation = r#"<?xml version="1.0" encoding="UTF-8"?>
+<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<p:sldIdLst><p:sldId id="256" r:id="rId2"/><p:sldId id="257" r:id="rId3"/></p:sldIdLst></p:presentation>"#;
+    let pres_rels = r#"<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide2.xml"/>
+<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+</Relationships>"#;
+    let slide1 = r#"<?xml version="1.0" encoding="UTF-8"?>
+<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><p:cSld><p:spTree>
+<p:sp><p:nvSpPr><p:nvPr><p:ph type="title"/></p:nvPr></p:nvSpPr><p:txBody><a:p><a:r><a:t>第一页标题</a:t></a:r></a:p></p:txBody></p:sp>
+<p:sp><p:nvSpPr><p:nvPr/></p:nvSpPr><p:txBody><a:p><a:r><a:t>要点一</a:t></a:r></a:p><a:p><a:r><a:t>要点二</a:t></a:r></a:p></p:txBody></p:sp>
+</p:spTree></p:cSld></p:sld>"#;
+    let slide2 = r#"<?xml version="1.0" encoding="UTF-8"?>
+<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><p:cSld><p:spTree>
+<p:sp><p:nvSpPr><p:nvPr><p:ph type="ctrTitle"/></p:nvPr></p:nvSpPr><p:txBody><a:p><a:r><a:t>封面</a:t></a:r></a:p></p:txBody></p:sp>
+</p:spTree></p:cSld></p:sld>"#;
+    let slide1_rels = r#"<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide" Target="../notesSlides/notesSlide1.xml"/>
+</Relationships>"#;
+    let notes1 = r#"<?xml version="1.0" encoding="UTF-8"?>
+<p:notes xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><p:cSld><p:spTree>
+<p:sp><p:nvSpPr><p:nvPr><p:ph type="body"/></p:nvPr></p:nvSpPr><p:txBody><a:p><a:r><a:t>这是讲稿</a:t></a:r></a:p></p:txBody></p:sp>
+</p:spTree></p:cSld></p:notes>"#;
+    zip_with(&[
+        ("ppt/presentation.xml", presentation),
+        ("ppt/_rels/presentation.xml.rels", pres_rels),
+        ("ppt/slides/slide1.xml", slide1),
+        ("ppt/slides/slide2.xml", slide2),
+        ("ppt/slides/_rels/slide1.xml.rels", slide1_rels),
+        ("ppt/notesSlides/notesSlide1.xml", notes1),
+    ])
+}
+
+/// 最小 epub：mimetype + container.xml + OPF + 两章（其中一章在子目录里）。
+///
+/// 首个条目必须是**未压缩**的 `mimetype`、内容 application/epub+zip ——
+/// `preview::looks_like_epub` 只看前 256 字节：这既是 epub 规范的要求，
+/// 也是造件必须守住的形状（条目太小/顺序不对会落到判据之外，成假绿）
+pub fn epub_bytes() -> Vec<u8> {
+    let container = r#"<?xml version="1.0"?>
+<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container" version="1.0">
+<rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles>
+</container>"#;
+    let opf = r#"<?xml version="1.0"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0">
+<metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>测试书</dc:title><dc:creator>某作者</dc:creator></metadata>
+<manifest>
+<item id="c1" href="ch1.xhtml" media-type="application/xhtml+xml"/>
+<item id="c2" href="sub/ch2.xhtml" media-type="application/xhtml+xml"/>
+</manifest>
+<spine><itemref idref="c1"/><itemref idref="c2"/></spine>
+</package>"#;
+    let ch1 = r#"<?xml version="1.0"?>
+<html xmlns="http://www.w3.org/1999/xhtml"><head><title>不该出现</title><style>p{color:red}</style></head>
+<body><h1>第一章</h1><p>正文一</p><p>&lt;不是标签&gt; &amp; 实体</p>
+<script>alert(1)</script><img src="x.png"/><ul><li>条目</li></ul></body></html>"#;
+    let ch2 = r#"<?xml version="1.0"?>
+<html xmlns="http://www.w3.org/1999/xhtml"><body><h2>第二章</h2><p>正文二</p></body></html>"#;
+    zip_with(&[
+        ("mimetype", "application/epub+zip"),
+        ("META-INF/container.xml", container),
+        ("OEBPS/content.opf", opf),
+        ("OEBPS/ch1.xhtml", ch1),
+        ("OEBPS/sub/ch2.xhtml", ch2),
+    ])
 }
 
 /// 造一个 zip 到磁盘（**条目名就是结构证据**），返回路径

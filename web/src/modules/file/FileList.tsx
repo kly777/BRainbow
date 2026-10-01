@@ -155,7 +155,7 @@ const FileListPage: Component = () => {
 						<SearchInput
 							value={f.search()}
 							onSearch={f.setSearch}
-							placeholder="搜索文件名…"
+							placeholder="搜索文件名或正文…"
 						/>
 						<Show when={f.search().trim()}>
 							<Button

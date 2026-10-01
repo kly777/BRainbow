@@ -38,8 +38,22 @@ pub struct FileSearchHit {
     pub matched_tag: Option<String>,
     /// 首个命中的元信息键（值为关键字命中；无命中为 NULL）
     pub matched_meta: Option<String>,
-    /// 0 = 文件名命中，1 = 仅标签命中（排序用，也可以用来打分）
+    /// 0 = 文件名命中，1 = 仅标签/元信息/正文命中（排序用，也可以用来打分）
     pub name_hit: i64,
+    /// 1 = 正文命中（`file.text_content` 里有这个关键字）
+    pub content_hit: i64,
+    /// 正文命中时的正文原文（调用方截上下文片段用）；没命中为 NULL
+    pub text_content: Option<String>,
+}
+
+/// 列表搜索命中行：文件行 + 正文原文（**仅"文件名没命中"时取**，见
+/// [`FileRepository::search_by_name_or_text`]）
+#[derive(Debug, FromRow)]
+pub struct FileSearchRow {
+    #[sqlx(flatten)]
+    pub file: FileRow,
+    /// 命中正文时是正文原文（调用方据此截上下文片段）；文件名命中、或正文没命中时为 NULL
+    pub text_hit: Option<String>,
 }
 
 /// 向 WHERE 追加可见性条件（QueryBuilder 侧）。
@@ -223,6 +237,33 @@ impl FileRepository {
         Ok(())
     }
 
+    /// 写入抽出的正文（上传时与启动回填共用，内容来自 `extract`）。
+    ///
+    /// **不动 `updated_at`**：这是服务端派生出来的搜索数据，不是用户的编辑 ——
+    /// 动了会把文件顶到"最近更新"的最前面（与 `update_mime` 同一条规矩）。
+    pub async fn set_text_content(&self, id: i64, text: &str) -> Result<(), sqlx::Error> {
+        sqlx::query!("UPDATE file SET text_content = ? WHERE id = ?", text, id)
+            .execute(&*self.db)
+            .await?;
+        Ok(())
+    }
+
+    /// 还没抽过正文的行（id / stored_id / mime_type）：启动回填用。
+    ///
+    /// 只筛 `text_content IS NULL`：`''` 是"抽过但没文字"（别再试）。支不支持抽
+    /// 由调用方按 mime 判（`extract::supports`）—— 判据只在那一份，这里不筛 mime。
+    pub async fn find_missing_text(&self) -> Result<Vec<(i64, String, String)>, sqlx::Error> {
+        let rows = sqlx::query!(
+            "SELECT id AS \"id!: i64\", stored_id, mime_type FROM file WHERE text_content IS NULL ORDER BY id"
+        )
+        .fetch_all(&*self.db)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|row| (row.id, row.stored_id, row.mime_type))
+            .collect())
+    }
+
     /// 补一个缺失的媒体时长（只在为空时写）。返回是否真的写了一行。
     ///
     /// **刻意不动 `updated_at`**：这是服务端回填，不是用户的动作 —— 动了就会把文件
@@ -391,31 +432,44 @@ impl FileRepository {
         qb.build_query_as::<FileRow>().fetch_all(&*self.db).await
     }
 
-    /// 按文件名模糊统计
-    pub async fn count_by_name(
+    /// 按文件名**或正文**模糊统计（列表页搜索框；正文见 `file.text_content` 列）
+    pub async fn count_by_name_or_text(
         &self,
         query: &str,
         viewer: Option<&Actor>,
     ) -> Result<i64, sqlx::Error> {
-        let mut qb = QueryBuilder::new("SELECT COUNT(*) FROM file f WHERE f.original_name LIKE ");
-        qb.push_bind(like_contains(query)).push(" ESCAPE '\\'");
+        let mut qb = QueryBuilder::new("SELECT COUNT(*) FROM file f WHERE (f.original_name LIKE ");
+        qb.push_bind(like_contains(query))
+            .push(" ESCAPE '\\' OR f.text_content LIKE ")
+            .push_bind(like_contains(query))
+            .push(" ESCAPE '\\')");
         push_visibility(&mut qb, viewer);
         qb.build_query_scalar().fetch_one(&*self.db).await
     }
 
-    /// 按文件名模糊搜索
-    pub async fn search_by_name(
+    /// 按文件名**或正文**模糊搜索（列表页搜索框）。
+    ///
+    /// 正文命中的行会捎回正文原文（`text_hit`，调用方据此截上下文片段），
+    /// 但**只在文件名没命中时**才取：文件名命中本身已经说明白了，不必白搬几十 KB 文本。
+    /// 正文列可能有 1 MB（`extract::MAX_TEXT_BYTES`）；进响应的永远是片段，不是原文。
+    pub async fn search_by_name_or_text(
         &self,
         query: &str,
         viewer: Option<&Actor>,
         limit: i64,
         offset: i64,
         sort: SortOrder,
-    ) -> Result<Vec<FileRow>, sqlx::Error> {
+    ) -> Result<Vec<FileSearchRow>, sqlx::Error> {
+        let like = like_contains(query);
         let mut qb = QueryBuilder::new(
-            "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.category AS file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.is_private, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at FROM file f WHERE f.original_name LIKE ",
+            "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.category AS file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.is_private, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at, CASE WHEN f.original_name LIKE ",
         );
-        qb.push_bind(like_contains(query)).push(" ESCAPE '\\'");
+        qb.push_bind(like.clone())
+            .push(" ESCAPE '\\' THEN NULL ELSE f.text_content END AS text_hit FROM file f WHERE (f.original_name LIKE ")
+            .push_bind(like.clone())
+            .push(" ESCAPE '\\' OR f.text_content LIKE ")
+            .push_bind(like)
+            .push(" ESCAPE '\\')");
         push_visibility(&mut qb, viewer);
         qb.push(sort.order_by());
         qb.push(" LIMIT ")
@@ -423,7 +477,9 @@ impl FileRepository {
             .push(" OFFSET ")
             .push_bind(offset);
 
-        qb.build_query_as::<FileRow>().fetch_all(&*self.db).await
+        qb.build_query_as::<FileSearchRow>()
+            .fetch_all(&*self.db)
+            .await
     }
 
     // ── 一致性扫描 ──
@@ -454,7 +510,8 @@ impl FileRepository {
 
     // ── 全局搜索 ──
 
-    /// 全局搜索：文件名或标签名命中，文件名命中排在前面。
+    /// 全局搜索：文件名、标签名、元信息值**或正文**命中，文件名命中排在前面
+    /// （正文又排在标签 / 元信息前）。
     ///
     /// `like` 由 `like_contains` 生成（已转义 `%` / `_` / `\`），
     /// SQL 里用 `?1` 复用同一个模式串。
@@ -462,6 +519,10 @@ impl FileRepository {
     /// 可见性用静态 SQL 的标准形状 `(?2 IS NULL OR f.is_private = 0 OR f.user_id = ?2)`：
     /// admin 的 `owner_scope` 是 NULL → 条件恒真（全量）；普通用户 → 公开 + 自己的。
     /// 搜索端点（`SearchPort`）只给得到 `user_id`，所以落到这里的一定是普通用户口径。
+    ///
+    /// 正文命中时把**原文**捎回去（`text_content`，调用方截片段用）—— 只在命中时给：
+    /// 没命中的行这里是 NULL，不白搬几十 KB 文本。正文列可能到 1 MB
+    /// （`extract::MAX_TEXT_BYTES`），所以进响应的永远是片段，不是原文。
     pub async fn search_hits(
         &self,
         actor: &Actor,
@@ -482,16 +543,21 @@ impl FileRepository {
                       (SELECT m.key FROM file_meta m
                         WHERE m.file_id = f.id AND m.value LIKE ?1 ESCAPE '\'
                         ORDER BY m.key LIMIT 1) AS "matched_meta?: String",
-                      CASE WHEN f.original_name LIKE ?1 ESCAPE '\' THEN 0 ELSE 1 END AS "name_hit!: i64"
+                      CASE WHEN f.original_name LIKE ?1 ESCAPE '\' THEN 0 ELSE 1 END AS "name_hit!: i64",
+                      CASE WHEN f.text_content LIKE ?1 ESCAPE '\' THEN 1 ELSE 0 END AS "content_hit!: i64",
+                      CASE WHEN f.text_content LIKE ?1 ESCAPE '\' THEN f.text_content ELSE NULL END AS "text_content?: String"
                  FROM file f
                 WHERE (?2 IS NULL OR f.is_private = 0 OR f.user_id = ?2)
                   AND (f.original_name LIKE ?1 ESCAPE '\'
+                       OR f.text_content LIKE ?1 ESCAPE '\'
                        OR EXISTS (SELECT 1 FROM file_tag_rel r2
                                     JOIN file_tag t2 ON t2.id = r2.tag_id
                                    WHERE r2.file_id = f.id AND t2.name LIKE ?1 ESCAPE '\')
                        OR EXISTS (SELECT 1 FROM file_meta m2
                                    WHERE m2.file_id = f.id AND m2.value LIKE ?1 ESCAPE '\'))
-                ORDER BY CASE WHEN f.original_name LIKE ?1 ESCAPE '\' THEN 0 ELSE 1 END,
+                ORDER BY CASE WHEN f.original_name LIKE ?1 ESCAPE '\' THEN 0
+                              WHEN f.text_content LIKE ?1 ESCAPE '\' THEN 1
+                              ELSE 2 END,
                          f.created_at DESC
                 LIMIT ?3"#,
             like,
@@ -1208,13 +1274,13 @@ mod tests {
 
         // 搜索 + 排序（搜文件名后缀，命中两张图）
         let searched = repo
-            .search_by_name(".png", Some(&Actor::user(7)), 10, 0, SortOrder::SizeAsc)
+            .search_by_name_or_text(".png", Some(&Actor::user(7)), 10, 0, SortOrder::SizeAsc)
             .await
             .unwrap();
         assert_eq!(
             searched
                 .iter()
-                .map(|f| f.stored_id.as_str())
+                .map(|row| row.file.stored_id.as_str())
                 .collect::<Vec<_>>(),
             vec!["img-s", "img-l"]
         );
@@ -1797,10 +1863,10 @@ mod tests {
         assert!(repo.get_tags_for_files(&[]).await.unwrap().is_empty());
     }
 
-    // ── 文件名搜索 ──
+    // ── 文件名 / 正文搜索 ──
 
     #[tokio::test]
-    async fn search_by_name_matches_like_and_scopes_user() {
+    async fn search_by_name_or_text_matches_like_and_scopes_user() {
         let repo = setup().await;
         repo.insert(new_file_named("b1", "预算表.xlsx", "document", Some(7)))
             .await
@@ -1813,36 +1879,40 @@ mod tests {
             .unwrap();
 
         let hits = repo
-            .search_by_name("预算", Some(&Actor::user(7)), 10, 0, SortOrder::default())
+            .search_by_name_or_text("预算", Some(&Actor::user(7)), 10, 0, SortOrder::default())
             .await
             .unwrap();
         assert_eq!(hits.len(), 1);
-        assert_eq!(hits[0].stored_id, "b1");
+        assert_eq!(hits[0].file.stored_id, "b1");
+        // 文件名命中：不必捎正文（`text_hit` 是给"只在正文里命中"的行用的）
+        assert!(hits[0].text_hit.is_none());
 
         // 公开文件人人可见：空查询返回全部（含其他用户的公开文件）
         let all = repo
-            .search_by_name("", Some(&Actor::user(7)), 10, 0, SortOrder::default())
+            .search_by_name_or_text("", Some(&Actor::user(7)), 10, 0, SortOrder::default())
             .await
             .unwrap();
         assert_eq!(all.len(), 3);
 
         assert_eq!(
-            repo.count_by_name("预算", Some(&Actor::user(7)))
+            repo.count_by_name_or_text("预算", Some(&Actor::user(7)))
                 .await
                 .unwrap(),
             1
         );
         assert_eq!(
-            repo.count_by_name("", Some(&Actor::user(7))).await.unwrap(),
+            repo.count_by_name_or_text("", Some(&Actor::user(7)))
+                .await
+                .unwrap(),
             3
         );
         // 公开共享：用户 8 能搜到别人（user 7）的公开文件
         let shared = repo
-            .search_by_name("预算", Some(&Actor::user(8)), 10, 0, SortOrder::default())
+            .search_by_name_or_text("预算", Some(&Actor::user(8)), 10, 0, SortOrder::default())
             .await
             .unwrap();
         assert_eq!(shared.len(), 1);
-        assert_eq!(shared[0].stored_id, "b1");
+        assert_eq!(shared[0].file.stored_id, "b1");
 
         // 设为私密后别人搜不到，上传者本人仍能搜到
         sqlx::query("UPDATE file SET is_private = 1 WHERE stored_id = 'b1'")
@@ -1850,14 +1920,14 @@ mod tests {
             .await
             .unwrap();
         assert!(
-            repo.search_by_name("预算", Some(&Actor::user(8)), 10, 0, SortOrder::default())
+            repo.search_by_name_or_text("预算", Some(&Actor::user(8)), 10, 0, SortOrder::default())
                 .await
                 .unwrap()
                 .is_empty(),
             "别人的私密文件不应出现在搜索结果里"
         );
         assert_eq!(
-            repo.search_by_name("预算", Some(&Actor::user(7)), 10, 0, SortOrder::default())
+            repo.search_by_name_or_text("预算", Some(&Actor::user(7)), 10, 0, SortOrder::default())
                 .await
                 .unwrap()
                 .len(),
@@ -1865,18 +1935,72 @@ mod tests {
         );
         // LIKE 通配符转义：搜索 "%" 应作为字面字符（0 命中），而非匹配全部
         assert_eq!(
-            repo.search_by_name("%", Some(&Actor::user(7)), 10, 0, SortOrder::default())
+            repo.search_by_name_or_text("%", Some(&Actor::user(7)), 10, 0, SortOrder::default())
                 .await
                 .unwrap()
                 .len(),
             0
         );
         assert_eq!(
-            repo.search_by_name("_", Some(&Actor::user(7)), 10, 0, SortOrder::default())
+            repo.search_by_name_or_text("_", Some(&Actor::user(7)), 10, 0, SortOrder::default())
                 .await
                 .unwrap()
                 .len(),
             0
+        );
+    }
+
+    /// 正文命中：文件名不含关键字，但 `text_content` 里有 —— 搜得到，且只在这时捎回正文
+    #[tokio::test]
+    async fn search_by_name_or_text_matches_file_content() {
+        let repo = setup().await;
+        let row = repo
+            .insert(new_file_named("c1", "会议记录.docx", "document", Some(7)))
+            .await
+            .unwrap();
+        repo.insert(new_file_named("c2", "无关.txt", "document", Some(7)))
+            .await
+            .unwrap();
+        repo.set_text_content(row.id, "会上定了三件事：报销、排期、调休")
+            .await
+            .unwrap();
+
+        let hits = repo
+            .search_by_name_or_text("调休", Some(&Actor::user(7)), 10, 0, SortOrder::default())
+            .await
+            .unwrap();
+        assert_eq!(hits.len(), 1);
+        assert_eq!(hits[0].file.stored_id, "c1");
+        assert_eq!(
+            hits[0].text_hit.as_deref(),
+            Some("会上定了三件事：报销、排期、调休"),
+            "正文命中要把原文带回来给调用方截片段"
+        );
+        assert_eq!(
+            repo.count_by_name_or_text("调休", Some(&Actor::user(7)))
+                .await
+                .unwrap(),
+            1
+        );
+        // 别人的私密文件不能靠正文绕过可见性
+        let private = repo
+            .insert(new_file_named("c3", "私事.txt", "document", Some(8)))
+            .await
+            .unwrap();
+        repo.set_text_content(private.id, "调休申请已批")
+            .await
+            .unwrap();
+        sqlx::query("UPDATE file SET is_private = 1 WHERE stored_id = 'c3'")
+            .execute(&*repo.db)
+            .await
+            .unwrap();
+        assert!(
+            repo.search_by_name_or_text("调休", Some(&Actor::user(7)), 10, 0, SortOrder::default())
+                .await
+                .unwrap()
+                .iter()
+                .all(|row| row.file.stored_id != "c3"),
+            "私密文件的正文不该被搜出来"
         );
     }
 }

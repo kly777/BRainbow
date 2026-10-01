@@ -1,5 +1,7 @@
 pub mod consistency;
 pub mod content;
+/// 从可解析文档里抽可搜索的纯文本（`file.text_content` 的填充者）
+pub mod extract;
 pub mod handler;
 /// 类型 → 能力的唯一定义处（上限档 / 缩略图 / 预览 / 内联策略）
 pub mod kind;

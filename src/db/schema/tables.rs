@@ -210,6 +210,10 @@ pub(crate) const DECLS: &[Decl] = &[
             ) VIRTUAL,
             size_bytes      INTEGER NOT NULL DEFAULT 0,
             content_hash    TEXT,
+            -- 从可解析文档里抽出的纯文本（docx/xlsx/pptx/epub/文本族），供搜索。
+            -- NULL = 没抽过（这类没有正文，或还没轮到回填）；'' = 抽过但没文字。
+            -- 只用于搜索：不进任何响应 DTO，也不参与预览渲染
+            text_content    TEXT,
             width           INTEGER,
             height          INTEGER,
             duration_ms     INTEGER,

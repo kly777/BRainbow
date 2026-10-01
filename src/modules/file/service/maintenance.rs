@@ -13,6 +13,7 @@ use tracing::{debug, info, warn};
 
 use super::FileService;
 use crate::modules::file::consistency::{self, ConsistencyReport, is_stored_id};
+use crate::modules::file::extract;
 
 /// 孤儿清理护栏：孤儿数达到该下限、且占比超过 [`ORPHAN_GUARD_RATIO`] 时跳过清理。
 ///
@@ -203,12 +204,15 @@ impl FileService {
 
     /// 启动维护（后台执行，不阻塞启动）：
     /// 1. 回填存量文件的 content_hash（v16 之前的记录没有哈希，不参与去重）
-    /// 2. 回收孤儿文件（磁盘存在、DB 已无记录；护栏见 [`Self::cleanup_orphan_files`]）
+    /// 2. 回填存量文件的正文（v22 之前的记录没有 `text_content`，搜不到内容）
+    /// 3. 回收孤儿文件（磁盘存在、DB 已无记录；护栏见 [`Self::cleanup_orphan_files`]）
+    /// 4. 回收缩略图缓存
     ///
     /// 一致性**报告**由启动自检（`app::self_check`）统一输出，这里只做修复动作，
     /// 避免同一次启动打两份报告。
     pub async fn run_startup_maintenance(&self) {
         self.backfill_content_hashes().await;
+        self.backfill_text_content().await;
         self.cleanup_orphan_files().await;
         self.prune_thumb_cache().await;
     }
@@ -313,6 +317,60 @@ impl FileService {
         }
         if filled > 0 || skipped > 0 {
             info!("文件内容哈希回填：成功 {filled} 条，跳过 {skipped} 条（内容重复）");
+        }
+    }
+
+    /// 回填存量文件的正文（搜索用，v22 之前上传的文件没有 `text_content`）。
+    ///
+    /// 判据与上传路径共用 [`extract`] 那一份，"新传的能搜到、老文件搜不到"这类
+    /// 只在一边复现的问题因此不会出现。跳过三类，都不动数据库（列上留 NULL，
+    /// 下次启动再试）：这类没有正文、超过解析闸门、读不出来（文件缺失/损坏）。
+    pub async fn backfill_text_content(&self) {
+        let rows = match self.repo.find_missing_text().await {
+            Ok(rows) => rows,
+            Err(e) => {
+                warn!("读取待回填正文的文件失败: {e}");
+                return;
+            }
+        };
+        let mut filled = 0usize;
+        for (id, stored_id, mime) in rows {
+            if !extract::supports(&mime) {
+                continue;
+            }
+            let path = format!("{}/{}", self.upload_dir, stored_id);
+            // 先看体积再决定读不读：几百 MB 的文件不该为了抽正文整个进内存
+            let Ok(meta) = tokio::fs::metadata(&path).await else {
+                continue; // 文件缺失/不可读
+            };
+            if meta.len() > extract::MAX_PARSE_BYTES as u64 {
+                continue;
+            }
+            let Ok(bytes) = tokio::fs::read(&path).await else {
+                continue;
+            };
+            // 解析是同步 CPU 活（解压 + XML），别占着 runtime 线程
+            let parsed = tokio::task::spawn_blocking(move || extract::extract(&mime, &bytes)).await;
+            let text = match parsed {
+                Ok(Ok(Some(text))) => text,
+                Ok(Ok(None)) => continue,
+                Ok(Err(reason)) => {
+                    debug!("正文回填跳过 {stored_id}: {reason}");
+                    continue;
+                }
+                Err(e) => {
+                    warn!("正文回填任务失败 {stored_id}: {e}");
+                    continue;
+                }
+            };
+            if let Err(e) = self.repo.set_text_content(id, &text).await {
+                warn!("正文回填写入失败 {stored_id}: {e}");
+                continue;
+            }
+            filled += 1;
+        }
+        if filled > 0 {
+            info!("文件正文回填：{filled} 条可搜索");
         }
     }
 
@@ -603,6 +661,109 @@ mod tests {
         assert!(stored.content_hash.is_none(), "撞唯一索引应保持 NULL");
         // 文件未被误删
         assert!(std::path::Path::new(&format!("{}/legacy000002", ctx.dir.0)).exists());
+    }
+
+    // ── 正文回填（搜索用） ──
+
+    #[tokio::test]
+    async fn backfill_text_content_fills_legacy_rows() {
+        let ctx = setup_service().await;
+        // 存量记录：v22 之前上传的文件没有正文，只有磁盘上的内容
+        let row = ctx
+            .svc
+            .repo
+            .insert(crate::modules::file::model::NewFile {
+                stored_id: "legacy000003",
+                original_name: "会议.txt",
+                mime_type: "text/plain",
+                size_bytes: 0,
+                width: None,
+                height: None,
+                duration_ms: None,
+                user_id: Some(7),
+                content_hash: None,
+                is_private: false,
+            })
+            .await
+            .unwrap();
+        std::fs::write(
+            format!("{}/legacy000003", ctx.dir.0),
+            "下周评审：材料周三前交",
+        )
+        .unwrap();
+
+        ctx.svc.backfill_text_content().await;
+
+        let text: Option<String> = sqlx::query_scalar("SELECT text_content FROM file WHERE id = ?")
+            .bind(row.id)
+            .fetch_one(&*ctx.pool)
+            .await
+            .unwrap();
+        assert_eq!(text.as_deref(), Some("下周评审：材料周三前交"));
+    }
+
+    /// 没有正文可抽的类型（图片）不读盘也不写库：回填后仍是 NULL，
+    /// 下次启动会再筛一遍但它们连文件都不会被读
+    #[tokio::test]
+    async fn backfill_text_content_skips_types_without_body() {
+        let ctx = setup_service().await;
+        let row = ctx
+            .svc
+            .repo
+            .insert(crate::modules::file::model::NewFile {
+                stored_id: "legacy000004",
+                original_name: "旧图.png",
+                mime_type: "image/png",
+                size_bytes: PNG_1X1.len() as i64,
+                width: None,
+                height: None,
+                duration_ms: None,
+                user_id: Some(7),
+                content_hash: None,
+                is_private: false,
+            })
+            .await
+            .unwrap();
+        std::fs::write(format!("{}/legacy000004", ctx.dir.0), PNG_1X1).unwrap();
+
+        ctx.svc.backfill_text_content().await;
+
+        let text: Option<String> = sqlx::query_scalar("SELECT text_content FROM file WHERE id = ?")
+            .bind(row.id)
+            .fetch_one(&*ctx.pool)
+            .await
+            .unwrap();
+        assert_eq!(text, None, "没有正文可抽的类型不该写空串（空串=抽过）");
+    }
+
+    /// 已经抽过的行（含"抽过但没文字"的空串）不再进回填名单
+    #[tokio::test]
+    async fn backfill_text_content_leaves_already_extracted_rows_alone() {
+        let ctx = setup_service().await;
+        let f = ctx
+            .svc
+            .upload(
+                "第一次的内容".as_bytes(),
+                "a.txt",
+                "text/plain",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
+            .await
+            .unwrap()
+            .file;
+        // 把磁盘上的内容换掉：回填若再抽一次会把新内容写进去 —— 那说明它在白干活
+        std::fs::write(format!("{}/{}", ctx.dir.0, f.stored_id), "改过的内容").unwrap();
+
+        ctx.svc.backfill_text_content().await;
+
+        let text: Option<String> = sqlx::query_scalar("SELECT text_content FROM file WHERE id = ?")
+            .bind(f.id)
+            .fetch_one(&*ctx.pool)
+            .await
+            .unwrap();
+        assert_eq!(text.as_deref(), Some("第一次的内容"));
     }
 
     // ── 一致性扫描 ──

@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id AS \"id!: i64\", stored_id, mime_type FROM file WHERE text_content IS NULL ORDER BY id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "file",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "stored_id",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "file",
+            "name": "stored_id"
+          }
+        }
+      },
+      {
+        "name": "mime_type",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "file",
+            "name": "mime_type"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "826f8dbf9d06406eca664bbad3e7a0e186aa93c905f897d9cc91726cd92e8804"
+}

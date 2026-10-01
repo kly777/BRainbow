@@ -53,6 +53,9 @@ export interface FileItem {
 	is_private: boolean;
 	/** 当前登录用户能否改名 / 改标签 / 切换可见性 / 删除（仅上传者本人） */
 	can_edit: boolean;
+	/** 搜索时命中**正文**的上下文片段（只有"文件名没命中、正文命中"的行才有；
+	 *  后端只给片段，不给抽出来的那整份文本） */
+	match_snippet?: string | null;
 }
 
 /** 上传结果：duplicate=true 表示命中内容去重、复用已有文件（未新建） */

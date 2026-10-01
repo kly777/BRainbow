@@ -50,6 +50,10 @@ struct FileResponse {
     is_private: bool,
     /// 当前请求者是否可以改名 / 改标签 / 切换可见性 / 删除
     can_edit: bool,
+    /// 搜索时命中**正文**的上下文片段（只有"文件名没命中、正文命中"的行才有）。
+    /// 只是片段，不是抽出来的那整份文本 —— 那份（`file.text_content`）不出接口
+    #[serde(skip_serializing_if = "Option::is_none")]
+    match_snippet: Option<String>,
 }
 
 /// 上传响应：duplicate=true 表示命中内容去重、复用已有文件（未新建）
@@ -105,6 +109,8 @@ fn to_response(f: &super::model::File, include_meta: bool, viewer: Option<&Actor
         missing: f.missing,
         is_private: f.is_private,
         can_edit: can_edit(f.user_id, viewer),
+        // 详情页不是"搜索结果的某一页"：命中片段只在列表响应里给
+        match_snippet: None,
     }
 }
 
@@ -133,6 +139,7 @@ fn to_summary_response(f: &super::model::FileSummary, viewer: Option<&Actor>) ->
         missing: f.missing,
         is_private: f.is_private,
         can_edit: can_edit(f.user_id, viewer),
+        match_snippet: f.match_snippet.clone(),
     }
 }
 
@@ -1063,6 +1070,7 @@ mod tests {
             updated_at: Utc::now(),
             missing,
             is_private: false,
+            match_snippet: None,
         }
     }
 
@@ -1131,6 +1139,38 @@ mod tests {
             listed.get("meta").is_none(),
             "列表不带 meta（skip_serializing_if）"
         );
+    }
+
+    /// 层间契约：搜索结果里的正文命中片段必须真的进响应。
+    /// 回归背景同 `responses_carry_missing_flag` —— model 加了字段、响应漏映射，
+    /// 前端就永远收不到；只有"列表响应带上、详情/普通列表不带"两种情况都对才算接好
+    #[test]
+    fn responses_carry_match_snippet_only_when_it_exists() {
+        let hit = FileSummary {
+            match_snippet: Some("会上定了三件事：报销、排期".into()),
+            ..sample_summary(false)
+        };
+        let listed =
+            serde_json::to_value(to_summary_response(&hit, Some(&Actor::user(7)))).unwrap();
+        assert_eq!(
+            listed["match_snippet"],
+            serde_json::json!("会上定了三件事：报销、排期")
+        );
+
+        // 没有命中（普通列表 / 详情）时字段整个不出现，而不是给 null
+        let plain = serde_json::to_value(to_summary_response(
+            &sample_summary(false),
+            Some(&Actor::user(7)),
+        ))
+        .unwrap();
+        assert!(plain.get("match_snippet").is_none());
+        let detail = serde_json::to_value(to_response(
+            &sample_file(false),
+            true,
+            Some(&Actor::user(7)),
+        ))
+        .unwrap();
+        assert!(detail.get("match_snippet").is_none());
     }
 
     // ── can_edit（响应里的按钮开关） ──

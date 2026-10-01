@@ -112,7 +112,7 @@ impl Decl {
 ///
 /// 漏抬的后果是被**自检**兜住的：声明改了、版本号没动时，老库不会去 reconcile，
 /// 而启动自检会报出"声明里有、库里没有的列"（见 `verify::check_schema`）。
-pub const SCHEMA_VERSION: i64 = 21;
+pub const SCHEMA_VERSION: i64 = 22;
 
 /// schema 入口：把库带到当前代次。
 ///

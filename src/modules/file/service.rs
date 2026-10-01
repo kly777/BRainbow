@@ -5,10 +5,9 @@ use sqlx::SqlitePool;
 use tracing::{error, warn};
 
 use super::content::sanitize_name;
-use super::limits;
-use super::mime;
 use super::model::{File, FileCategory, NewFile, UpdateFileRequest};
 use super::repository::FileRepository;
+use super::{extract, limits, mime};
 use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 
@@ -248,6 +247,11 @@ impl FileService {
                 .await;
         }
 
+        // 正文抽取（搜索用）：刚落盘的文件读回来解一遍。
+        // 失败不影响上传 —— 与图片尺寸解析同一尺度；列上留 NULL，下次启动的回填会再试
+        self.capture_text_content(file_row.id, &stored_id, final_mime, data_size)
+            .await;
+
         // 标签（匿名老路径没有归属人，无法归属标签，静默忽略 —— 直接跳过，
         // 别拿 0 兜底：那会写出一条 user_id=0 的标签并撞外键）
         let tag_names = match (tags, owner) {
@@ -433,6 +437,36 @@ impl FileService {
             },
             duplicate: true,
         })
+    }
+
+    /// 抽正文入库（搜索用，见 [`extract`]）。
+    ///
+    /// 读回刚落盘的文件而不是用内存里的字节：流式上传路径手里只有文件头，
+    /// 走同一条"从磁盘读"的路，两条上传入口的行为才一致。
+    /// 抽不出来（这类没有正文 / 超过解析闸门 / 文件损坏）都**不是错误**：
+    /// 留 NULL，下次启动的回填会再试。
+    async fn capture_text_content(&self, id: i64, stored_id: &str, mime: &str, size: u64) {
+        if !extract::supports(mime) || size > extract::MAX_PARSE_BYTES as u64 {
+            return;
+        }
+        let path = format!("{}/{}", self.upload_dir, stored_id);
+        let Ok(bytes) = tokio::fs::read(&path).await else {
+            warn!("正文抽取：读不回刚落盘的文件 {stored_id}");
+            return;
+        };
+        let mime = mime.to_string();
+        // 解析是同步 CPU 活（解压 + XML），丢进 blocking 线程，别占着 runtime
+        let parsed = tokio::task::spawn_blocking(move || extract::extract(&mime, &bytes)).await;
+        match parsed {
+            Ok(Ok(Some(text))) => {
+                if let Err(e) = self.repo.set_text_content(id, &text).await {
+                    warn!("正文抽取：写入失败 {stored_id}: {e}");
+                }
+            }
+            Ok(Ok(None)) => {}
+            Ok(Err(reason)) => tracing::debug!("正文抽取跳过 {stored_id}: {reason}"),
+            Err(e) => warn!("正文抽取任务失败 {stored_id}: {e}"),
+        }
     }
 
     /// 提取图片尺寸
@@ -994,6 +1028,102 @@ mod tests {
             .unwrap_err();
         assert!(matches!(err, ServiceError::InvalidInput(_)));
         assert!(err.to_string().contains("无法识别"));
+    }
+
+    // ── 正文抽取（搜索用，file.text_content） ──
+
+    /// 读回文件行上的 text_content（NULL 与 '' 在这里能区分开）
+    async fn text_content_of(ctx: &Ctx, id: i64) -> Option<String> {
+        sqlx::query_scalar("SELECT text_content FROM file WHERE id = ?")
+            .bind(id)
+            .fetch_one(&*ctx.pool)
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn upload_captures_body_text_for_search() {
+        let ctx = setup_service().await;
+        let f = ctx
+            .svc
+            .upload(
+                "退货政策：七天内可退，运费自理".as_bytes(),
+                "政策.md",
+                "text/markdown",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
+            .await
+            .unwrap()
+            .file;
+        assert_eq!(
+            text_content_of(&ctx, f.id).await.as_deref(),
+            Some("退货政策：七天内可退，运费自理")
+        );
+        // 服务端派生的搜索数据，不动 updated_at（否则会把文件顶到"最近更新"最前）
+        assert_eq!(f.updated_at, {
+            sqlx::query_scalar::<_, chrono::DateTime<chrono::Utc>>(
+                "SELECT updated_at FROM file WHERE id = ?",
+            )
+            .bind(f.id)
+            .fetch_one(&*ctx.pool)
+            .await
+            .unwrap()
+        });
+    }
+
+    /// docx 抽的是**正文文字**：段落成行、表格单元格用制表符分隔，
+    /// 与预览那份受限 HTML 不是一回事
+    #[tokio::test]
+    async fn upload_captures_docx_body_as_plain_text() {
+        let ctx = setup_service().await;
+        let bytes = docx_bytes(
+            r#"<w:p><w:r><w:t>季度总结</w:t></w:r></w:p>
+<w:tbl><w:tr><w:tc><w:p><w:r><w:t>营收</w:t></w:r></w:p></w:tc>
+<w:tc><w:p><w:r><w:t>一百万</w:t></w:r></w:p></w:tc></w:tr></w:tbl>"#,
+        );
+        let f = ctx
+            .svc
+            .upload(
+                &bytes,
+                "总结.docx",
+                DOCX,
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
+            .await
+            .unwrap()
+            .file;
+        let text = text_content_of(&ctx, f.id).await.expect("docx 应有正文");
+        assert!(text.contains("季度总结"), "{text}");
+        assert!(text.contains("营收\t一百万"), "{text}");
+        assert!(
+            !text.contains("<w:p"),
+            "存的必须是抽出来的文字，不是 XML：{text}"
+        );
+    }
+
+    /// 没有正文可抽的类型（图片）留 NULL —— 不是空串：
+    /// NULL 才代表"没抽过"，回填不会再白读一遍盘
+    #[tokio::test]
+    async fn upload_leaves_text_content_null_for_image() {
+        let ctx = setup_service().await;
+        let f = ctx
+            .svc
+            .upload(
+                PNG_1X1,
+                "x.png",
+                "image/png",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
+            .await
+            .unwrap()
+            .file;
+        assert_eq!(text_content_of(&ctx, f.id).await, None);
     }
 
     #[tokio::test]

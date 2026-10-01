@@ -15,7 +15,12 @@ import {
 	onCleanup,
 	onMount,
 } from "solid-js";
-import { buildCmdItems, buildNavItems, probeDuck } from "./suggestions.ts";
+import {
+	buildCmdItems,
+	buildIdleItems,
+	buildNavItems,
+	probeDuck,
+} from "./suggestions.ts";
 import { usePaletteSearch } from "./usePaletteSearch.ts";
 
 export type Mode = "idle" | "nav" | "search" | "cmd";
@@ -29,7 +34,8 @@ export const MODE_PREFIX: Record<Mode, string> = {
 	cmd: ":",
 };
 export const MODE_PLACEHOLDER: Record<Mode, string> = {
-	idle: "输入 / 导航  ? 搜索  : 指令",
+	// idle 现在"直接打字"就有用（本地跳页面 + 可转站内搜索），前缀是进阶开关
+	idle: "搜索、跳转或执行命令（/ ? : 换模式）",
 	nav: "输入路由名称…",
 	search: "输入搜索关键词…",
 	cmd: "输入指令…",
@@ -88,7 +94,9 @@ export function usePalette() {
 	let lastFocused: HTMLElement | null = null;
 
 	const mode = createMemo(() => detectMode(value()));
-	const query = () => value().slice(1);
+	// 前缀只有 nav / search / cmd 三个模式才有；idle 下整串都是查询词。
+	// （曾经无条件 slice(1)：idle 打字会被吃掉第一个字，"文件"变成"件"）
+	const query = () => (mode() === "idle" ? value() : value().slice(1));
 
 	const close = () => {
 		setOpen(false);
@@ -144,6 +152,13 @@ export function usePalette() {
 			: EMPTY_SUGGESTIONS,
 	);
 
+	// idle：不打前缀也有用 —— 本地跳页面，输入还能一键转站内搜索（选中后停在 `?` 模式）
+	const idleItems = createMemo<Suggestion[]>(() =>
+		mode() === "idle"
+			? buildIdleItems(query(), navigate, close, (q) => setValue(`?${q}`))
+			: EMPTY_SUGGESTIONS,
+	);
+
 	const cmdItems = createMemo<Suggestion[]>(() =>
 		mode() === "cmd" ? buildCmdItems(query(), commands()) : EMPTY_SUGGESTIONS,
 	);
@@ -166,7 +181,7 @@ export function usePalette() {
 				? cmdItems()
 				: mode() === "search"
 					? search.searchItems()
-					: EMPTY_SUGGESTIONS,
+					: idleItems(),
 	);
 
 	// 选中项变化时滚动到可见

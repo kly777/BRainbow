@@ -155,6 +155,19 @@ export default function CommandPalette() {
 	const ActionPanel = () => {
 		const m = p.mode();
 		const q = p.query();
+		// idle：空输入列可跳页面（最近访问优先），打字 = 本地匹配 + "在站内搜索"一行
+		if (m === "idle") {
+			if (p.currentItems().length > 0)
+				return (
+					<SuggestionList
+						items={p.currentItems()}
+						selected={p.selectedIndex()}
+						onHover={p.setSelectedIndex}
+						listRef={p.bindSugScroll}
+					/>
+				);
+			return null;
+		}
 		if (m === "nav") {
 			if (p.navItems().length > 0)
 				return (

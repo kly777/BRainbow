@@ -147,6 +147,35 @@ describe("命令面板的键盘与 a11y 契约", () => {
 		dispose();
 	});
 
+	it("无前缀打开就列出可跳页面；打字给「在站内搜索」一行，选中即切 ? 模式", async () => {
+		const { dispose } = await mountPalette();
+		key(document.body, { key: "k", ctrlKey: true });
+
+		// 空输入不再是空白面板：直接列出可跳页面
+		expect(document.querySelectorAll('[role="option"]').length).toBeGreaterThan(
+			0,
+		);
+
+		const input = paletteInput() as HTMLInputElement;
+		input.value = "文件";
+		input.dispatchEvent(new Event("input", { bubbles: true }));
+		await waitFor(() =>
+			(document.body.textContent ?? "").includes("在站内搜索"),
+		);
+
+		const rows = [...document.querySelectorAll('[role="option"]')];
+		const searchRow = rows.at(-1) as HTMLElement;
+		expect(searchRow.textContent).toContain("在站内搜索「文件」");
+
+		// 选中它：留在面板里、切到 `?` 模式（输入框前缀跟着变），而不是直接跳走
+		searchRow.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+		await Promise.resolve();
+		expect(paletteInput()?.value).toBe("?文件");
+		expect(navigateMock).not.toHaveBeenCalled();
+
+		dispose();
+	});
+
 	it("多分组结果下回车执行第一条可选项（此前会选到标题上、静默关面板）", async () => {
 		const { dispose } = await mountPalette();
 		key(document.body, { key: "k", ctrlKey: true });

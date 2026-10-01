@@ -72,6 +72,34 @@ export function resolveTargetUrl(target: SearchTarget): string {
 }
 
 /**
+ * 无前缀（idle）的候选：**打开面板直接打字就有用**。
+ *
+ * 之前 idle 什么都不给：输入框accept了输入却什么都不显示，回车还会静默关掉面板 ——
+ * 用户得先知道 `/` `?` `:` 三个前缀才使得动（业界默认是"直接打字搜一切"）。
+ * 现在：空输入 = 可直接跳的页面（最近访问优先，同 `/`）；有输入 = 本地模糊匹配
+ * 那些页面 + 一条"在站内搜索「q」"（选中即切到 `?` 模式，在面板里原地看结果）。
+ */
+export function buildIdleItems(
+	q: string,
+	navigate: (path: string) => void,
+	close: () => void,
+	switchToSearch: (q: string) => void,
+): Suggestion[] {
+	const nav = buildNavItems(q, navigate, close);
+	const trimmed = q.trim();
+	if (!trimmed) return nav;
+	return [
+		...nav,
+		{
+			label: `在站内搜索「${trimmed}」`,
+			desc: "任务 / 卡片 / 记忆 / 文件…",
+			extra: "search",
+			onSelect: () => switchToSearch(trimmed),
+		},
+	];
+}
+
+/**
  * 导航模式的候选页面：**只留能直接跳的实路径**。
  *
  * `NAV_ITEMS` 里还有一批详情页模板（`/file/:id`、`/card/edit/:id`…，`nav: false`），

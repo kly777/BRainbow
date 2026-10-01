@@ -1,8 +1,13 @@
 // ── 全局搜索目标的 URL 解析、模块标签、导航候选 ──
 
 import { fillPath, isConcretePath, PATHS } from "@config/paths";
-import { describe, expect, it } from "vitest";
-import { buildNavItems, KIND_LABEL, resolveTargetUrl } from "./suggestions.ts";
+import { describe, expect, it, vi } from "vitest";
+import {
+	buildIdleItems,
+	buildNavItems,
+	KIND_LABEL,
+	resolveTargetUrl,
+} from "./suggestions.ts";
 
 describe("resolveTargetUrl", () => {
 	it("File 目标用 stored_id 解析为文件详情页", () => {
@@ -77,5 +82,32 @@ describe("buildNavItems（/ 模式的候选）", () => {
 		const paths = pathsOf("");
 		expect(paths).toContain(PATHS.file);
 		expect(paths.every(isConcretePath)).toBe(true);
+	});
+});
+
+describe("buildIdleItems（无前缀模式）", () => {
+	const noop = () => {};
+
+	it("空输入就列出可跳页面（不再是什么都没有）", () => {
+		const items = buildIdleItems("", noop, noop, noop);
+		expect(items.map((s) => s.extra)).toContain(PATHS.file);
+		expect(items.every((s) => !s.isHeader)).toBe(true);
+	});
+
+	it("打字 = 本地匹配 + 末尾一条「在站内搜索」，选中即切到搜索模式", () => {
+		const switchToSearch = vi.fn();
+		const items = buildIdleItems("  文件  ", noop, noop, switchToSearch);
+		const last = items.at(-1);
+		expect(last?.label).toBe("在站内搜索「文件」");
+		expect(last?.extra).toBe("search");
+
+		last?.onSelect();
+		expect(switchToSearch).toHaveBeenCalledWith("文件");
+	});
+
+	it("本地命中仍排在搜索兜底之前（能直接跳就不进搜索页）", () => {
+		const items = buildIdleItems("file", noop, noop, noop);
+		expect(items[0]?.extra).toBe(PATHS.file);
+		expect(items.at(-1)?.extra).toBe("search");
 	});
 });

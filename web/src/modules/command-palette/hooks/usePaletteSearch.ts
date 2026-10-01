@@ -78,7 +78,8 @@ export function usePaletteSearch(opts: UsePaletteSearchOpts) {
 			return;
 		}
 		const seq = ++searchSeq;
-		setHits([]);
+		// **不清空上一轮结果**：每按一键就把列表抹掉重画会闪（同 bookmark 的搜索契约）。
+		// 新结果一到就整体替换；真正没结果时由 buildSearchItems 给"在浏览器中搜索"兜底
 		setSearching(true);
 		searchTimer = setTimeout(async () => {
 			try {

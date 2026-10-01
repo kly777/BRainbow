@@ -69,6 +69,27 @@ describe("usePaletteSearch 的输入法闸门", () => {
 		dispose();
 	});
 
+	it("搜索中保留上一轮结果（不清空，避免列表闪）", async () => {
+		const { api, setQuery, dispose } = setup();
+		mockedSearch.mockResolvedValueOnce({
+			hits: [{ kind: "file", id: 1, title: "第一轮" }],
+		} as never);
+
+		setQuery("huiyi");
+		await vi.advanceTimersByTimeAsync(DEBOUNCE * 2);
+		expect(api.hits()).toHaveLength(1);
+
+		// 再输入：请求还没回来，旧结果必须还在（列表不能整块消失）
+		mockedSearch.mockReturnValueOnce(new Promise(() => {}) as never);
+		setQuery("huiyi2");
+		await vi.advanceTimersByTimeAsync(DEBOUNCE * 2);
+		expect(api.searching()).toBe(true);
+		expect(api.hits()).toHaveLength(1);
+		expect(api.hits()[0]?.title).toBe("第一轮");
+
+		dispose();
+	});
+
 	it("不组字时照常防抖搜索（闸门没把正常路径堵死）", async () => {
 		const { setQuery, dispose } = setup();
 

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // ── useConvSearch 搜索状态与链接构造（测试覆盖扩充）──
 // mock useUrlParams（路由耦合）与搜索 API，验证纯逻辑分支。
 import { PATHS } from "@config/paths";

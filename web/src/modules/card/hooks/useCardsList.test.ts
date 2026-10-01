@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // ── useCardsList 列表生命周期（测试覆盖扩充）──
 // 乐观删除回滚 / 创建前置插入 / 分页守卫 / 加载更多终止条件。
 

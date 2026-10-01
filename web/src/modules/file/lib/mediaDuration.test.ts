@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // ── 上传前读媒体时长（纯函数 + 注入假元素的路径测试） ──
 //
 // jsdom 不解码媒体，也不实现 URL.createObjectURL，所以这里注入一个假元素把

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // ── useCardAdd 表单生命周期（测试覆盖扩充，T4 card 模块零测试缺口）──
 // mock 路由与 API 层，hook 在 createRoot 中运行（同 mem hooks 测试范式）。
 import { createCardE } from "@modules/card";

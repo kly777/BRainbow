@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // ── 上传限额：分档判断、格式化、以及"与后端镜像一致"的交叉校验 ──
 //
 // 前端这套数字是后端 `src/modules/file/limits.rs` 的镜像，两处必须同步。

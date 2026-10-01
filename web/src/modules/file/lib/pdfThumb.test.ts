@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // ── PDF 首页缩略图（判定与降级路径；真正的渲染在浏览器里） ──
 //
 // jsdom 没有 canvas 的 2d 上下文，也没有 IntersectionObserver，所以这里锁的是

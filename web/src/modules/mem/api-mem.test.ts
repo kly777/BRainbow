@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getMnemonicE, getUpcomingCountsE, setMnemonicE } from "./api.ts";
 

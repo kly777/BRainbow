@@ -5,7 +5,7 @@
 use sqlx::SqliteConnection;
 
 use super::super::helpers::migration_failed;
-use super::v8::TIME_COLUMNS;
+use super::super::schema::TIME_COLUMNS;
 
 pub async fn migrate(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
     for (table, pk, columns) in TIME_COLUMNS {

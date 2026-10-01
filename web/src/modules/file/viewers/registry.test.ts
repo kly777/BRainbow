@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // ── 查看器注册表契约 ──
 //
 // 两条规则：

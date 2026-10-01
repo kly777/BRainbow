@@ -5,7 +5,7 @@ import { useAuth } from "@app/context/auth.tsx";
 import { PATHS } from "@config/paths";
 import { openAiSettings } from "@modules/ai-setting";
 import { AUTH_REQUIRED_EVENT } from "@shared/api";
-import { isTypingTarget } from "@shared/utils";
+import { isImeComposing, isTypingTarget } from "@shared/utils";
 import { addRecentPage } from "@shared/utils/recent-pages.ts";
 import { useNavigate } from "@solidjs/router";
 import {
@@ -72,6 +72,8 @@ export function usePalette() {
 	const [value, setValue] = createSignal("");
 	const [open, setOpen] = createSignal(false);
 	const [selectedIndex, setSelectedIndex] = createSignal(0);
+	/** 输入法组字中：搜索要等 compositionend，别按拼音中间态去搜 */
+	const [composing, setComposing] = createSignal(false);
 
 	let inputRef!: HTMLInputElement;
 	let sugScrollRef: HTMLDivElement | undefined;
@@ -133,6 +135,7 @@ export function usePalette() {
 	const search = usePaletteSearch({
 		mode,
 		query,
+		composing,
 		setQuery: setValue,
 		navigate,
 		close,
@@ -186,6 +189,9 @@ export function usePalette() {
 	});
 
 	const onInputKey = (e: KeyboardEvent) => {
+		// 输入法组字中：回车是选候选词、上下键是翻候选、Esc 是撤候选 —— 都不归我们管。
+		// 不放行的话，中文用户一按回车选词就把面板里"随便哪一项"执行掉并关掉面板
+		if (isImeComposing(e)) return;
 		if (e.key === "Escape") {
 			close();
 			return;
@@ -268,6 +274,9 @@ export function usePalette() {
 		onInputKey,
 		openPalette,
 		close,
+		/** 组字状态由输入框的 composition 事件驱动（见 usePaletteSearch 的搜索闸门） */
+		onCompositionStart: () => setComposing(true),
+		onCompositionEnd: () => setComposing(false),
 		bindInput: (el: HTMLInputElement) => {
 			inputRef = el;
 		},

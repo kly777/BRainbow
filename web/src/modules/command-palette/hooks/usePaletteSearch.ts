@@ -19,6 +19,8 @@ const EMPTY: Suggestion[] = [];
 export interface UsePaletteSearchOpts {
 	mode: Accessor<Mode>;
 	query: Accessor<string>;
+	/** 输入法组字中（见 usePalette）：组字期间不搜，等 compositionend */
+	composing: Accessor<boolean>;
 	setQuery: (v: string) => void;
 	navigate: (path: string) => void;
 	close: () => void;
@@ -65,6 +67,9 @@ export function usePaletteSearch(opts: UsePaletteSearchOpts) {
 
 	createEffect(() => {
 		if (opts.mode() !== "search") return;
+		// 组字中不搜（拼音的中间态会带来一串无用请求，且每次都会把列表清空重画）；
+		// compositionend 把 composing 翻回 false，这个 effect 会带着最终文本再跑一遍
+		if (opts.composing()) return;
 		const q = opts.query().trim();
 		clearTimeout(searchTimer);
 		if (!q) {

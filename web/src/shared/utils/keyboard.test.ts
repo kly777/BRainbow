@@ -2,7 +2,7 @@
 // ── 键盘让路判定 ──
 
 import { describe, expect, it } from "vitest";
-import { isTypingTarget } from "./keyboard.ts";
+import { isImeComposing, isTypingTarget } from "./keyboard.ts";
 
 function el(tag: string, editing = false): HTMLElement {
 	const node = document.createElement(tag);
@@ -39,5 +39,28 @@ describe("isTypingTarget", () => {
 		expect(isTypingTarget(undefined)).toBe(false);
 		// window / document 之类没有 tagName 的目标
 		expect(isTypingTarget(window as unknown as EventTarget)).toBe(false);
+	});
+});
+
+describe("isImeComposing", () => {
+	const keydown = (init: KeyboardEventInit) =>
+		new KeyboardEvent("keydown", { key: "Enter", ...init });
+
+	it("组字中的按键一律让路（回车在选候选词）", () => {
+		expect(isImeComposing(keydown({ isComposing: true }))).toBe(true);
+	});
+
+	it("老实现只给 keyCode 229（组字的标志），也认", () => {
+		const e = keydown({});
+		// jsdom 的 KeyboardEventInit 不吃 keyCode，得直接定义
+		Object.defineProperty(e, "keyCode", { value: 229 });
+		expect(isImeComposing(e)).toBe(true);
+	});
+
+	it("组字之外的按键照常处理", () => {
+		expect(isImeComposing(keydown({}))).toBe(false);
+		expect(isImeComposing(keydown({ key: "ArrowDown", keyCode: 40 }))).toBe(
+			false,
+		);
 	});
 });

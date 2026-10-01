@@ -16,6 +16,7 @@ import {
 } from "@modules/file/api";
 import { getErrorMessage } from "@shared/api";
 import {
+	isImeComposing,
 	notifyError,
 	notifySuccess,
 	showConfirm,
@@ -138,6 +139,8 @@ const TagManager: Component<Props> = (props) => {
 											value={editName()}
 											onInput={(e) => setEditName(e.currentTarget.value)}
 											onKeyDown={(e) => {
+												// 输入法组字中：回车选候选、Esc 撤候选 —— 先别改名
+												if (isImeComposing(e)) return;
 												if (e.key === "Enter") void submitRename();
 												if (e.key === "Escape") setEditingId(null);
 											}}

@@ -5,6 +5,7 @@ import {
 	copyTextWithToast,
 	fmtLocal,
 	getGreeting,
+	isImeComposing,
 	tryOrNotify,
 } from "@shared/utils";
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
@@ -84,7 +85,9 @@ export function TreeListItem(props: {
 						onClick={(e) => e.stopPropagation()}
 						onBlur={commitRename}
 						onKeyDown={(e) => {
+							// 组字期间也要拦住冒泡（别惊动全局快捷键），但动作让给输入法
 							e.stopPropagation();
+							if (isImeComposing(e)) return;
 							if (e.key === "Enter") commitRename();
 							if (e.key === "Escape") {
 								setRenameText(props.tree.title);

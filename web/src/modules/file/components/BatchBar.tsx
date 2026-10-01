@@ -1,4 +1,5 @@
 import { Button, Input } from "@components/ui";
+import { isImeComposing } from "@shared/utils";
 import { type Component, createSignal, Show } from "solid-js";
 import styles from "../FileList.module.css";
 
@@ -44,6 +45,8 @@ const BatchBar: Component<{
 						value={tag()}
 						onInput={(e) => setTag(e.currentTarget.value)}
 						onKeyDown={(e) => {
+							// 输入法组字中：回车在选候选词，别急着提交标签
+							if (isImeComposing(e)) return;
 							if (e.key === "Enter") void submitTag();
 						}}
 						aria-label="为已选文件加标签"

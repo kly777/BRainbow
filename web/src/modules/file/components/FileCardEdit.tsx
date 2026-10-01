@@ -1,4 +1,5 @@
 import { Button, Input } from "@components/ui";
+import { isImeComposing } from "@shared/utils";
 import { Show } from "solid-js";
 import type { FileItem } from "../api.ts";
 import styles from "../FileList.module.css";
@@ -24,7 +25,12 @@ export default function FileCardEdit(props: {
 					value={props.editName}
 					onInput={(e) => props.onEditName(e.currentTarget.value)}
 					class={styles.editInput}
-					onKeyPress={(e) => e.key === "Enter" && props.onRename()}
+					// 用 keydown 而不是过时的 keypress：组字中的回车（选候选词）要被挡掉，
+					// 否则中文改名会提交成没打完的拼音
+					onKeyDown={(e) => {
+						if (isImeComposing(e)) return;
+						if (e.key === "Enter") props.onRename();
+					}}
 					aria-label="文件名称"
 				/>
 				<FileMeta item={props.item} />

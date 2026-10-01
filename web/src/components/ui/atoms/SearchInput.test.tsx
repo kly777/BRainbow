@@ -74,6 +74,34 @@ describe("SearchInput", () => {
 		expect(onSearch).toHaveBeenCalledWith("abc");
 	});
 
+	it("输入法组字中不搜；compositionend 立刻用最终文本搜一次", () => {
+		const onSearch = vi.fn();
+		mount(() => <SearchInput value="" onSearch={onSearch} debounceMs={50} />);
+		const el = input();
+
+		// 组字开始：拼音中间态一个个进来（"hui"、"huiy"…），都不该触发搜索
+		el.dispatchEvent(
+			new CompositionEvent("compositionstart", { bubbles: true }),
+		);
+		type("hui");
+		vi.advanceTimersByTime(60);
+		type("huiyi");
+		vi.advanceTimersByTime(60);
+		expect(onSearch).not.toHaveBeenCalled();
+
+		// 组字结束：一次性、立刻（不等防抖）用最终文本回调
+		el.value = "会议";
+		el.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true }));
+		expect(onSearch).toHaveBeenCalledTimes(1);
+		expect(onSearch).toHaveBeenCalledWith("会议");
+
+		// 结束之后的普通输入回到防抖路径
+		type("会议记录");
+		vi.advanceTimersByTime(60);
+		expect(onSearch).toHaveBeenCalledTimes(2);
+		expect(onSearch).toHaveBeenLastCalledWith("会议记录");
+	});
+
 	it("外部 value 变化同步到输入框（外部清空搜索能反映出来）", async () => {
 		const [value, setValue] = createSignal("初始");
 		mount(() => <SearchInput value={value()} onSearch={() => {}} />);

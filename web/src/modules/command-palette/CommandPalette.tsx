@@ -208,6 +208,8 @@ export default function CommandPalette() {
 								p.setValue(e.currentTarget.value);
 								p.setSelectedIndex(0);
 							}}
+							onCompositionStart={p.onCompositionStart}
+							onCompositionEnd={p.onCompositionEnd}
 							onKeyDown={p.onInputKey}
 							role="combobox"
 							aria-expanded={true}

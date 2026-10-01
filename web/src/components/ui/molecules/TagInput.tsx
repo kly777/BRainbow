@@ -4,6 +4,7 @@ import {
 	blurClose,
 	filterTagOptions,
 	hasExactTagMatch,
+	isImeComposing,
 	tagEnterTarget,
 } from "@shared/utils";
 import {
@@ -106,6 +107,8 @@ export default function TagInput(props: Props) {
 	};
 
 	const handleKeyDown = (e: KeyboardEvent) => {
+		// 输入法组字中：回车是选候选词、Esc 是撤候选 —— 标签先别加
+		if (isImeComposing(e)) return;
 		if (e.key === "Enter") {
 			e.preventDefault();
 			const target = tagEnterTarget(suggestions(), trimmed(), options());

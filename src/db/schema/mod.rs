@@ -4,12 +4,17 @@
 //! `create_tables` 顺序执行它们 —— 新库由此得到最新 schema；老库由迁移链补齐
 //! （第 3 步起改为按声明的**形状**补齐，不再重放历史）。
 
+pub(crate) mod apply;
 pub(crate) mod fts;
+pub(crate) mod legacy;
+pub(crate) mod repairs;
 pub(crate) mod tables;
 pub(crate) mod time;
 
-// 对外仍以 `db::schema::XXX` 暴露（迁移与测试都用这个路径）
-pub(crate) use fts::{FTS_SPECS, create_fts_indexes};
+// 对外仍以 `db::schema::XXX` 暴露（`create_tables` 与测试都用这个路径）
+#[cfg(test)]
+pub(crate) use fts::FTS_SPECS;
+pub(crate) use fts::create_fts_indexes;
 pub(crate) use time::{TIME_COLUMNS, create_time_iso_triggers};
 
 use sqlx::{SqliteConnection, SqlitePool};
@@ -41,9 +46,14 @@ pub(crate) struct Decl {
     /// `CREATE … IF NOT EXISTS …`
     pub(crate) ddl: &'static str,
     /// 前置条件 `(表, 列)`：这些列都齐了才应用这条声明，缺一列就跳过
-    /// —— `create_tables` 会在"`user_version = 0` 但已有表"的历史库上跑，
-    /// 那时的老表可能还没有 `user_id` 之类的列（见 `tables.rs` 的说明）。
+    /// —— 老库的旧表可能还没有 `user_id` 之类的列（见 `tables.rs` 的说明）。
     pub(crate) requires: &'static [(&'static str, &'static str)],
+    /// 生成列的表达式：(列名, 表达式)。
+    ///
+    /// 只给"可能被 ALTER 补出来的生成列"用：`ALTER TABLE … ADD COLUMN` 要完整的列定义，
+    /// 而表达式取不到（`pragma_table_xinfo` 不给生成列表达式），所以在这里再写一份 ——
+    /// `generated_exprs_appear_in_decl_ddl` 测试盯着两份一致。
+    pub(crate) generated: &'static [(&'static str, &'static str)],
 }
 
 impl Decl {
@@ -54,6 +64,7 @@ impl Decl {
             name,
             ddl,
             requires: &[],
+            generated: &[],
         }
     }
 
@@ -64,10 +75,11 @@ impl Decl {
             name,
             ddl,
             requires: &[],
+            generated: &[],
         }
     }
 
-    /// 带前置条件的索引声明（历史库缺列时跳过）
+    /// 带前置条件的索引声明（老库缺列时跳过）
     pub(crate) const fn index_requiring(
         name: &'static str,
         ddl: &'static str,
@@ -78,7 +90,16 @@ impl Decl {
             name,
             ddl,
             requires,
+            generated: &[],
         }
+    }
+
+    /// 登记生成列表达式（见 [`Decl::generated`]）
+    pub(crate) const fn generated(
+        self,
+        exprs: &'static [(&'static str, &'static str)],
+    ) -> Self {
+        Self { generated: exprs, ..self }
     }
 }
 
@@ -89,7 +110,7 @@ impl Decl {
 pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     let mut conn = pool.acquire().await?;
     for decl in tables::DECLS {
-        apply_decl(&mut conn, decl).await?;
+        apply::apply_decl(&mut conn, decl).await?;
     }
 
     // **时间触发器必须建在 FTS 触发器之前**：AFTER 触发器按创建顺序触发，而时间归一化的
@@ -99,29 +120,6 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     // v8 建时间触发器、v12/v14 才建 FTS 触发器。
     create_time_iso_triggers(&mut conn).await?;
     create_fts_indexes(&mut conn).await?;
-    Ok(())
-}
-
-/// 应用一条声明：前置条件齐了才执行（DDL 自身幂等）。
-///
-/// 失败时报出**是哪条声明**：历史库的形状千奇百怪，裸的 sqlx 报错（"no such column"）
-/// 不说是哪张表/哪个索引，排查得从头数语句。
-async fn apply_decl(conn: &mut SqliteConnection, decl: &Decl) -> Result<(), sqlx::Error> {
-    for (table, column) in decl.requires {
-        if !columns_exist(conn, table, &[column]).await? {
-            return Ok(());
-        }
-    }
-    sqlx::query(decl.ddl)
-        .execute(&mut *conn)
-        .await
-        .map_err(|e| {
-            sqlx::Error::Configuration(Box::new(std::io::Error::other(format!(
-                "建基线失败：{} `{}`：{e}",
-                decl.kind.label(),
-                decl.name
-            ))))
-        })?;
     Ok(())
 }
 
@@ -147,6 +145,32 @@ pub(crate) async fn columns_exist(
     Ok(columns
         .iter()
         .all(|wanted| existing.iter().any(|name| name == wanted)))
+}
+
+/// 库里这个对象的 DDL 文本（不存在返回 `None`）。
+///
+/// `reconcile` 用它做"声明 vs 实际"的比对；表之外的对象（索引/触发器/虚表）**可以逐字比**：
+/// SQLite 存储时只去掉 `IF NOT EXISTS`，其余原样保留（实测）。
+pub(crate) async fn stored_sql(
+    conn: &mut SqliteConnection,
+    name: &str,
+) -> Result<Option<String>, sqlx::Error> {
+    let row: Option<(String,)> =
+        sqlx::query_as("SELECT COALESCE(sql, '') FROM sqlite_master WHERE name = ?1")
+            .bind(name)
+            .fetch_optional(&mut *conn)
+            .await?;
+    Ok(row.map(|(sql,)| sql))
+}
+
+/// 声明文本与库里存的文本是否同一句 DDL（SQLite 会剥掉 `IF NOT EXISTS`）
+pub(crate) fn same_ddl(declared: &str, stored: &str) -> bool {
+    stored == declared.replace("IF NOT EXISTS ", "")
+}
+
+/// 报错用：把一段说明包成 sqlx 错误
+pub(crate) fn schema_error(message: String) -> sqlx::Error {
+    sqlx::Error::Configuration(Box::new(std::io::Error::other(message)))
 }
 
 #[cfg(test)]
@@ -188,7 +212,7 @@ mod tests {
     }
 
     /// 声明自洽之三：前置条件只指向声明过的表。
-    /// 写错表名的后果很隐蔽 —— 那个索引会在**所有**历史库上被永远跳过，
+    /// 写错表名的后果很隐蔽 —— 那个索引会在**所有**老库上被永远跳过，
     /// 而新库（缺列守卫不触发）一切正常。
     #[test]
     fn decl_preconditions_point_at_declared_tables() {
@@ -198,6 +222,26 @@ mod tests {
                 assert!(
                     declared.contains(table),
                     "声明 `{}` 的前置条件指向未声明的表 `{table}.{column}`",
+                    decl.name
+                );
+            }
+        }
+    }
+
+    /// 声明自洽之四：登记的生成列表达式必须是 DDL 文本里那一份。
+    ///
+    /// 生成列表达式写了两遍（DDL 里一次、`generated` 里一次，理由见 `Decl::generated`），
+    /// 这条盯住两份不漂移 —— 比较前先挤掉空白，免得改缩进就误报。
+    #[test]
+    fn generated_exprs_appear_in_decl_ddl() {
+        fn squeeze(text: &str) -> String {
+            text.chars().filter(|c| !c.is_whitespace()).collect()
+        }
+        for decl in tables::DECLS {
+            for (column, expr) in decl.generated {
+                assert!(
+                    squeeze(decl.ddl).contains(&squeeze(expr)),
+                    "`{}`.`{column}` 的生成列表达式没出现在 DDL 里：{expr}",
                     decl.name
                 );
             }

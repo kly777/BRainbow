@@ -10,6 +10,22 @@
 
 use super::Decl;
 
+/// `file.category` 的生成列表达式。
+///
+/// ALTER 补生成列时要完整的列定义，而表达式取不到（`pragma_table_xinfo` 不给），
+/// 所以在声明里再写一份，`generated_exprs_appear_in_decl_ddl` 测试盯着两份一致
+/// （比较前挤掉空白，改缩进不会误报）。
+const CATEGORY_EXPR: &str = "CASE
+    WHEN mime_type >= 'image/' AND mime_type < 'image0' THEN 'image'
+    WHEN mime_type >= 'video/' AND mime_type < 'video0' THEN 'video'
+    WHEN mime_type >= 'audio/' AND mime_type < 'audio0' THEN 'audio'
+    WHEN mime_type >= 'text/' AND mime_type < 'text0' THEN 'document'
+    WHEN mime_type = 'application/pdf' THEN 'document'
+    WHEN mime_type = 'application/msword' THEN 'document'
+    WHEN mime_type >= 'application/vnd.' AND mime_type < 'application/vnd0' THEN 'document'
+    ELSE 'other'
+END";
+
 /// `idx_<表>_user_id`：v11 引入的隔离列索引。
 ///
 /// 11 张表共用同一形状，用宏生成免得索引名/表名各写三遍（写错只有 golden dump 能发现）。
@@ -205,7 +221,9 @@ pub(crate) const DECLS: &[Decl] = &[
             FOREIGN KEY (user_id) REFERENCES user(id)
         )
         "#,
-    ),
+    )
+    // v19：`category` 是虚拟生成列 —— 老库补这一列时要带表达式（见 CATEGORY_EXPR）
+    .generated(&[("category", CATEGORY_EXPR)]),
     Decl::index(
         "idx_file_created",
         "CREATE INDEX IF NOT EXISTS idx_file_created ON file(created_at DESC)",

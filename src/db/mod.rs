@@ -30,7 +30,7 @@ mod tests {
         ADDED_COLUMNS, ADDED_COLUMNS_UNDROPPABLE, CHAIN_VERSIONS, LATEST_USER_VERSION,
         apply_full_chain_for_test, migrate,
     };
-    use super::schema::{TIME_COLUMNS, create_tables};
+    use super::schema::{FTS_SPECS, TIME_COLUMNS, create_tables};
     use sqlx::SqlitePool;
 
     /// `sqlite_master` 的结构快照（表 / 索引 / 触发器 / 视图 + 各自的 DDL），
@@ -191,8 +191,7 @@ mod tests {
         left.iter().filter(|item| !right.contains(item)).collect()
     }
 
-    /// 每列的定义快照（按 `表.列` 排序）。
-    ///
+    /// 每列的定义快照（按 `表.列` 排序）。    ///
     /// **不比列顺序**：老库的列是 `ALTER` 追加在末尾的（真实老库本来就如此），
     /// 而代码一律按列名取值，顺序无关。
     async fn column_defs(pool: &SqlitePool) -> Vec<String> {
@@ -220,8 +219,118 @@ mod tests {
         .unwrap()
     }
 
+    /// 造一个"v18 之前"的库形状（还带着 v15/v2 的残留），专门用来喂 `reconcile`：
+    ///
+    /// - v17 之前：`content_hash` 走旧的复合索引，没有唯一索引
+    /// - v18 之前：没有 `is_private` / 可见性索引，`file_tag` 没有全局唯一索引
+    /// - v19 之前：`file_category` 是普通列（不是生成列 `category`）
+    /// - v21 之前：`file` 没有时间归一化触发器
+    /// - v15 / v2 之前：`media`、`conv` 两张废弃表还在
+    ///
+    /// 做法是从最新 schema 往回退（先删引用列的索引，再删列）—— 老库的真实形状就是
+    /// "新库的列少几列、索引是旧形态"，退出来的形状与真实老库等价。
+    async fn pre_v18_shape(pool: &SqlitePool) {
+        create_tables(pool).await.unwrap();
+        for sql in [
+            "DROP TRIGGER IF EXISTS trg_file_time_iso_ins",
+            "DROP TRIGGER IF EXISTS trg_file_time_iso_upd",
+            "DROP INDEX IF EXISTS idx_file_content_hash_unique",
+            "DROP INDEX IF EXISTS idx_file_visibility",
+            "DROP INDEX IF EXISTS idx_file_tag_name_unique",
+            "DROP INDEX IF EXISTS idx_file_category",
+            "ALTER TABLE file DROP COLUMN is_private",
+            "ALTER TABLE file DROP COLUMN category",
+            "ALTER TABLE file ADD COLUMN file_category TEXT NOT NULL DEFAULT 'other'",
+            "CREATE INDEX idx_file_category ON file(file_category, created_at DESC)",
+            "CREATE INDEX idx_file_content_hash ON file(user_id, content_hash)",
+            "CREATE TABLE conv (id INTEGER PRIMARY KEY)",
+            "CREATE TABLE media (id INTEGER PRIMARY KEY, stored_id TEXT)",
+            "CREATE INDEX idx_media_stored_id ON media(stored_id)",
+            "CREATE INDEX idx_media_type_created ON media(id)",
+            "PRAGMA user_version = 17",
+        ] {
+            sqlx::query(sql).execute(pool).await.unwrap();
+        }
+    }
+
+    /// **老形状经 reconcile 后 ≡ 新建库**（结构）：列定义逐项相等、对象清单相等。
+    ///
+    /// 这条接替"基线 ≡ 基线 + 完整链"的位置：那个不变量管的是"两份书写别漂移"，
+    /// 现在结构只有一份来源（声明），要盯的就成了**老库补齐后与新建库一致**。
+    #[tokio::test]
+    async fn reconcile_restores_pre_v18_shape_to_fresh_equivalent() {
+        let fresh = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        migrate(&fresh).await.unwrap();
+        assert_eq!(user_version(&fresh).await, LATEST_USER_VERSION);
+
+        let old = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        pre_v18_shape(&old).await;
+        migrate(&old).await.unwrap();
+        assert_eq!(user_version(&old).await, LATEST_USER_VERSION);
+
+        assert_eq!(
+            column_defs(&old).await,
+            column_defs(&fresh).await,
+            "补齐后的列定义与新建库不一致"
+        );
+        assert_eq!(
+            object_names(&old).await,
+            object_names(&fresh).await,
+            "补齐后的对象清单与新建库不一致"
+        );
+
+        // 废弃对象真的清掉了
+        for name in ["conv", "media"] {
+            let count: i64 =
+                sqlx::query_scalar("SELECT COUNT(*) FROM sqlite_master WHERE name = ?1")
+                    .bind(name)
+                    .fetch_one(&old)
+                    .await
+                    .unwrap();
+            assert_eq!(count, 0, "废弃表 {name} 应被清掉");
+        }
+    }
+
+    /// **时间触发器必须早于同表的 FTS 触发器**：AFTER 触发器按创建顺序触发，顺序反了
+    /// （FTS 在前）会在 external content 的 FTS5 上撞出 `database disk image is malformed`。
+    ///
+    /// 盯的是**老库路径**：FTS 触发器早就在库里了，第 ⑤ 阶段补/换的时间触发器只会排在
+    /// 它们后面 —— 所以 FTS 阶段每次把触发器拆掉重建（见 `schema::fts::sync`）。
+    #[tokio::test]
+    async fn time_triggers_precede_fts_triggers() {
+        for label in ["新建库", "老形状"] {
+            let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+            if label == "老形状" {
+                pre_v18_shape(&pool).await;
+            }
+            migrate(&pool).await.unwrap();
+
+            let order: Vec<String> = sqlx::query_scalar(
+                "SELECT name FROM sqlite_master WHERE type = 'trigger' ORDER BY rowid",
+            )
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+            let position = |name: &str| order.iter().position(|item| item == name);
+
+            for (_, src, _, _, prefix) in FTS_SPECS {
+                let fts = format!("{prefix}_fts_ai");
+                let fts_position = position(&fts).unwrap_or_else(|| panic!("{fts} 不存在"));
+                for suffix in ["ins", "upd"] {
+                    let time_trigger = format!("trg_{src}_time_iso_{suffix}");
+                    if let Some(time_position) = position(&time_trigger) {
+                        assert!(
+                            time_position < fts_position,
+                            "（{label}）{time_trigger} 排在 {fts} 之后：会撞出 malformed 的组合"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
     /// 删列：SQLite 不允许删被索引引用的列，先把引用它的显式索引删掉
-    /// （链会把它们重建回来 —— 对象清单断言盯着这一点）。
+    /// （reconcile 会把它们重建回来 —— 对象清单断言盯着这一点）。
     async fn drop_column(pool: &SqlitePool, table: &str, column: &str) {
         let indexes: Vec<String> = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
             "SELECT il.name FROM pragma_index_list('{table}') il \

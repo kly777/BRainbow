@@ -7,6 +7,7 @@
 
 use sqlx::SqlitePool;
 
+#[cfg(test)]
 use super::helpers::set_user_version;
 use super::schema::create_tables;
 
@@ -22,15 +23,20 @@ macro_rules! migration_chain {
     (@last $head:literal, $($tail:literal),+) => { migration_chain!(@last $($tail),+) };
 
     ($($version:literal => $module:ident),+ $(,)?) => {
-        $(mod $module;)+
+        // 第 4 步起这条链**不再是升级路径**（`migrate` 走 `schema::apply::reconcile`），
+        // 只留给"基线 ≡ 基线 + 完整链"那条对照测试当对照组 —— 所以生产构建里整体 cfg 掉，
+        // 免得整条链（连同它用的 helper）成为 dead_code 噪声。删链时连这些属性一起去掉。
+        $(#[cfg(test)] mod $module;)+
 
         /// 链上登记过的版本号（升序，即应用顺序）；v1 是基线，不在链里
+        #[cfg(test)]
         pub(crate) const CHAIN_VERSIONS: &[i64] = &[$($version),+];
 
         /// 程序支持的最新 schema 版本（链尾派生，不再手写）
         pub const LATEST_USER_VERSION: i64 = migration_chain!(@last $($version),+);
 
         /// 在单事务中执行一个版本迁移并推进 user_version
+        #[cfg(test)]
         async fn apply_migration(pool: &SqlitePool, target: i64) -> Result<(), sqlx::Error> {
             let mut tx = pool.begin().await?;
             match target {
@@ -48,6 +54,8 @@ macro_rules! migration_chain {
     };
 }
 
+// 第 4 步删除：迁移链已不再是升级路径（`migrate` 走 `schema::apply::reconcile`），
+// 只留着给"基线 ≡ 基线 + 完整链"那条对照测试当对照组。
 migration_chain! {
     2 => v2, 3 => v3, 4 => v4, 5 => v5, 6 => v6, 7 => v7, 8 => v8, 9 => v9, 10 => v10,
     11 => v11, 12 => v12, 13 => v13, 14 => v14, 15 => v15, 16 => v16, 17 => v17, 18 => v18,
@@ -103,9 +111,10 @@ pub(crate) const ADDED_COLUMNS_UNDROPPABLE: &[(&str, &str)] =
 
 /// 迁移统一入口。
 ///
-/// - 新库（user_version = 0）：先建基线 schema，再逐版本走到最新；
-/// - 旧库：按当前 user_version 从下一版本开始升级；
-/// - user_version 高于程序支持版本：启动失败（防止旧程序破坏新库）。
+/// - **真正的新库**（`user_version = 0` 且一张表都没有）：`create_tables` 直建最新 schema；
+/// - **其余一切**（老库、`user_version = 0` 但有表的历史库、被删过表的库）：
+///   [`schema::apply::reconcile`] 按**形状**补齐 —— 结构、废弃清理、数据修复一次跑完；
+/// - `user_version` 高于程序支持版本：启动失败（防止旧程序破坏新库）。
 pub async fn migrate(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     let current: i64 = sqlx::query_scalar("PRAGMA user_version")
         .fetch_one(pool)
@@ -116,36 +125,27 @@ pub async fn migrate(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         ))));
     }
 
-    if current == 0 {
-        // `user_version = 0` 但**已有表** = 历史库（或手工造的旧 schema）：那些表是
-        // `CREATE TABLE IF NOT EXISTS` 补不齐的（老表缺后来的列），必须走迁移链。
-        // 所以这个计数要在 create_tables **之前**做。
-        let existing_tables: i64 =
-            sqlx::query_scalar("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table'")
-                .fetch_one(pool)
-                .await?;
+    // 新库判定要在 create_tables **之前**做：它自己会建表，建完就没法区分"本来就有表"了
+    let is_fresh = current == 0
+        && sqlx::query_scalar::<_, i64>("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table'")
+            .fetch_one(pool)
+            .await?
+            == 0;
 
+    if is_fresh {
+        // 空库直建基线就是最新 schema（"新增列/表"只改声明一处），省下整条链的开销：
+        // 实测后端测试执行 51s → 20s
         create_tables(pool).await?;
-
-        // 只有**真正的新库**（一张表都没有）才跳过迁移链：基线 DDL 就是最新 schema
-        // （"新增列/表四步"第 ①④ 步要求每次变更都补进基线），空库上再跑一遍迁移链
-        // 全是 no-op —— 而它们逐条 PRAGMA 检查 + 建 FTS/触发器的开销不小
-        // （实测：跳过后后端测试执行 51s → 17s）。
-        if existing_tables == 0 {
-            // 这条"基线 ≡ 基线 + 完整链"的等价性由 `db::tests::
-            // fresh_db_baseline_equals_the_full_migration_chain` 钉住：只加迁移、
-            // 忘了补基线，那条测试会红。
-            sqlx::query(sqlx::AssertSqlSafe(format!(
-                "PRAGMA user_version = {LATEST_USER_VERSION}"
-            )))
-            .execute(pool)
-            .await?;
-            return Ok(());
-        }
+    } else if current < LATEST_USER_VERSION {
+        crate::db::schema::apply::reconcile(pool, current).await?;
     }
 
-    for &target in CHAIN_VERSIONS.iter().filter(|&&v| v > current) {
-        apply_migration(pool, target).await?;
+    if current != LATEST_USER_VERSION {
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "PRAGMA user_version = {LATEST_USER_VERSION}"
+        )))
+        .execute(pool)
+        .await?;
     }
     Ok(())
 }

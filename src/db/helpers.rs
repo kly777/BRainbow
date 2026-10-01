@@ -1,4 +1,8 @@
 //! 数据库迁移共享工具函数。
+//!
+//! 注：`add_column_if_missing` / `migration_failed` / `set_user_version` / `table_exists_on`
+//! 现在只有**迁移链**（对照测试用，生产构建 cfg 掉了）在用 —— 第 4 步删链时一并删掉。
+//! `#[cfg_attr(not(test), allow(dead_code))]` 是那期间临时的豁免。
 
 use sqlx::{Row, SqliteConnection};
 
@@ -7,6 +11,7 @@ use super::query::sanitize_table_name;
 /// 为表添加列（如果不存在）。
 ///
 /// 列名/DDL 由调用方保证为内部常量，无注入风险。
+#[cfg_attr(not(test), allow(dead_code))]
 pub async fn add_column_if_missing(
     conn: &mut SqliteConnection,
     table: &str,
@@ -23,6 +28,7 @@ pub async fn add_column_if_missing(
 }
 
 /// 包装迁移失败错误。
+#[cfg_attr(not(test), allow(dead_code))]
 pub fn migration_failed(what: &str, e: &sqlx::Error) -> sqlx::Error {
     sqlx::Error::Configuration(Box::new(std::io::Error::other(format!(
         "迁移失败: {what}: {e}"
@@ -30,6 +36,7 @@ pub fn migration_failed(what: &str, e: &sqlx::Error) -> sqlx::Error {
 }
 
 /// 设置 PRAGMA user_version。
+#[cfg_attr(not(test), allow(dead_code))]
 pub async fn set_user_version(
     conn: &mut SqliteConnection,
     version: i64,
@@ -67,6 +74,7 @@ pub async fn column_exists_on(
 }
 
 /// 检查表是否存在（连接级）。
+#[cfg_attr(not(test), allow(dead_code))]
 pub async fn table_exists_on(
     conn: &mut SqliteConnection,
     table: &str,

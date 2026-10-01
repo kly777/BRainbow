@@ -75,7 +75,8 @@ const FileCard: Component<{
 		}}
 		data-file-id={props.item.stored_id}
 	>
-		<Show when={props.selectMode}>
+		{/* 勾选框是批量写操作的入口：只给可编辑（自己的 / admin）的文件出现 */}
+		<Show when={props.selectMode && props.item.can_edit}>
 			<label class={styles.selectBox}>
 				<input
 					type="checkbox"

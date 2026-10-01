@@ -229,6 +229,11 @@ describe("FileList 渲染", () => {
 			expect(host.textContent).toContain("o.png");
 			expect(host.textContent).not.toContain("重命名");
 			expect(host.textContent).not.toContain("删除");
+			// 本页没有任何可编辑文件 → 不给「选择」入口（选择只为批量写操作）
+			const hasSelectButton = Array.from(host.querySelectorAll("button")).some(
+				(b) => b.textContent?.trim() === "选择",
+			);
+			expect(hasSelectButton).toBe(false);
 			dispose();
 		});
 	}, 20000);

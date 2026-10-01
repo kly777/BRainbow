@@ -119,6 +119,18 @@ describe("FileCard", () => {
 		expect(host.querySelector("input[type='checkbox']")).toBeNull();
 	});
 
+	it("选择模式下不可编辑的文件也不给勾选框（勾选=批量写操作入口）", () => {
+		const host = mount(() => (
+			<FileCard
+				{...cardProps({
+					selectMode: true,
+					item: item({ can_edit: false }),
+				})}
+			/>
+		));
+		expect(host.querySelector("input[type='checkbox']")).toBeNull();
+	});
+
 	it("编辑态渲染重命名输入框并回调输入", () => {
 		const onEditName = vi.fn();
 		const host = mount(() => (
@@ -172,5 +184,17 @@ describe("FileRow", () => {
 			<FileRow {...rowProps({ item: item({ missing: true }) })} />
 		));
 		expect(host.textContent).toContain("文件缺失");
+	});
+
+	it("选择模式下不可编辑的文件也不给勾选框（勾选=批量写操作入口）", () => {
+		const host = mount(() => (
+			<FileRow
+				{...rowProps({
+					selectMode: true,
+					item: item({ can_edit: false }),
+				})}
+			/>
+		));
+		expect(host.querySelector("input[type='checkbox']")).toBeNull();
 	});
 });

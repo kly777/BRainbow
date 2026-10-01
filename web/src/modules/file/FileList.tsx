@@ -178,13 +178,17 @@ const FileListPage: Component = () => {
 						>
 							标签管理
 						</Button>
-						<Button
-							variant={f.selectMode() ? "secondary" : "ghost"}
-							size="sm"
-							onClick={() => f.setSelectMode(!f.selectMode())}
-						>
-							{f.selectMode() ? "退出选择" : "选择"}
-						</Button>
+						{/* 选择只为批量写操作（删除/加标签）：本页一个可编辑文件都没有时不给这个入口，
+						    否则点进去勾选框一个也没有（别人的公开文件在列表里是可编辑=false） */}
+						<Show when={f.items().some((it) => it.can_edit)}>
+							<Button
+								variant={f.selectMode() ? "secondary" : "ghost"}
+								size="sm"
+								onClick={() => f.setSelectMode(!f.selectMode())}
+							>
+								{f.selectMode() ? "退出选择" : "选择"}
+							</Button>
+						</Show>
 						<Button
 							variant="primary"
 							size="sm"

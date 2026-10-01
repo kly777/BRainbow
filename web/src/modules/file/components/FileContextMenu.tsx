@@ -5,7 +5,7 @@
 
 import { Copy, Download, Pencil, X } from "@components/ui/icons";
 import { copyTextWithToast } from "@shared/utils";
-import { type Component, onCleanup, onMount } from "solid-js";
+import { type Component, onCleanup, onMount, Show } from "solid-js";
 import { Portal } from "solid-js/web";
 import type { FileItem } from "../api.ts";
 import styles from "./FileContextMenu.module.css";
@@ -83,23 +83,27 @@ const FileContextMenu: Component<Props> = (props) => {
 				>
 					<Download size={14} /> 下载
 				</button>
-				<div class={styles.divider} />
-				<button
-					type="button"
-					class={styles.item}
-					role="menuitem"
-					onClick={() => run(() => props.onStartRename(props.item))}
-				>
-					<Pencil size={14} /> 重命名
-				</button>
-				<button
-					type="button"
-					class={`${styles.item} ${styles.danger}`}
-					role="menuitem"
-					onClick={() => run(() => props.onDelete(props.item.stored_id))}
-				>
-					<X size={14} /> 删除
-				</button>
+				{/* 写操作只对自己（或 admin）的文件出现：别人的公开文件也能右键，
+				    但按钮不该给出"点了会 404"的入口（`can_edit` 由后端按归属判据算） */}
+				<Show when={props.item.can_edit}>
+					<div class={styles.divider} />
+					<button
+						type="button"
+						class={styles.item}
+						role="menuitem"
+						onClick={() => run(() => props.onStartRename(props.item))}
+					>
+						<Pencil size={14} /> 重命名
+					</button>
+					<button
+						type="button"
+						class={`${styles.item} ${styles.danger}`}
+						role="menuitem"
+						onClick={() => run(() => props.onDelete(props.item.stored_id))}
+					>
+						<X size={14} /> 删除
+					</button>
+				</Show>
 			</div>
 		</Portal>
 	);

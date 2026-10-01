@@ -4,7 +4,7 @@
 	max-width: var(--page-text-max);
 	margin: 0 auto;
 	padding: 0;
-	animation: fade-in var(--t-transition-normal) -out;
+	animation: fade-in var(--t-transition-normal);
 }
 
 .loading {
@@ -149,5 +149,22 @@
 
 	.article-block {
 		padding: var(--space-sm);
+	}
+}
+
+/* ── Keyframes ──
+ *
+ * 本模块自己定义，不能靠 global.css 里的同名 @keyframes：CSS Modules 会把
+ * animation 里的动画名一起 scope（`fade-in` → `ConvDetail-module__fade-in`），
+ * 而模块里没有这份定义 → 动画静默不跑（`.page` 那条从 vanilla-extract 迁移过来
+ * 后一直没生效：原写法还多个非法的 `-out`，整条声明被解析器丢弃）。
+ * 同类做法见 CommandPalette / QuickCapture，它们也各自带本模块的 fade-in。 */
+@keyframes fade-in {
+	from {
+		opacity: 0;
+	}
+
+	to {
+		opacity: 1;
 	}
 }

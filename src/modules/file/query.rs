@@ -355,19 +355,16 @@ impl SearchPort for FileQueryService {
     /// 文件内容不入库，因此不搜正文 —— 但文件名通常带扩展名（搜 "pdf" 能筛出 PDF）。
     async fn search(
         &self,
-        user_id: i32,
+        actor: &Actor,
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
         let Some((like, _kw, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
         };
-        // 搜索层还没接 Actor（`SearchPort` 仍只传 user_id），这里按**普通用户**口径取行
-        // （公开 + 自己的）；admin 的跨用户全量搜索要等搜索层改造（届时 `SearchPort` 也收 `&Actor`）。
-        let actor = Actor::user(user_id);
         let rows = self
             .repo
-            .search_hits(&actor, &like, cap)
+            .search_hits(actor, &like, cap)
             .await
             .map_err(ServiceError::Db)?;
 
@@ -783,7 +780,7 @@ mod tests {
         let tag = repo.get_or_create_tag("报告配图", 7).await.unwrap();
         repo.set_file_tags(img.id, &[tag.id]).await.unwrap();
 
-        let hits = query.search(7, "报告", 5).await.unwrap();
+        let hits = query.search(&Actor::user(7), "报告", 5).await.unwrap();
         assert_eq!(hits.len(), 2);
         // 文件名命中排前，片段给规格
         assert_eq!(hits[0].kind, "file");
@@ -807,10 +804,10 @@ mod tests {
         seed(&repo).await;
 
         // 公开共享：用户 8 也能搜到别人的公开文件
-        let hits = query.search(8, "文件", 5).await.unwrap();
+        let hits = query.search(&Actor::user(8), "文件", 5).await.unwrap();
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].title, "别人文件.bin");
-        let hits = query.search(7, "别人", 5).await.unwrap();
+        let hits = query.search(&Actor::user(7), "别人", 5).await.unwrap();
         assert_eq!(hits.len(), 1, "别人的公开文件应能被搜到");
 
         // 设为私密后：别人搜不到，上传者本人能搜到
@@ -818,11 +815,11 @@ mod tests {
             .execute(&*_pool)
             .await
             .unwrap();
-        assert!(query.search(7, "别人", 5).await.unwrap().is_empty());
-        assert_eq!(query.search(8, "别人", 5).await.unwrap().len(), 1);
+        assert!(query.search(&Actor::user(7), "别人", 5).await.unwrap().is_empty());
+        assert_eq!(query.search(&Actor::user(8), "别人", 5).await.unwrap().len(), 1);
 
         // 空 / 纯空白查询直接返回空
-        assert!(query.search(7, "   ", 5).await.unwrap().is_empty());
+        assert!(query.search(&Actor::user(7), "   ", 5).await.unwrap().is_empty());
     }
 
     #[test]
@@ -941,13 +938,13 @@ mod tests {
         meta.insert("author".to_string(), "费曼".to_string());
         repo.set_file_meta(doc, &meta).await.unwrap();
 
-        let hits = query.search(7, "费曼", 5).await.unwrap();
+        let hits = query.search(&Actor::user(7), "费曼", 5).await.unwrap();
         assert_eq!(hits.len(), 1);
         assert_eq!(hits[0].title, "季度报告.md");
         assert_eq!(hits[0].snippet, "元信息 author");
 
         // 值不匹配时不命中
-        assert!(query.search(7, "不存在的作者", 5).await.unwrap().is_empty());
+        assert!(query.search(&Actor::user(7), "不存在的作者", 5).await.unwrap().is_empty());
     }
 
     #[test]

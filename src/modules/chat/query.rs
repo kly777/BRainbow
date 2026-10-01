@@ -38,20 +38,17 @@ impl ChatQueryService {
 impl SearchPort for ChatQueryService {
     async fn search(
         &self,
-        user_id: i32,
+        actor: &Actor,
         q: &str,
         limit: i64,
     ) -> Result<Vec<GlobalSearchHit>, ServiceError> {
         let Some((like, _, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
         };
-        // 全局搜索端口仍按 user_id 收参数（`SearchPort` 的签名，见 shared/search.rs）：
-        // 这里是"以普通用户身份搜自己的"，admin 的全量口径不在这一层。
-        let actor = Actor::user(user_id);
         if let Some(fts) = fts_query(q) {
-            self.repo.search_hits_fts(&actor, &fts, cap).await
+            self.repo.search_hits_fts(actor, &fts, cap).await
         } else {
-            self.repo.search_hits(&actor, &like, cap).await
+            self.repo.search_hits(actor, &like, cap).await
         }
     }
 }

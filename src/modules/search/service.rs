@@ -1,5 +1,6 @@
 use futures_util::future::join_all;
 
+use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{SearchRegistry, SearchResponse, clamp_search_limit, trim_query};
 
@@ -18,7 +19,7 @@ impl SearchQueryService {
     /// `limit` 为每类数据源的结果上限。
     pub async fn search(
         &self,
-        user_id: i32,
+        actor: &Actor,
         q: &str,
         limit: i64,
     ) -> Result<SearchResponse, ServiceError> {
@@ -28,7 +29,8 @@ impl SearchQueryService {
         let cap = clamp_search_limit(limit);
 
         let ports = self.registry.providers();
-        let results = join_all(ports.iter().map(|port| port.search(user_id, kw, cap))).await;
+        // admin 的全量搜索在这里成立：`Actor` 一路传到各模块的 SQL 判据
+        let results = join_all(ports.iter().map(|port| port.search(actor, kw, cap))).await;
 
         let mut hits = Vec::new();
         for res in results {
@@ -177,7 +179,7 @@ mod tests {
         sqlx::query("INSERT INTO chat_node (tree_id, role, content) VALUES (?1, 'user', '费曼学习法是什么？')")
             .bind(t2).execute(&ctx.pool).await.unwrap();
 
-        let res = ctx.svc.search(1, "费曼", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "费曼", 5).await.unwrap();
         let kinds: Vec<&str> = res.hits.iter().map(|h| h.kind.as_str()).collect();
         assert!(kinds.contains(&"mem"));
         assert!(kinds.contains(&"card"));
@@ -223,7 +225,7 @@ mod tests {
     #[tokio::test]
     async fn empty_query_returns_empty() {
         let ctx = setup().await;
-        let res = ctx.svc.search(1, "  ", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "  ", 5).await.unwrap();
         assert!(res.hits.is_empty());
     }
 
@@ -317,7 +319,7 @@ mod tests {
         sqlx::query("INSERT INTO text_note (name, content, user_id) VALUES ('读书笔记', '今天读了费曼物理学讲义第一章', 1)")
             .execute(&ctx.pool).await.unwrap();
 
-        let res = ctx.svc.search(1, "费曼", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "费曼", 5).await.unwrap();
         let onto_hit = res.hits.iter().find(|h| h.kind == "onto").unwrap();
         assert_eq!(onto_hit.title, "费曼学习法");
         assert!(matches!(
@@ -344,12 +346,12 @@ mod tests {
         .await
         .unwrap();
 
-        let res = ctx.svc.search(1, "feynman-technique", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "feynman-technique", 5).await.unwrap();
         let hit = res.hits.iter().find(|h| h.kind == "bookmark").unwrap();
         assert_eq!(hit.id, 1);
         assert_eq!(hit.snippet, "https://feynman-technique.com/");
 
-        let res = ctx.svc.search(1, "费曼技巧", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "费曼技巧", 5).await.unwrap();
         let hit = res.hits.iter().find(|h| h.kind == "bookmark").unwrap();
         assert_eq!(hit.id, 2);
         assert!(hit.snippet.contains("详细说明"));
@@ -377,7 +379,7 @@ mod tests {
             .await
             .unwrap();
 
-        let res = ctx.svc.search(1, "任务", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "任务", 5).await.unwrap();
         let titles: Vec<&str> = res
             .hits
             .iter()
@@ -391,7 +393,7 @@ mod tests {
             "NULL 行只有 admin 看得到，而搜索层还没接 Actor"
         );
 
-        let res = ctx.svc.search(2, "任务", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(2), "任务", 5).await.unwrap();
         let titles: Vec<&str> = res
             .hits
             .iter()
@@ -423,13 +425,13 @@ mod tests {
             .await
             .unwrap();
 
-        let res = ctx.svc.search(1, "熵", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "熵", 5).await.unwrap();
         let hit = res.hits.iter().find(|h| h.kind == "mem").unwrap();
         assert_eq!(hit.id, 1);
         assert!(matches!(hit.target, SearchTarget::Memory { id: 1 }));
         assert!(hit.title.contains("什么是熵"));
 
-        let res = ctx.svc.search(1, "热力学", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "热力学", 5).await.unwrap();
         let hit = res.hits.iter().find(|h| h.kind == "mem").unwrap();
         assert_eq!(hit.id, 1);
         assert!(hit.snippet.contains("热力学"));
@@ -454,7 +456,7 @@ mod tests {
         sqlx::query("INSERT INTO chat_node (tree_id, role, content) VALUES (?1, 'assistant', '熵是热力学中的核心概念')")
             .bind(t).execute(&ctx.pool).await.unwrap();
 
-        let res = ctx.svc.search(1, "熵", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "熵", 5).await.unwrap();
         let hits: Vec<_> = res.hits.iter().filter(|h| h.kind == "chat").collect();
         assert_eq!(hits.len(), 2);
         assert!(matches!(
@@ -482,7 +484,7 @@ mod tests {
         sqlx::query("INSERT INTO reading_article (title, content, user_id) VALUES ('关键词XYZ完全指南', '正文没有命中词', 1)")
             .execute(&ctx.pool).await.unwrap();
 
-        let res = ctx.svc.search(1, "关键词XYZ", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "关键词XYZ", 5).await.unwrap();
         let hits: Vec<_> = res.hits.iter().filter(|h| h.kind == "reading").collect();
         assert_eq!(hits.len(), 2);
         assert_eq!(hits[0].title, "关键词XYZ完全指南");
@@ -492,7 +494,7 @@ mod tests {
     #[tokio::test]
     async fn limit_caps_each_module_and_empty_db() {
         let ctx = setup().await;
-        let res = ctx.svc.search(1, "任意", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "任意", 5).await.unwrap();
         assert!(res.hits.is_empty());
 
         for i in 0..3 {
@@ -502,7 +504,7 @@ mod tests {
                 .await
                 .unwrap();
         }
-        let res = ctx.svc.search(1, "共享关键词", 1).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "共享关键词", 1).await.unwrap();
         let card_hits: Vec<_> = res.hits.iter().filter(|h| h.kind == "card").collect();
         assert_eq!(card_hits.len(), 1);
     }
@@ -544,7 +546,7 @@ mod tests {
             .await
             .unwrap();
 
-        let res = ctx.svc.search(1, "财报", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "财报", 5).await.unwrap();
         let file_hits: Vec<_> = res.hits.iter().filter(|h| h.kind == "file").collect();
         // 自己的两条（文件名命中 + 标签命中）+ 别人的公开文件一条
         assert_eq!(file_hits.len(), 3);
@@ -568,7 +570,7 @@ mod tests {
             .execute(&ctx.pool)
             .await
             .unwrap();
-        let res = ctx.svc.search(1, "财报", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "财报", 5).await.unwrap();
         let mine: Vec<&str> = res
             .hits
             .iter()
@@ -586,7 +588,7 @@ mod tests {
             .unwrap();
 
         // 公开共享：用户 2 也能搜到用户 1 的公开文件
-        let res = ctx.svc.search(2, "财报", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(2), "财报", 5).await.unwrap();
         let titles: Vec<&str> = res
             .hits
             .iter()
@@ -600,7 +602,7 @@ mod tests {
             .execute(&ctx.pool)
             .await
             .unwrap();
-        let res = ctx.svc.search(2, "财报", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(2), "财报", 5).await.unwrap();
         let titles: Vec<&str> = res
             .hits
             .iter()
@@ -610,7 +612,7 @@ mod tests {
         assert_eq!(titles, vec!["别人的财报.pdf"]);
 
         // 上传者本人仍能搜到自己的私密文件
-        let res = ctx.svc.search(1, "财报", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "财报", 5).await.unwrap();
         assert_eq!(
             res.hits.iter().filter(|h| h.kind == "file").count(),
             3,
@@ -631,7 +633,7 @@ mod tests {
         .unwrap();
 
         // "%" 只作为字面字符匹配含它的文件名，而不是通配全部
-        let res = ctx.svc.search(1, "%", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "%", 5).await.unwrap();
         let titles: Vec<&str> = res
             .hits
             .iter()
@@ -639,5 +641,41 @@ mod tests {
             .map(|h| h.title.as_str())
             .collect();
         assert_eq!(titles, vec!["占比100%的图.png"]);
+    }
+
+    /// admin 的全局搜索跨用户：`SearchPort` 收 `&Actor` 之后，admin 与普通用户看到的是
+    /// 不同的结果集（这是"admin 全管"在搜索面成立的前提，见 doc/design/authorization.md）。
+    #[tokio::test]
+    async fn admin_search_spans_users_while_regular_user_does_not() {
+        let ctx = setup().await;
+        sqlx::query("INSERT INTO card (content, user_id) VALUES ('A 的卡片：费曼学习法', 1)")
+            .execute(&ctx.pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO card (content, user_id) VALUES ('B 的卡片：费曼学习法', 2)")
+            .execute(&ctx.pool)
+            .await
+            .unwrap();
+
+        // 普通用户 1：只搜到自己的那张卡
+        let mine = ctx
+            .svc
+            .search(&Actor::user(1), "费曼学习法", 10)
+            .await
+            .unwrap();
+        let cards: Vec<&crate::shared::search::SearchHit> =
+            mine.hits.iter().filter(|h| h.kind == "card").collect();
+        assert_eq!(cards.len(), 1, "普通用户只该搜到自己的卡片");
+        assert!(cards[0].title.contains("A 的卡片"));
+
+        // admin：两张都搜到
+        let all = ctx
+            .svc
+            .search(&Actor::admin(3), "费曼学习法", 10)
+            .await
+            .unwrap();
+        let cards: Vec<&crate::shared::search::SearchHit> =
+            all.hits.iter().filter(|h| h.kind == "card").collect();
+        assert_eq!(cards.len(), 2, "admin 的全局搜索应跨用户");
     }
 }

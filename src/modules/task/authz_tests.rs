@@ -341,23 +341,23 @@ async fn search_paths_are_scoped() {
     // SearchPort 仍只传 user_id（搜索层还没接 Actor）→ 实现里按普通用户口径取行：
     // 长词走 FTS，短词退化 LIKE；admin 的跨用户全量搜索要等搜索层改造。
     // 这里用 UFCS 显式走端口实现（点语法会先命中同名的 4 参固有方法）。
-    let fts_hits = SearchPort::search(&ctx.qsvc, ALICE, "zzz-alice", 20)
+    let fts_hits = SearchPort::search(&ctx.qsvc, &Actor::user(ALICE), "zzz-alice", 20)
         .await
         .unwrap();
     assert_eq!(fts_hits.len(), 1, "FTS 命中自己的");
     assert!(
-        SearchPort::search(&ctx.qsvc, BOB, "zzz-alice", 20)
+        SearchPort::search(&ctx.qsvc, &Actor::user(BOB), "zzz-alice", 20)
             .await
             .unwrap()
             .is_empty(),
         "FTS 不命中别人的"
     );
-    let like_hits = SearchPort::search(&ctx.qsvc, ALICE, "zz", 20)
+    let like_hits = SearchPort::search(&ctx.qsvc, &Actor::user(ALICE), "zz", 20)
         .await
         .unwrap();
     assert_eq!(like_hits.len(), 1, "LIKE 退化路径同样只看自己的");
     assert_eq!(
-        SearchPort::search(&ctx.qsvc, BOB, "zz", 20)
+        SearchPort::search(&ctx.qsvc, &Actor::user(BOB), "zz", 20)
             .await
             .unwrap()
             .len(),

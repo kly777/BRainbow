@@ -113,7 +113,7 @@ impl ReadingQueryService {
 impl SearchPort for ReadingQueryService {
     async fn search(
         &self,
-        user_id: i32,
+        actor: &Actor,
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
@@ -123,7 +123,7 @@ impl SearchPort for ReadingQueryService {
         let (rows, score) = if let Some(fts) = fts_query(q) {
             (
                 self.repo
-                    .search_hits_fts(&Actor::user(user_id), &fts, cap)
+                    .search_hits_fts(actor, &fts, cap)
                     .await
                     .map_err(ServiceError::Db)?,
                 1.0f64,
@@ -131,7 +131,7 @@ impl SearchPort for ReadingQueryService {
         } else {
             (
                 self.repo
-                    .search_hits(&Actor::user(user_id), &like, cap)
+                    .search_hits(actor, &like, cap)
                     .await
                     .map_err(ServiceError::Db)?,
                 0.0f64,

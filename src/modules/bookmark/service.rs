@@ -728,13 +728,13 @@ mod tests {
         // 全局搜索（SearchPort 仍只传 user_id，内部按普通用户口径取行）；
         // 这里必须走全限定调用 —— 固有方法 `search`（5 参）会遮蔽端口上的同名方法
         assert!(
-            SearchPort::search(&qsvc, 2, "A 的书签", 5)
+            SearchPort::search(&qsvc, &Actor::user(2), "A 的书签", 5)
                 .await
                 .unwrap()
                 .is_empty()
         );
         assert_eq!(
-            SearchPort::search(&qsvc, 1, "A 的书签", 5)
+            SearchPort::search(&qsvc, &Actor::user(1), "A 的书签", 5)
                 .await
                 .unwrap()
                 .len(),

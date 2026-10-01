@@ -70,7 +70,7 @@ pub async fn search_conv(
 impl SearchPort for ConvQueryService {
     async fn search(
         &self,
-        user_id: i32,
+        actor: &Actor,
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
@@ -79,11 +79,11 @@ impl SearchPort for ConvQueryService {
         };
         if let Some(fts) = fts_query(q) {
             self.repo
-                .search_hits_fts(&Actor::user(user_id), &fts, cap)
+                .search_hits_fts(actor, &fts, cap)
                 .await
         } else {
             self.repo
-                .search_hits(&Actor::user(user_id), &like, cap)
+                .search_hits(actor, &like, cap)
                 .await
         }
     }

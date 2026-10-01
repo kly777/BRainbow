@@ -202,13 +202,10 @@ impl TaskQueryService {
 impl SearchPort for TaskQueryService {
     async fn search(
         &self,
-        user_id: i32,
+        actor: &Actor,
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
-        // 搜索层还没接 Actor（`SearchPort` 仍只传 user_id），这里按**普通用户**口径取行；
-        // admin 的跨用户全量搜索要等搜索层改造（届时 `SearchPort` 也收 `&Actor`）。
-        let actor = Actor::user(user_id);
         let Some((like, kw, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
         };
@@ -216,7 +213,7 @@ impl SearchPort for TaskQueryService {
         let (rows, is_fts) = if let Some(fts) = fts_query(q) {
             (
                 self.repo
-                    .search_hits_fts(&actor, &fts, cap)
+                    .search_hits_fts(actor, &fts, cap)
                     .await
                     .map_err(ServiceError::Db)?,
                 true,
@@ -224,7 +221,7 @@ impl SearchPort for TaskQueryService {
         } else {
             (
                 self.repo
-                    .search_hits(&actor, &like, cap)
+                    .search_hits(actor, &like, cap)
                     .await
                     .map_err(ServiceError::Db)?,
                 false,

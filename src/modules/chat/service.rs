@@ -1381,14 +1381,14 @@ mod tests {
         );
 
         // 全局搜索端口（`SearchPort` 仍只收 user_id）按普通用户口径搜自己的
-        let hits = SearchPort::search(&m.query, OWNER, "费曼技巧四步", 20).await.unwrap();
+        let hits = SearchPort::search(&m.query, &Actor::user(OWNER), "费曼技巧四步", 20).await.unwrap();
         assert_eq!(hits.len(), 1);
         assert!(
             hits.iter().all(|h| h.id == m.owner_tree),
             "命中只应属于自己的树"
         );
         assert!(
-            SearchPort::search(&m.query, OTHER, "费曼技巧四步", 20).await.unwrap().is_empty(),
+            SearchPort::search(&m.query, &Actor::user(OTHER), "费曼技巧四步", 20).await.unwrap().is_empty(),
             "他人搜不到"
         );
     }

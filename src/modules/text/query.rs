@@ -37,18 +37,17 @@ impl TextQueryService {
 impl SearchPort for TextQueryService {
     async fn search(
         &self,
-        user_id: i32,
+        actor: &Actor,
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
-        // 搜索层还没接 Actor（`SearchPort` 仍只传 user_id）：这里按普通用户口径取行
         let Some((like, kw, cap)) = normalize_search(q, limit) else {
             return Ok(vec![]);
         };
         let (rows, use_fts) = if let Some(fts) = fts_query(q) {
             (
                 self.repo
-                    .search_hits_fts(&Actor::user(user_id), &fts, cap)
+                    .search_hits_fts(actor, &fts, cap)
                     .await
                     .map_err(ServiceError::Db)?,
                 true,
@@ -56,7 +55,7 @@ impl SearchPort for TextQueryService {
         } else {
             (
                 self.repo
-                    .search_hits(&Actor::user(user_id), &like, cap)
+                    .search_hits(actor, &like, cap)
                     .await
                     .map_err(ServiceError::Db)?,
                 false,

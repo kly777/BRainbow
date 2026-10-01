@@ -253,11 +253,11 @@ async fn onto_isolation_between_users() {
     assert_eq!(svc.delete(&b, onto_a.id).await.unwrap(), 0, "B 不该删得掉");
     // 搜索命中同样按归属过滤（搜索层仍只传 user_id，admin 全量搜索待该层改造）
     assert!(
-        qsvc.search(2, "以教促学", 5).await.unwrap().is_empty(),
+        qsvc.search(&Actor::user(2), "以教促学", 5).await.unwrap().is_empty(),
         "B 不该搜到 A 的本体"
     );
     assert_eq!(
-        qsvc.search(1, "以教促学", 5).await.unwrap().len(),
+        qsvc.search(&Actor::user(1), "以教促学", 5).await.unwrap().len(),
         1,
         "A 搜得到自己的"
     );

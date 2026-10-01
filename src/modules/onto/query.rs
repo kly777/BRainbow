@@ -49,7 +49,7 @@ impl OntoQueryService {
 impl SearchPort for OntoQueryService {
     async fn search(
         &self,
-        user_id: i32,
+        actor: &Actor,
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
@@ -59,7 +59,7 @@ impl SearchPort for OntoQueryService {
         let (rows, is_fts) = if let Some(fts) = fts_query(q) {
             (
                 self.repo
-                    .search_hits_fts(&Actor::user(user_id), &fts, cap)
+                    .search_hits_fts(actor, &fts, cap)
                     .await
                     .map_err(ServiceError::Db)?,
                 true,
@@ -67,7 +67,7 @@ impl SearchPort for OntoQueryService {
         } else {
             (
                 self.repo
-                    .search_hits(&Actor::user(user_id), &like, cap)
+                    .search_hits(actor, &like, cap)
                     .await
                     .map_err(ServiceError::Db)?,
                 false,

@@ -404,6 +404,116 @@ mod tests {
         assert_eq!(created, "2026-08-17T15:22:22.123+00:00");
     }
 
+    /// **每一个 TIMESTAMP 列都必须被时间归一化触发器覆盖。**
+    ///
+    /// 为什么必须有这条：老库的**列默认值**是改不掉的（SQLite 不能改列定义），而历史上
+    /// 基线写过三种形态的默认值（`CURRENT_TIMESTAMP` / `…Z` / `…+00:00`），于是老库与
+    /// 新库的默认值天然不同 —— 这无害**当且仅当**写入时会被触发器改写成规范格式。
+    /// 反过来，没被覆盖的列会把默认值的原始格式直接落库：`file.updated_at` 就是这么漏的
+    /// （dev 库 11/44 行是 `2026-09-10 14:53:50`，同一行的 created_at 却规范）。
+    #[tokio::test]
+    async fn time_columns_cover_every_timestamp_column() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        migrate(&pool).await.unwrap();
+
+        // ① 清单自己不许指向不存在的列：建触发器是按 `columns_exist` **静默跳过**的，
+        //    写错列名不会报错，只会少一个触发器
+        for (table, _pk, columns) in TIME_COLUMNS {
+            for column in *columns {
+                assert!(
+                    column_exists(&pool, table, column).await.unwrap(),
+                    "TIME_COLUMNS 里的 {table}.{column} 不存在 —— 触发器会被静默跳过"
+                );
+            }
+        }
+
+        // ② 库里每个 TIMESTAMP 列都要在覆盖范围内，而且触发器真的建出来了
+        let declared: Vec<(String, String)> = sqlx::query_as(
+            "SELECT m.name, x.name FROM sqlite_master m JOIN pragma_table_xinfo(m.name) x \
+             WHERE m.type = 'table' AND m.name NOT LIKE 'sqlite_%' \
+               AND upper(x.type) LIKE '%TIMESTAMP%' \
+             ORDER BY m.name, x.name",
+        )
+        .fetch_all(&pool)
+        .await
+        .unwrap();
+        assert!(
+            declared.len() > 20,
+            "一个 TIMESTAMP 列都没扫到？清单扫描本身有问题"
+        );
+
+        for (table, column) in declared {
+            assert!(
+                TIME_COLUMNS
+                    .iter()
+                    .any(|(t, _, cols)| *t == table && cols.contains(&column.as_str())),
+                "{table}.{column} 是 TIMESTAMP 列但不在 TIME_COLUMNS 里 —— \
+                 老库的默认值格式会原样落库（file.updated_at 就是这么漏的）"
+            );
+            for suffix in ["ins", "upd"] {
+                let trigger = format!("trg_{table}_time_iso_{suffix}");
+                let count: i64 = sqlx::query_scalar(
+                    "SELECT COUNT(*) FROM sqlite_master WHERE type = 'trigger' AND name = ?",
+                )
+                .bind(&trigger)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+                assert_eq!(count, 1, "{trigger} 不存在：归一化没生效");
+            }
+        }
+    }
+
+    /// v21：`file` 的存量脏行被归一化，触发器也就位（之后写入自动规范化）
+    #[tokio::test]
+    async fn v21_normalizes_file_timestamps() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        create_tables(&pool).await.unwrap();
+        // 造出"v20 老库"的形状：file 的时间列还没有触发器
+        for suffix in ["ins", "upd"] {
+            sqlx::query(sqlx::AssertSqlSafe(format!(
+                "DROP TRIGGER IF EXISTS trg_file_time_iso_{suffix}"
+            )))
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+        sqlx::query("PRAGMA user_version = 20")
+            .execute(&pool)
+            .await
+            .unwrap();
+        // 历史写路径的直接产物：空格分隔、无时区
+        sqlx::query(
+            "INSERT INTO file (stored_id, original_name, mime_type, created_at, updated_at) \
+             VALUES ('s1', 'a.png', 'image/png', '2026-09-10 14:53:50', '2026-09-10 14:53:50')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        migrate(&pool).await.unwrap();
+        assert_eq!(user_version(&pool).await, LATEST_USER_VERSION);
+
+        let (created, updated): (String, String) =
+            sqlx::query_as("SELECT created_at, updated_at FROM file WHERE stored_id = 's1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert_eq!(created, "2026-09-10T14:53:50+00:00");
+        assert_eq!(updated, "2026-09-10T14:53:50+00:00");
+
+        // 触发器就位：之后的写入即使再写成空格格式，也会被改回规范形态
+        sqlx::query("UPDATE file SET updated_at = '2026-09-11 10:00:00' WHERE stored_id = 's1'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let updated: String = sqlx::query_scalar("SELECT updated_at FROM file WHERE stored_id = 's1'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        assert_eq!(updated, "2026-09-11T10:00:00+00:00");
+    }
+
     #[tokio::test]
     async fn migrate_upgrades_legacy_db_with_missing_columns() {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();

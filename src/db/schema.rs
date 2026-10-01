@@ -873,6 +873,10 @@ pub(crate) const TIME_COLUMNS: &[(&str, &str, &[&str])] = &[
     ("prompt_preset", "id", &["created_at"]),
     ("ai_settings", "user_id", &["updated_at"]),
     ("api_key", "id", &["created_at"]),
+    // v21 补入：file 的写路径曾直接写 `CURRENT_TIMESTAMP`（空格格式、无时区），而这张表
+    // 一直不在清单里、没有触发器兜底 —— 脏值就直接落库了（dev 库 11/44 行）。
+    // 覆盖完整性由 `db::tests::time_columns_cover_every_timestamp_column` 钉住。
+    ("file", "id", &["created_at", "updated_at"]),
 ];
 
 /// FTS5 全文索引：虚拟表（外部内容表）+ 三个同步触发器。

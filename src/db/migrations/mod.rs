@@ -13,6 +13,7 @@ mod v17;
 mod v18;
 mod v19;
 mod v20;
+mod v21;
 mod v2;
 mod v3;
 mod v4;
@@ -28,7 +29,7 @@ use super::helpers::set_user_version;
 use super::schema::create_tables;
 
 /// 程序支持的最新 schema 版本
-pub const LATEST_USER_VERSION: i64 = 20;
+pub const LATEST_USER_VERSION: i64 = 21;
 
 /// 迁移链用 `ALTER TABLE … ADD COLUMN` 加过的列：(表, 列)。
 ///
@@ -129,7 +130,7 @@ pub async fn migrate(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 /// 测试用：跑**完整迁移链**（新库路径的老行为），给"基线等价性"测试做对照。
 ///
 /// 常规入口是 [`migrate`] —— 它在全新库上只建基线就直接置版本号，所以对照那侧
-/// 需要这个函数显式地把 v2…v20 都跑一遍。
+/// 需要这个函数显式地把 v2…v21 都跑一遍。
 #[cfg(test)]
 pub(crate) async fn apply_full_chain_for_test(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     for target in 2..=LATEST_USER_VERSION {
@@ -161,6 +162,7 @@ async fn apply_migration(pool: &SqlitePool, target: i64) -> Result<(), sqlx::Err
         18 => v18::migrate(&mut tx).await?,
         19 => v19::migrate(&mut tx).await?,
         20 => v20::migrate(&mut tx).await?,
+        21 => v21::migrate(&mut tx).await?,
         _ => {
             return Err(sqlx::Error::Configuration(Box::new(std::io::Error::other(
                 format!("未知的迁移版本: {target}"),

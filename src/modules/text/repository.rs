@@ -52,7 +52,7 @@ impl TextRepo {
 
     /// 整体替换**自己那一份**草稿。
     ///
-    /// 这里刻意只删 `actor.user_id` 的行（不用 `owner_scope`）：PUT 的语义是"替换我的集合"，
+    /// 这里刻意只删 `actor.user_id()` 的行（不用 `owner_scope`）：PUT 的语义是"替换我的集合"，
     /// 若按 admin 的全量口径删，管理员保存一次就会清空所有人的草稿。集合式写入的这条例外
     /// 记在 `doc/design/authorization.md` §3。
     ///
@@ -64,7 +64,7 @@ impl TextRepo {
     ) -> Result<(), sqlx::Error> {
         let mut tx = self.pool.begin().await?;
 
-        sqlx::query!("DELETE FROM text_note WHERE user_id = ?", actor.user_id)
+        sqlx::query!("DELETE FROM text_note WHERE user_id = ?", actor.user_id())
             .execute(&mut *tx)
             .await?;
 
@@ -73,7 +73,7 @@ impl TextRepo {
                 "INSERT INTO text_note (name, content, user_id, created_at, updated_at) VALUES (?, ?, ?, datetime('now'), datetime('now'))",
                 name,
                 content,
-                actor.user_id
+                actor.user_id()
             )
             .execute(&mut *tx)
             .await?;

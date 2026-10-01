@@ -130,7 +130,7 @@ impl TaskRepository {
             TaskStatus::Backlog.as_str(),
             Option::<DateTime<Utc>>::None,
             request.effort_estimate_minutes,
-            actor.user_id,
+            actor.user_id(),
             now,
             now
         )
@@ -161,7 +161,7 @@ impl TaskRepository {
                          COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>""#,
             request.title,
             TaskStatus::Backlog.as_str(),
-            actor.user_id,
+            actor.user_id(),
             now,
             now
         )

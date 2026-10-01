@@ -208,7 +208,7 @@ impl ChatRepo {
     ) -> Result<TreeDetail, ServiceError> {
         let id: i64 = sqlx::query!(
             "INSERT INTO chat_tree (user_id, title, system_prompt, kind, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?5)",
-            actor.user_id,
+            actor.user_id(),
             title,
             system_prompt,
             kind,
@@ -422,7 +422,7 @@ impl ChatRepo {
     ) -> Result<PresetItem, ServiceError> {
         let id: i64 = sqlx::query!(
             "INSERT INTO prompt_preset (user_id, name, content) VALUES (?1, ?2, ?3)",
-            actor.user_id,
+            actor.user_id(),
             name.trim(),
             content.trim()
         )

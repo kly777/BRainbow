@@ -59,7 +59,7 @@ impl ReadingService {
 
         // 插入文章
         let article_id = repo
-            .insert_article(actor.user_id, title, content, word_count)
+            .insert_article(actor.user_id(), title, content, word_count)
             .await
             .map_err(ServiceError::Db)?;
 
@@ -90,7 +90,7 @@ impl ReadingService {
         }
         let word = word.trim();
         let repo = &self.repo;
-        repo.upsert_user_word(actor.user_id, word, status)
+        repo.upsert_user_word(actor.user_id(), word, status)
             .await
             .map_err(ServiceError::Db)
     }

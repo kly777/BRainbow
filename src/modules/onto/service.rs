@@ -30,7 +30,7 @@ impl OntoService {
             return Err(ServiceError::InvalidInput("本体名称不能为空".into()));
         }
         self.repo
-            .create(actor.user_id, name, description)
+            .create(actor.user_id(), name, description)
             .await
             .map_err(ServiceError::Db)
     }

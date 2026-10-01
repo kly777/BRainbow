@@ -6,7 +6,6 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 use crate::shared::actor::Actor;
-use crate::shared::claims::Claims;
 use crate::shared::error_types::{bad_request, not_found};
 use crate::shared::pagination::{PaginatedResponse, Pagination};
 use crate::shared::time_text::to_utc_iso;
@@ -45,10 +44,10 @@ impl From<super::model::Card> for CardResponse {
 
 pub async fn create_card_handler(
     State(service): State<CardService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
     Json(payload): Json<CreateCardRequest>,
 ) -> impl IntoResponse {
-    match service.create(&Actor::from(&claims), payload.content).await {
+    match service.create(&actor, payload.content).await {
         Ok(card) => (StatusCode::CREATED, Json(CardResponse::from(card))).into_response(),
         Err(e) => e.into_response(),
     }
@@ -57,10 +56,10 @@ pub async fn create_card_handler(
 pub async fn get_cards_handler(
     Query(pagination): Query<Pagination>,
     State(query): State<CardQueryService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
     match query
-        .list(&Actor::from(&claims), pagination.limit(), pagination.offset())
+        .list(&actor, pagination.limit(), pagination.offset())
         .await
     {
         Ok((items, total)) => {
@@ -73,10 +72,10 @@ pub async fn get_cards_handler(
 
 pub async fn get_card_handler(
     State(query): State<CardQueryService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    match query.by_id(&Actor::from(&claims), id).await {
+    match query.by_id(&actor, id).await {
         Ok(Some(card)) => Json(CardResponse::from(card)).into_response(),
         Ok(None) => not_found("卡片不存在").into_response(),
         Err(e) => e.into_response(),
@@ -85,11 +84,11 @@ pub async fn get_card_handler(
 
 pub async fn update_card_handler(
     State(service): State<CardService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
     Path(id): Path<i32>,
     Json(payload): Json<UpdateCardRequest>,
 ) -> impl IntoResponse {
-    match service.update(&Actor::from(&claims), id, payload.content).await {
+    match service.update(&actor, id, payload.content).await {
         Ok(card) => Json(CardResponse::from(card)).into_response(),
         Err(e) => e.into_response(),
     }
@@ -97,10 +96,10 @@ pub async fn update_card_handler(
 
 pub async fn delete_card_handler(
     State(service): State<CardService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    match service.delete(&Actor::from(&claims), id).await {
+    match service.delete(&actor, id).await {
         Ok(n) if n > 0 => StatusCode::NO_CONTENT.into_response(),
         Ok(_) => not_found("卡片不存在").into_response(),
         Err(e) => e.into_response(),
@@ -123,7 +122,7 @@ impl SearchCardsQuery {
 pub async fn search_cards_handler(
     Query(params): Query<SearchCardsQuery>,
     State(query): State<CardQueryService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
     if params.q.trim().is_empty() {
         return bad_request("搜索关键词不能为空");
@@ -131,7 +130,7 @@ pub async fn search_cards_handler(
     let pagination = params.pagination();
     match query
         .search(
-            &Actor::from(&claims),
+            &actor,
             params.q.trim(),
             pagination.limit(),
             pagination.offset(),

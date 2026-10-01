@@ -5,7 +5,7 @@ use axum::{
     routing::{get, post},
 };
 
-use crate::shared::claims::Claims;
+use crate::shared::actor::Actor;
 
 use super::model::{AiProxyRequest, UpdateAiSettingsRequest};
 use super::service::AiService;
@@ -23,11 +23,14 @@ where
         .route("/chat", post(chat_proxy_handler))
 }
 
+// AI 设置与代理调用是**个人**资源（每个用户一份），所以这里取 `actor.user_id()`；
+// 服务层还没接 `Actor`（见 doc/design/authorization.md 的落地清单）。
+
 pub async fn get_settings_handler(
     State(ai): State<AiService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
-    match ai.get_settings(claims.sub).await {
+    match ai.get_settings(actor.user_id()).await {
         Ok(s) => Json(s).into_response(),
         Err(e) => e.into_response(),
     }
@@ -35,10 +38,10 @@ pub async fn get_settings_handler(
 
 pub async fn update_settings_handler(
     State(ai): State<AiService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
     Json(req): Json<UpdateAiSettingsRequest>,
 ) -> impl IntoResponse {
-    match ai.update_settings(claims.sub, req).await {
+    match ai.update_settings(actor.user_id(), req).await {
         Ok(s) => Json(s).into_response(),
         Err(e) => e.into_response(),
     }
@@ -46,11 +49,16 @@ pub async fn update_settings_handler(
 
 pub async fn chat_proxy_handler(
     State(ai): State<AiService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
     Json(req): Json<AiProxyRequest>,
 ) -> impl IntoResponse {
     match ai
-        .chat(claims.sub, &req.messages, req.temperature, req.max_tokens)
+        .chat(
+            actor.user_id(),
+            &req.messages,
+            req.temperature,
+            req.max_tokens,
+        )
         .await
     {
         Ok((content, model)) => {

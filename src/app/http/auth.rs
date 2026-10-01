@@ -6,7 +6,7 @@ use axum::{
 };
 
 use crate::app::auth::service::{AuthService, DeleteApiKeyResult};
-use crate::shared::claims::Claims;
+use crate::shared::actor::Actor;
 use crate::shared::error_types::{ServiceError, forbidden, json_error, not_found, unauthorized};
 pub use crate::shared::jwt::{extract_api_key, extract_token, verify_token};
 use serde::Serialize;
@@ -24,8 +24,12 @@ pub struct ApiKeyResponse {
 // 中间件
 // ============================================================
 
-/// 认证中间件：先验证 JWT，再尝试 X-API-Key，将 Claims 注入 request extensions。
+/// 认证中间件：先验证 JWT，再尝试 X-API-Key，把凭据翻译成 [`Actor`] 注入 request extensions。
 /// 两者都失败返回 401。
+///
+/// **这里是认证边界，也是生产代码里唯一的 `Actor` 产出口**：JWT 载荷 / API key 行
+/// （凭据语言）在这一处变成领域身份（`sub`→`user_id`、`role=="admin"`→`is_admin`），
+/// 之后各层只见 `Actor`，见 `shared/actor.rs` 的说明与 `doc/design/authorization.md`。
 ///
 /// 用法：挂载到需要登录的路由组上。
 ///   Router::new().nest(…).layer(from_fn_with_state(state, auth::auth))
@@ -40,7 +44,7 @@ pub async fn auth(
     if let Some(token) = extract_token(&request)
         && let Some(claims) = verify_token(&token, &secret)
     {
-        request.extensions_mut().insert(claims);
+        request.extensions_mut().insert(Actor::from(&claims));
         return next.run(request).await;
     }
 
@@ -60,8 +64,8 @@ pub async fn auth(
             }
         };
 
-        if let Some(claims) = row {
-            request.extensions_mut().insert(claims);
+        if let Some(actor) = row {
+            request.extensions_mut().insert(actor);
             return next.run(request).await;
         }
     }
@@ -74,10 +78,11 @@ pub async fn auth(
 ///
 /// 用在公开路由上"带了凭据就能多看点东西"的场景 —— 目前是私密文件的内容路由：
 /// 公开文件无需凭据（`<img>` 内嵌不带 Authorization），私密文件必须带凭据且为上传者。
-pub async fn optional_claims(
+/// 与 [`auth`] 中间件同一套翻译：这里也产出 `Actor`（`None` = 匿名）。
+pub async fn optional_actor(
     auth_service: &AuthService,
     headers: &axum::http::HeaderMap,
-) -> Option<Claims> {
+) -> Option<Actor> {
     let secret = auth_service.jwt_secret_active();
 
     if let Some(token) = headers
@@ -86,7 +91,7 @@ pub async fn optional_claims(
         .and_then(|s| s.strip_prefix("Bearer "))
         && let Some(claims) = verify_token(token, &secret)
     {
-        return Some(claims);
+        return Some(Actor::from(&claims));
     }
 
     if let Some(key) = headers
@@ -94,9 +99,9 @@ pub async fn optional_claims(
         .and_then(|v| v.to_str().ok())
         .map(str::trim)
         .filter(|s| !s.is_empty())
-        && let Ok(Some(claims)) = auth_service.authenticate_api_key(key).await
+        && let Ok(Some(actor)) = auth_service.authenticate_api_key(key).await
     {
-        return Some(claims);
+        return Some(actor);
     }
 
     None
@@ -121,8 +126,8 @@ async fn drain_rejected_body(request: &mut Request) {
 ///       .layer(from_fn(auth::require_admin))
 ///       .layer(from_fn_with_state(state, auth::auth))
 pub async fn require_admin(request: Request, next: Next) -> Response {
-    match request.extensions().get::<Claims>() {
-        Some(c) if c.role == "admin" => next.run(request).await,
+    match request.extensions().get::<Actor>() {
+        Some(actor) if actor.is_admin() => next.run(request).await,
         Some(_) => forbidden("仅管理员可访问"),
         None => unauthorized("请先登录"),
     }
@@ -138,12 +143,9 @@ pub async fn require_admin(request: Request, next: Next) -> Response {
 /// prod 环境：需登录（auth 中间件已前置），key 绑定当前用户角色。
 pub async fn create_api_key(
     State(auth_service): State<AuthService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> Response {
-    match auth_service
-        .create_api_key(&claims.role, Some(claims.sub))
-        .await
-    {
+    match auth_service.create_api_key(&actor).await {
         Ok(info) => Json(ApiKeyResponse {
             id: info.id,
             role: info.role,
@@ -155,12 +157,12 @@ pub async fn create_api_key(
     }
 }
 
-/// 列出当前用户可见的 key（dev 免登录；prod 仅显示自己的 key）。
+/// 列出当前用户可见的 key（admin 看全部，普通用户只看自己的）。
 pub async fn list_api_keys(
     State(auth_service): State<AuthService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> Response {
-    match auth_service.list_api_keys(&claims).await {
+    match auth_service.list_api_keys(&actor).await {
         Ok(items) => {
             let items: Vec<ApiKeyResponse> = items
                 .into_iter()
@@ -177,13 +179,13 @@ pub async fn list_api_keys(
     }
 }
 
-/// 删除 API key。prod 下只能删除自己的 key（admin 可删任意）。
+/// 删除 API key。只能删除自己的 key（admin 可删任意）。
 pub async fn delete_api_key(
     State(auth_service): State<AuthService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
     Path(id): Path<i32>,
 ) -> Response {
-    match auth_service.delete_api_key(&claims, id).await {
+    match auth_service.delete_api_key(&actor, id).await {
         Ok(DeleteApiKeyResult::Deleted) => StatusCode::NO_CONTENT.into_response(),
         Ok(DeleteApiKeyResult::NotFound) => not_found("key 不存在"),
         Ok(DeleteApiKeyResult::Forbidden) => forbidden("只能删除自己的 key"),
@@ -352,10 +354,12 @@ mod tests {
         assert_ne!(hash_api_key("other"), h1);
     }
 
-    // ── Claims serialization ──
+    // ── Claims serialization（凭据语言的载荷，只在认证层内部流转）──
 
     #[test]
     fn claims_json_roundtrip() {
+        use crate::shared::claims::Claims;
+
         let claims = Claims {
             sub: 5,
             role: "admin".to_string(),

@@ -11,7 +11,6 @@ use super::model::{CreateTimeWindowRequest, TimeWindow, TimeWindowType, UpdateTi
 use super::query::TimeWindowQueryService;
 use super::service::TimeWindowService;
 use crate::shared::actor::Actor;
-use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
 use crate::shared::pagination::Pagination;
 
@@ -73,10 +72,10 @@ impl From<TimeWindow> for TimeWindowResponse {
 /// 创建时间窗口
 pub async fn create_time_window_handler(
     State(service): State<TimeWindowService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
     Json(payload): Json<CreateTimeWindowRequest>,
 ) -> impl IntoResponse {
-    match service.create(&Actor::from(&claims), payload).await {
+    match service.create(&actor, payload).await {
         Ok(time_window) => Json(TimeWindowResponse::from(time_window)).into_response(),
         Err(e) => e.into_response(),
     }
@@ -86,9 +85,9 @@ pub async fn create_time_window_handler(
 pub async fn get_time_window_handler(
     Path(id): Path<i32>,
     State(query): State<TimeWindowQueryService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
-    match query.by_id(&Actor::from(&claims), id).await {
+    match query.by_id(&actor, id).await {
         Ok(Some(time_window)) => Json(TimeWindowResponse::from(time_window)).into_response(),
         Ok(None) => error::not_found("时间窗口未找到"),
         Err(e) => e.into_response(),
@@ -99,14 +98,14 @@ pub async fn get_time_window_handler(
 pub async fn get_time_windows_handler(
     Query(query): Query<TimeWindowQuery>,
     State(query_service): State<TimeWindowQueryService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
     use crate::shared::pagination::PaginatedResponse;
     let p = &query.pagination;
 
     if let Some(task_id) = query.task_id {
         let result = query_service
-            .list_by_task(&Actor::from(&claims), task_id, query.window_type, p.limit(), p.offset())
+            .list_by_task(&actor, task_id, query.window_type, p.limit(), p.offset())
             .await;
 
         return match result {
@@ -132,10 +131,10 @@ pub async fn get_time_windows_handler(
 pub async fn update_time_window_handler(
     Path(id): Path<i32>,
     State(service): State<TimeWindowService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
     Json(payload): Json<UpdateTimeWindowRequest>,
 ) -> impl IntoResponse {
-    match service.update(&Actor::from(&claims), id, payload).await {
+    match service.update(&actor, id, payload).await {
         Ok(time_window) => Json(TimeWindowResponse::from(time_window)).into_response(),
         Err(e) => e.into_response(),
     }
@@ -145,9 +144,9 @@ pub async fn update_time_window_handler(
 pub async fn delete_time_window_handler(
     Path(id): Path<i32>,
     State(service): State<TimeWindowService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
-    match service.delete(&Actor::from(&claims), id).await {
+    match service.delete(&actor, id).await {
         Ok(rows_affected) => {
             if rows_affected > 0 {
                 StatusCode::NO_CONTENT.into_response()
@@ -163,9 +162,9 @@ pub async fn delete_time_window_handler(
 pub async fn get_time_window_stats_handler(
     Path(task_id): Path<i32>,
     State(query): State<TimeWindowQueryService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
-    match query.get_task_time_stats(&Actor::from(&claims), task_id).await {
+    match query.get_task_time_stats(&actor, task_id).await {
         Ok((earliest, latest, count)) => {
             #[derive(Debug, Serialize)]
             struct StatsResponse {
@@ -190,7 +189,7 @@ pub async fn check_time_conflict_handler(
     Path(task_id): Path<i32>,
     Query(params): Query<HashMap<String, String>>,
     State(query): State<TimeWindowQueryService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
     let start_time_str = params.get("start_time");
     let end_time_str = params.get("end_time");
@@ -224,7 +223,7 @@ pub async fn check_time_conflict_handler(
     let exclude_id = exclude_id_str.and_then(|s| s.parse::<i32>().ok());
 
     match query
-        .check_time_conflict(&Actor::from(&claims), task_id, start_time, end_time, exclude_id)
+        .check_time_conflict(&actor, task_id, start_time, end_time, exclude_id)
         .await
     {
         Ok(has_conflict) => {

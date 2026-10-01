@@ -7,7 +7,6 @@ use axum::{
 use serde::Deserialize;
 
 use crate::shared::actor::Actor;
-use crate::shared::claims::Claims;
 use axum::extract::Extension;
 
 use super::service::SearchQueryService;
@@ -33,10 +32,10 @@ fn default_limit() -> i64 {
 
 pub async fn search_handler(
     State(service): State<SearchQueryService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
     Query(params): Query<SearchParams>,
 ) -> impl IntoResponse {
-    match service.search(&Actor::from(&claims), &params.q, params.limit).await {
+    match service.search(&actor, &params.q, params.limit).await {
         Ok(resp) => Json(resp).into_response(),
         Err(e) => e.into_response(),
     }

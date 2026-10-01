@@ -181,7 +181,7 @@ impl BookmarkRepo {
         Ok(row)
     }
 
-    /// 创建书签（`user_id` 是创建者，由 service 传 `actor.user_id`）
+    /// 创建书签（`user_id` 是创建者，由 service 传 `actor.user_id()`）
     pub async fn create(
         &self,
         user_id: i32,
@@ -567,7 +567,7 @@ impl BookmarkRepo {
         let result = sqlx::query!(
             "INSERT OR IGNORE INTO bookmark_tag (name, user_id) VALUES (?1, ?2)",
             name,
-            actor.user_id
+            actor.user_id()
         )
         .execute(&*self.pool)
         .await?;
@@ -626,7 +626,7 @@ impl BookmarkRepo {
         names: &[String],
     ) -> Result<Vec<BookmarkTag>, sqlx::Error> {
         let mut tx = self.pool.begin().await?;
-        self.replace_tags_in_tx(&mut tx, actor.user_id, bookmark_id, names)
+        self.replace_tags_in_tx(&mut tx, actor.user_id(), bookmark_id, names)
             .await?;
         tx.commit().await?;
         self.get_bookmark_tags(bookmark_id).await

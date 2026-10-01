@@ -22,28 +22,51 @@
 
 use crate::shared::claims::Claims;
 
-/// 调用者：谁、是不是管理员
+/// 调用者：谁、是不是管理员。
+///
+/// **创建即固定，生产路径只有一个构造口**（这是刻意的）：
+/// - 字段私有 + 只读访问器 —— 拿到 `&Actor` 之后改不动，`actor.is_admin = true` 这种写法根本不存在；
+/// - 生产代码里唯一的构造点是 `From<&Claims>`（认证边界），`Actor::user/admin` 只在 `#[cfg(test)]`
+///   下存在 —— 于是"凭空造一个管理员"在生产编译单元里过不了编译，提权只能发生在认证层，
+///   而且写出来就看得见（一处映射）。
+///
+/// 将来若需要"系统身份"（后台任务要动数据），**加一个具名构造器**（如 `Actor::system()`）并把
+/// 它的权限与审计含义写清楚，别把 `new` 放开。
+///
+/// 保持 `Copy`：它现在是个不可变的值，复制没有安全含义，而传参/进 `tokio::spawn` 都省事。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Actor {
-    /// 调用者的 user_id（admin 也是普通用户之一，只是多了全量权限）
-    pub user_id: i32,
-    /// 是否管理员（来自 `Claims.role == "admin"`）
-    pub is_admin: bool,
+    user_id: i32,
+    is_admin: bool,
 }
 
 impl Actor {
-    pub const fn new(user_id: i32, is_admin: bool) -> Self {
-        Self { user_id, is_admin }
-    }
-
-    /// 普通用户身份的 actor（测试与后台任务用）
+    /// 普通用户身份的 actor（**只在测试里可用**：生产路径走 `From<&Claims>`）
+    #[cfg(test)]
     pub const fn user(user_id: i32) -> Self {
-        Self::new(user_id, false)
+        Self {
+            user_id,
+            is_admin: false,
+        }
     }
 
-    /// 管理员身份的 actor
+    /// 管理员身份的 actor（**只在测试里可用**：生产路径走 `From<&Claims>`）
+    #[cfg(test)]
     pub const fn admin(user_id: i32) -> Self {
-        Self::new(user_id, true)
+        Self {
+            user_id,
+            is_admin: true,
+        }
+    }
+
+    /// 调用者的 user_id（admin 也是普通用户之一，只是多了全量权限）
+    pub const fn user_id(&self) -> i32 {
+        self.user_id
+    }
+
+    /// 是否管理员（来自 `Claims.role == "admin"`）
+    pub const fn is_admin(&self) -> bool {
+        self.is_admin
     }
 
     /// 绑进 SQL 的归属过滤值：admin → `None`（绑成 NULL，条件恒真），其余 → 自己的 id
@@ -74,8 +97,12 @@ impl Actor {
 }
 
 impl From<&Claims> for Actor {
+    /// **生产代码里唯一的构造点**（认证中间件 / 可选凭据解析各用它一次）。
     fn from(claims: &Claims) -> Self {
-        Self::new(claims.sub, claims.role == "admin")
+        Self {
+            user_id: claims.sub,
+            is_admin: claims.role == "admin",
+        }
     }
 }
 
@@ -94,9 +121,9 @@ mod tests {
 
     #[test]
     fn admin_role_maps_to_admin_actor() {
-        assert!(Actor::from(&claims(1, "admin")).is_admin);
-        assert!(!Actor::from(&claims(2, "user")).is_admin);
-        assert_eq!(Actor::from(&claims(2, "user")).user_id, 2);
+        assert!(Actor::from(&claims(1, "admin")).is_admin());
+        assert!(!Actor::from(&claims(2, "user")).is_admin());
+        assert_eq!(Actor::from(&claims(2, "user")).user_id(), 2);
     }
 
     /// SQL 绑参：admin 用 NULL（不过滤），普通用户用自己的 id

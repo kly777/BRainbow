@@ -6,7 +6,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::shared::claims::Claims;
+use crate::shared::actor::Actor;
 use crate::shared::response;
 
 use crate::modules::admin::port::AdminServicePort;
@@ -82,9 +82,9 @@ pub async fn login_handler(
 /// 返回当前登录用户信息（原为全部用户列表 —— 最小化，避免用户枚举）
 pub async fn user_handler(
     State(query): State<UserQueryService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
-    match query.find_by_id(claims.sub).await {
+    match query.find_by_id(actor.user_id()).await {
         Ok(Some(u)) => {
             let mut m = HashMap::new();
             m.insert("id".to_string(), u.id.to_string());
@@ -109,11 +109,15 @@ pub struct ChangePasswordRequest {
 
 pub async fn change_password_handler(
     State(user): State<UserService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
     Json(payload): Json<ChangePasswordRequest>,
 ) -> impl IntoResponse {
     match user
-        .change_password(claims.sub, &payload.old_password, &payload.new_password)
+        .change_password(
+            actor.user_id(),
+            &payload.old_password,
+            &payload.new_password,
+        )
         .await
     {
         Ok(()) => response::ok().into_response(),

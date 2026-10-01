@@ -8,7 +8,6 @@ use serde::Deserialize;
 use super::super::model::TaskStatus;
 use super::super::service::TaskService;
 use crate::shared::actor::Actor;
-use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
 use crate::shared::response;
 
@@ -40,12 +39,12 @@ pub struct DependencyRequest {
 pub async fn add_dependency_handler(
     Path(task_id): Path<i32>,
     State(service): State<TaskService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
     Json(payload): Json<DependencyRequest>,
 ) -> impl IntoResponse {
     let svc = &service;
     match svc
-        .add_dependency(&Actor::from(&claims), task_id, payload.depends_on_task_id)
+        .add_dependency(&actor, task_id, payload.depends_on_task_id)
         .await
     {
         Ok(_) => response::message("依赖关系已添加").into_response(),
@@ -56,11 +55,11 @@ pub async fn add_dependency_handler(
 pub async fn remove_dependency_handler(
     Path((task_id, depends_on_task_id)): Path<(i32, i32)>,
     State(service): State<TaskService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
     let svc = &service;
     match svc
-        .remove_dependency(&Actor::from(&claims), task_id, depends_on_task_id)
+        .remove_dependency(&actor, task_id, depends_on_task_id)
         .await
     {
         Ok(rows) if rows > 0 => response::message("依赖关系已删除").into_response(),

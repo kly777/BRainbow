@@ -14,7 +14,6 @@ use super::model::{FileListQuery, UpdateFileRequest};
 use super::query::FileQueryService;
 use super::service::FileService;
 use crate::shared::actor::Actor;
-use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
 use crate::shared::error_types::ServiceError;
 use crate::shared::time_text::to_utc_iso;
@@ -157,11 +156,10 @@ pub struct UploadQuery {
 
 pub async fn upload_handler(
     State(service): State<FileService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
     Query(query): Query<UploadQuery>,
     mut multipart: Multipart,
 ) -> impl IntoResponse {
-    let actor = Actor::from(&claims);
     while let Ok(Some(mut field)) = multipart.next_field().await {
         let name = field.name().unwrap_or("").to_string();
         if name != "file" {
@@ -289,9 +287,8 @@ pub async fn upload_handler(
 pub async fn list_handler(
     Query(query): Query<FileListQuery>,
     State(query_svc): State<FileQueryService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
-    let actor = Actor::from(&claims);
     match query_svc.list(query, Some(&actor)).await {
         Ok(response) => {
             let items: Vec<FileResponse> = response
@@ -316,10 +313,9 @@ pub async fn list_handler(
 
 pub async fn get_handler(
     State(query): State<FileQueryService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
     Path(stored_id): Path<String>,
 ) -> impl IntoResponse {
-    let actor = Actor::from(&claims);
     match query.get_by_stored_id(&stored_id).await {
         Ok(file) => {
             // 别人的私密文件按"不存在"处理，不暴露其存在
@@ -410,9 +406,7 @@ async fn check_content_access(
         return None;
     }
     // 未认证是常态（Markdown 内嵌的 <img src> 不带 Authorization），解析失败不报错
-    let viewer = crate::app::http::auth::optional_claims(auth, headers)
-        .await
-        .map(|c| Actor::from(&c));
+    let viewer = crate::app::http::auth::optional_actor(auth, headers).await;
     denial_response(super::query::content_access(file, viewer.as_ref()))
 }
 
@@ -909,11 +903,10 @@ pub async fn thumb_handler(
 
 pub async fn update_handler(
     State(service): State<FileService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
     Path(stored_id): Path<String>,
     Json(payload): Json<UpdateFileRequest>,
 ) -> impl IntoResponse {
-    let actor = Actor::from(&claims);
     match service.update(&stored_id, payload, &actor).await {
         Ok(file) => Json(to_response(&file, true, Some(&actor))).into_response(),
         Err(e) => e.into_response(),
@@ -930,7 +923,7 @@ pub struct DeleteQuery {
 
 pub async fn delete_handler(
     State(service): State<FileService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
     Path(stored_id): Path<String>,
     Query(query): Query<DeleteQuery>,
 ) -> impl IntoResponse {
@@ -938,7 +931,7 @@ pub async fn delete_handler(
         .delete(
             &stored_id,
             query.force.unwrap_or(false),
-            &Actor::from(&claims),
+            &actor,
         )
         .await
     {
@@ -958,9 +951,9 @@ struct TagResponse {
 
 pub async fn tags_handler(
     State(query): State<FileQueryService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
-    match query.get_tags_with_count(&Actor::from(&claims)).await {
+    match query.get_tags_with_count(&actor).await {
         Ok(tags) => {
             let items: Vec<TagResponse> = tags
                 .into_iter()
@@ -979,9 +972,8 @@ pub async fn tags_handler(
 /// 文件库统计（列表页展示总量与类别分布）
 pub async fn stats_handler(
     State(service): State<FileService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
-    let actor = Actor::from(&claims);
     match service.stats(Some(&actor)).await {
         Ok(stats) => Json(stats).into_response(),
         Err(e) => e.into_response(),

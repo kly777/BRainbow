@@ -179,7 +179,7 @@ impl BookmarkService {
         }];
 
         let (content, _model) = ai
-            .chat(actor.user_id, &messages, Some(0.3), Some(256))
+            .chat(actor.user_id(), &messages, Some(0.3), Some(256))
             .await?;
 
         // 解析 AI 返回的标签列表
@@ -215,7 +215,7 @@ impl BookmarkService {
             .filter(|t| !t.is_empty())
             .collect();
         self.repo
-            .create(actor.user_id, title, url, description, &tags)
+            .create(actor.user_id(), title, url, description, &tags)
             .await
             .map_err(ServiceError::Db)
     }
@@ -355,7 +355,7 @@ impl BookmarkService {
                     item.title
                 };
                 self.repo
-                    .create(actor.user_id, &title, &item.url, "", &tags)
+                    .create(actor.user_id(), &title, &item.url, "", &tags)
                     .await?;
                 created += 1;
             }

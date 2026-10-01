@@ -5,7 +5,6 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 use crate::shared::actor::Actor;
-use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
 
@@ -48,12 +47,12 @@ impl From<super::model::SignifierSignified> for SignResponse {
 
 pub async fn create_sign_handler(
     State(service): State<SignService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
     Json(payload): Json<CreateSignRequest>,
 ) -> impl IntoResponse {
     let result = service
         .create(
-            &Actor::from(&claims),
+            &actor,
             payload.signifier,
             payload.signified,
             payload.onto_id,
@@ -68,10 +67,10 @@ pub async fn create_sign_handler(
 pub async fn get_signs_handler(
     Query(pagination): Query<Pagination>,
     State(query): State<SignQueryService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
     let result = query
-        .list(&Actor::from(&claims), pagination.limit(), pagination.offset())
+        .list(&actor, pagination.limit(), pagination.offset())
         .await
         .map(|(items, total)| {
             let items: Vec<SignResponse> = items.into_iter().map(SignResponse::from).collect();
@@ -82,11 +81,11 @@ pub async fn get_signs_handler(
 
 pub async fn get_sign_handler(
     State(query): State<SignQueryService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
     let result = query
-        .by_id(&Actor::from(&claims), id)
+        .by_id(&actor, id)
         .await
         .map(|opt| opt.map(SignResponse::from));
     error::found_or(result, "获取符号关系")
@@ -94,21 +93,21 @@ pub async fn get_sign_handler(
 
 pub async fn delete_sign_handler(
     State(service): State<SignService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    error::deleted_or(service.delete(&Actor::from(&claims), id).await, "删除符号关系")
+    error::deleted_or(service.delete(&actor, id).await, "删除符号关系")
 }
 
 pub async fn get_signs_by_signifier_handler(
     Path(signifier): Path<String>,
     Query(pagination): Query<Pagination>,
     State(query): State<SignQueryService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
     let result = query
         .by_signifier(
-            &Actor::from(&claims),
+            &actor,
             &signifier,
             pagination.limit(),
             pagination.offset(),
@@ -125,11 +124,11 @@ pub async fn get_signs_by_signified_handler(
     Path(signified): Path<String>,
     Query(pagination): Query<Pagination>,
     State(query): State<SignQueryService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
     let result = query
         .by_signified(
-            &Actor::from(&claims),
+            &actor,
             &signified,
             pagination.limit(),
             pagination.offset(),

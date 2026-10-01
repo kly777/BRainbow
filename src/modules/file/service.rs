@@ -198,7 +198,7 @@ impl FileService {
                 height: None,
                 duration_ms,
                 // 归属写调用者的 id（admin 也是某个人，别写成 NULL/0 —— 见授权文档 §5）
-                user_id: owner.map(|a| i64::from(a.user_id)),
+                user_id: owner.map(|a| i64::from(a.user_id())),
                 // force 副本显式不参与去重：写 NULL 退出唯一索引约束
                 content_hash: if force { None } else { Some(&hash) },
                 // 上传一律公开；需要私密时由上传者在详情页切换（匿名上传无归属，不能私密）
@@ -252,7 +252,7 @@ impl FileService {
         // 别拿 0 兜底：那会写出一条 user_id=0 的标签并撞外键）
         let tag_names = match (tags, owner) {
             (Some(t), Some(actor)) => {
-                self.set_tags_for_file(file_row.id, i64::from(actor.user_id), &t)
+                self.set_tags_for_file(file_row.id, i64::from(actor.user_id()), &t)
                     .await?
             }
             _ => Vec::new(),
@@ -521,7 +521,7 @@ impl FileService {
 
         // 更新标签（标签的创建者记调用者本人 —— admin 也一样，别写 NULL/0）
         let tags = if let Some(tag_names) = req.tags {
-            self.set_tags_for_file(file_row.id, i64::from(actor.user_id), &tag_names)
+            self.set_tags_for_file(file_row.id, i64::from(actor.user_id()), &tag_names)
                 .await?
         } else {
             self.repo

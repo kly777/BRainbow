@@ -7,6 +7,7 @@ use uuid::Uuid;
 
 use crate::modules::admin::port::AdminServicePort;
 use crate::modules::admin::service::AdminService;
+use crate::shared::actor::Actor;
 use crate::shared::claims::Claims;
 use crate::shared::jwt::hash_api_key;
 use crate::shared::time_text::ISO_UTC_FORMAT;
@@ -50,28 +51,36 @@ impl AuthService {
         self.admin.jwt_secret_active()
     }
 
-    /// 通过 API key 认证
-    pub async fn authenticate_api_key(&self, key: &str) -> Result<Option<Claims>, sqlx::Error> {
+    /// 通过 API key 认证：把 key 行翻译成 [`Actor`]（认证边界的一部分）。
+    ///
+    /// **无主 key（`user_id IS NULL`）直接拒绝**：v20 之后 `user_id IS NULL` 的行都归了 admin，
+    /// 这样一个"没有归属"的身份看不到任何数据，留着只会让人困惑（历史上它映射成 `sub = -1`）。
+    /// 重新建一把即可 —— 开发库里这种行是 0 条。
+    pub async fn authenticate_api_key(&self, key: &str) -> Result<Option<Actor>, sqlx::Error> {
         let key_hash = hash_api_key(key);
         match self.repo.find_by_hash(&key_hash).await? {
-            Some((role, user_id)) => Ok(Some(Claims {
-                sub: user_id.unwrap_or(-1),
+            Some((role, Some(user_id))) => Ok(Some(Actor::from(&Claims {
+                sub: user_id,
                 role,
                 exp: usize::MAX,
-            })),
+            }))),
+            Some((_, None)) => {
+                tracing::warn!("API key 没有归属（user_id 为空），已拒绝；请重新创建");
+                Ok(None)
+            }
             None => Ok(None),
         }
     }
 
-    /// 创建 API key（返回 (id, 明文 key)）
-    pub async fn create_api_key(
-        &self,
-        role: &str,
-        user_id: Option<i32>,
-    ) -> Result<ApiKeyInfo, sqlx::Error> {
+    /// 创建 API key（返回 (id, 明文 key)）。角色由调用者的身份决定（admin 才能建 admin key）。
+    pub async fn create_api_key(&self, actor: &Actor) -> Result<ApiKeyInfo, sqlx::Error> {
+        let role = if actor.is_admin() { "admin" } else { "user" };
         let key = Uuid::new_v4().to_string().replace('-', "");
         let key_hash = hash_api_key(&key);
-        let id = self.repo.insert(&key_hash, role, user_id).await?;
+        let id = self
+            .repo
+            .insert(&key_hash, role, Some(actor.user_id()))
+            .await?;
         Ok(ApiKeyInfo {
             id: id as i32,
             role: role.to_string(),
@@ -80,12 +89,12 @@ impl AuthService {
         })
     }
 
-    /// 列出当前用户可见的 API key
-    pub async fn list_api_keys(&self, claims: &Claims) -> Result<Vec<ApiKeyInfo>, sqlx::Error> {
+    /// 列出当前用户可见的 API key（admin 全部、普通用户自己的 —— 同一套归属判据）
+    pub async fn list_api_keys(&self, actor: &Actor) -> Result<Vec<ApiKeyInfo>, sqlx::Error> {
         let rows = self.repo.list_all().await?;
         let items: Vec<ApiKeyInfo> = rows
             .into_iter()
-            .filter(|row| claims.role == "admin" || Some(claims.sub) == row.user_id)
+            .filter(|row| actor.can_read(row.user_id.map(i64::from)))
             .map(|row| ApiKeyInfo {
                 id: row.id,
                 role: row.role,
@@ -96,17 +105,16 @@ impl AuthService {
         Ok(items)
     }
 
-    /// 删除 API key
+    /// 删除 API key（非 admin 只能删自己的 —— 走同一处归属判据）
     pub async fn delete_api_key(
         &self,
-        claims: &Claims,
+        actor: &Actor,
         id: i32,
     ) -> Result<DeleteApiKeyResult, sqlx::Error> {
-        // 非 admin 只能删自己的 key
-        if claims.role != "admin" {
+        if !actor.is_admin() {
             let owner = self.repo.find_owner(id).await?;
             match owner {
-                Some(Some(uid)) if uid == claims.sub => {}
+                Some(owner) if actor.can_write(owner.map(i64::from)) => {}
                 Some(_) => return Ok(DeleteApiKeyResult::Forbidden),
                 None => return Ok(DeleteApiKeyResult::NotFound),
             }

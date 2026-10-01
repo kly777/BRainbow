@@ -167,7 +167,7 @@ impl ChatService {
             },
         ];
         let (raw, _model) = ai
-            .chat(actor.user_id, &messages, Some(0.3), Some(64))
+            .chat(actor.user_id(), &messages, Some(0.3), Some(64))
             .await?;
         let title = sanitize_title(&raw);
         if title.is_empty() {
@@ -355,7 +355,7 @@ impl ChatService {
             .await?;
 
         let result = ai
-            .chat_stream(actor.user_id, &ctx.messages, None, None, Some(tx.clone()))
+            .chat_stream(actor.user_id(), &ctx.messages, None, None, Some(tx.clone()))
             .await;
         match result {
             Ok((full, _model, reasoning, _)) => {

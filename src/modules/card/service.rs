@@ -22,7 +22,7 @@ impl CardService {
 
     pub async fn create(&self, actor: &Actor, content: String) -> Result<Card, ServiceError> {
         self.repo
-            .create(actor.user_id, content)
+            .create(actor.user_id(), content)
             .await
             .map_err(ServiceError::Db)
     }

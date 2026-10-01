@@ -10,17 +10,15 @@ use super::super::query::TaskQueryService;
 use super::super::response::{CalendarEvent, StatsResponse, TaskResponse, TreeNode};
 use super::dependency::{CalendarQuery, DagQuery, TreeQuery};
 use crate::shared::actor::Actor;
-use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
 
 pub async fn get_tree_handler(
     Query(query): Query<TreeQuery>,
     State(query_service): State<TaskQueryService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
     let svc = &query_service;
-    let actor = Actor::from(&claims);
 
     let root_tasks = match svc.tree(&actor, None).await {
         Ok(tasks) => tasks,
@@ -71,12 +69,12 @@ fn build_tree_node<'a>(
 pub async fn get_calendar_handler(
     Query(query): Query<CalendarQuery>,
     State(query_service): State<TaskQueryService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
     let svc = &query_service;
 
     match svc
-        .calendar(&Actor::from(&claims), query.start, query.end, query.status)
+        .calendar(&actor, query.start, query.end, query.status)
         .await
     {
         Ok(entries) => {
@@ -100,13 +98,13 @@ pub async fn get_calendar_handler(
 pub async fn get_dag_handler(
     Query(query): Query<DagQuery>,
     State(query_service): State<TaskQueryService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
     let svc = &query_service;
 
     match svc
         .dag(
-            &Actor::from(&claims),
+            &actor,
             query.task_id,
             query.depth.unwrap_or(3),
         )
@@ -119,10 +117,10 @@ pub async fn get_dag_handler(
 
 pub async fn get_stats_handler(
     State(query_service): State<TaskQueryService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
     let svc = &query_service;
-    match svc.stats(&Actor::from(&claims)).await {
+    match svc.stats(&actor).await {
         Ok((backlog, active, completed, archived)) => Json(StatsResponse {
             backlog,
             active,
@@ -137,7 +135,7 @@ pub async fn get_stats_handler(
 pub async fn search_tasks_handler(
     Query(mut params): Query<HashMap<String, String>>,
     State(query_service): State<TaskQueryService>,
-    Extension(claims): Extension<Claims>,
+    Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
     let query = match params.remove("q") {
         Some(q) if !q.is_empty() => q,
@@ -154,7 +152,7 @@ pub async fn search_tasks_handler(
     let svc = &query_service;
     match svc
         .search(
-            &Actor::from(&claims),
+            &actor,
             &query,
             pagination.limit(),
             pagination.offset(),

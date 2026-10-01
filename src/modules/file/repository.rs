@@ -62,7 +62,7 @@ fn push_visibility(qb: &mut QueryBuilder<Sqlite>, viewer: Option<&Actor>) {
             qb.push(" AND f.is_private = 0");
         }
         // admin：全量，不加条件
-        Some(actor) if actor.is_admin => {}
+        Some(actor) if actor.is_admin() => {}
         Some(actor) => {
             // 归属值一律取 owner_scope()：判据只在 shared/actor.rs，这里不拼 user_id
             qb.push(" AND (f.is_private = 0 OR f.user_id = ")

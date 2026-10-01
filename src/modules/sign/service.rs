@@ -37,7 +37,7 @@ impl SignService {
         }
         self.repo
             .create(
-                actor.user_id,
+                actor.user_id(),
                 signifier,
                 signified,
                 onto_id,

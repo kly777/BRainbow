@@ -28,7 +28,7 @@ impl MemRepository for super::super::MemRepo {
             r#"INSERT INTO mem (cue_chunk_id, target_chunk_id, user_id) VALUES (?1, ?2, ?3) RETURNING id AS "id!: i32""#,
             cue_id,
             target_id,
-            actor.user_id
+            actor.user_id()
         )
         .fetch_one(&*self.pool)
         .await?;
@@ -525,7 +525,7 @@ impl MemRepository for super::super::MemRepo {
         sqlx::query_scalar!(
             r#"INSERT INTO chunk (content, user_id) VALUES (?1, ?2) RETURNING id AS "id!: i32""#,
             content,
-            actor.user_id
+            actor.user_id()
         )
         .fetch_one(&*self.pool)
         .await
@@ -965,7 +965,7 @@ impl MemRepository for super::super::MemRepo {
                RETURNING id AS "id!: i32", name,
                          COALESCE(created_at, '') AS "created_at!: String""#,
             name,
-            actor.user_id
+            actor.user_id()
         )
         .fetch_one(&*self.pool)
         .await?;

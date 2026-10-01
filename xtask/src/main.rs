@@ -62,11 +62,19 @@ struct Cli {
 #[derive(Subcommand)]
 enum Command {
     /// 构建前端 + 后端并组装 build/（前端与后端并行）
-    Build,
+    Build {
+        /// 构建目标：`native` 或目标三元组（缺省用配置文件的 BUILD_TARGET）
+        #[arg(long, value_name = "TRIPLE")]
+        target: Option<String>,
+    },
     /// 只构建前端到 web/dist
     BuildWeb,
     /// 只构建后端，复用现成的 web/dist
-    BuildBackend,
+    BuildBackend {
+        /// 构建目标：`native` 或目标三元组（缺省用配置文件的 BUILD_TARGET）
+        #[arg(long, value_name = "TRIPLE")]
+        target: Option<String>,
+    },
     /// 开发模式：cargo-watch（后端）+ vite（前端）并行，Ctrl-C 退出
     Dev {
         /// all（默认）/ backend / backend-check（只编译校验）/ web
@@ -185,9 +193,9 @@ fn run(cli: Cli) -> Result<()> {
     let mut cfg = Config::load(cli.env_file.as_deref())?;
     let remote = Remote::new(&cfg, cli.dry_run);
     match cli.command {
-        Command::Build => build::run_build(&cfg),
+        Command::Build { target } => build::run_build(&cfg, target.as_deref()),
         Command::BuildWeb => build::run_build_web(&cfg),
-        Command::BuildBackend => build::run_build_backend(&cfg),
+        Command::BuildBackend { target } => build::run_build_backend(&cfg, target.as_deref()),
         Command::Dev { mode } => build::run_dev(&cfg, build::DevMode::parse(Some(&mode))?),
         Command::Deploy => deploy::run(&mut cfg, &remote),
         Command::Check => cmd::check::run(&cfg, &remote),

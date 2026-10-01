@@ -29,12 +29,15 @@ export default function ReadingDetail() {
 				class={styles.back}
 			/>
 			{/* 四态交给共享外壳：错误 → 骨架 → 空 → 内容（判断顺序写进原语）；
-			    自定义骨架仍由本项目提供（左右两栏的版式） */}
+			    自定义骨架仍由本项目提供（左右两栏的版式）。
+			    contents 让外壳包的那层 div 不生成盒子，main-column / sidebar
+			    才能继续当 .page 的 grid 直接子项。 */}
 			<AsyncSection
 				data={m.detail.data}
 				loading={m.detail.loading}
 				error={m.detail.error}
 				onRetry={m.detail.refetch}
+				class={styles.contents}
 				skeleton={
 					<div
 						class={styles.skeletonWrap}

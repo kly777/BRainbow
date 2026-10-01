@@ -227,6 +227,14 @@
 	resize: vertical;
 }
 
+/* 内容容器：<AsyncSection> 会把 children 包进一个 div，而 .main-column / .sidebar
+ * 要当上面 .page 这个 grid 的直接子项 —— 让这层不生成盒子。
+ * 骨架走的是自定义 skeleton 分支（自己的 .skeleton-wrap），内容走 AsyncSection
+ * 的内容分支，两条路都要显式声明，少一处就会出现"侧栏掉到正文下面、占满整列"。 */
+.contents {
+	display: contents;
+}
+
 /* 加载骨架：display:contents 让子块直接落入页面 grid，形状对齐最终布局 */
 .skeleton-wrap {
 	display: contents;

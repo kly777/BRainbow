@@ -972,11 +972,17 @@ mod tests {
         use std::str::FromStr;
 
         let path = "target/sqlx-prepare.db";
-        let _ = std::fs::remove_file(path);
+        // **连 `-wal`/`-shm` 一起删**：只删主库的话，SQLite 会把上一次留下的 WAL
+        // 拼进新库 —— 表现是 fixture 里冒出别的库才有的表（实测见过 `test_fts*`），
+        // 而 `-wal` 里的 commit 页与 `cp` 出来的库 salt 相同，校验拦不住
+        for suffix in ["", "-wal", "-shm"] {
+            let _ = std::fs::remove_file(format!("{path}{suffix}"));
+        }
         let options = SqliteConnectOptions::from_str(&format!("sqlite:{path}"))
             .unwrap()
             .create_if_missing(true);
         let pool = SqlitePool::connect_with(options).await.unwrap();
         migrate(&pool).await.unwrap();
+        pool.close().await;
     }
 }

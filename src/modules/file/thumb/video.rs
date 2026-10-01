@@ -198,6 +198,14 @@ async fn run(ffmpeg: &Path, args: &[String]) -> Result<(), VideoError> {
 
 #[cfg(test)]
 mod tests {
+    // 这一组全靠"假 ffmpeg"驱动：一个 `#!/bin/sh` 脚本，靠执行位 + 管道喂输出
+    // （`set_executable` 用的 `PermissionsExt` 本身就只在 unix 上存在）。
+    // 所以整块只在 unix 上编译 —— 在 Windows 上编译它会直接报
+    // `cannot find unix in os`，而那会连累**整个测试二进制**都跑不起来。
+    // 代价是 Windows 上少跑一条本可以过的用例
+    // （`probe_reports_missing_binary_as_unavailable`，它只用了一个不存在的路径）。
+    #![cfg(unix)]
+
     #![allow(clippy::unwrap_used)]
     use super::*;
 

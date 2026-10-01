@@ -1,6 +1,6 @@
 //! JWT 工具与 API key 哈希（无 IO 副作用，业务与中间件共用）
 
-use axum::extract::Request;
+use axum::http::HeaderMap;
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 
 use crate::shared::claims::Claims;
@@ -44,16 +44,21 @@ pub fn create_token(user_id: i32, role: &str, secret: &str, ttl_secs: i64) -> St
     .unwrap_or_default()
 }
 
-pub fn extract_token(req: &Request) -> Option<String> {
-    req.headers()
+/// `Authorization: Bearer <token>` 里的 token。
+///
+/// 认证边界上"从请求里解凭据"只有这一种口径：`auth` 中间件、`optional_actor`
+/// 与其它的凭据消费方都用它，不会因为各自拿到的是 Request 还是 HeaderMap 而分叉。
+pub fn bearer_token(headers: &HeaderMap) -> Option<String> {
+    headers
         .get("Authorization")
         .and_then(|v| v.to_str().ok())
         .and_then(|s| s.strip_prefix("Bearer "))
         .map(|s| s.to_string())
 }
 
-pub fn extract_api_key(req: &Request) -> Option<String> {
-    req.headers()
+/// `X-API-Key` 里的 key（两侧空白去掉；空的当没有）。
+pub fn api_key_header(headers: &HeaderMap) -> Option<String> {
+    headers
         .get("X-API-Key")
         .and_then(|v| v.to_str().ok())
         .map(|s| s.trim().to_string())

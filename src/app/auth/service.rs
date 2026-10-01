@@ -7,8 +7,10 @@ use uuid::Uuid;
 
 use crate::modules::admin::port::AdminServicePort;
 use crate::modules::admin::service::AdminService;
+use crate::modules::user::UserQueryService;
 use crate::shared::actor::Actor;
 use crate::shared::claims::Claims;
+use crate::shared::error_types::ServiceError;
 use crate::shared::jwt::hash_api_key;
 use crate::shared::time_text::ISO_UTC_FORMAT;
 
@@ -36,19 +38,36 @@ pub enum DeleteApiKeyResult {
 pub struct AuthService {
     admin: AdminService,
     repo: ApiKeyRepo,
+    users: UserQueryService,
 }
 
 impl AuthService {
     pub fn new(admin: AdminService, db: Arc<SqlitePool>) -> Self {
         Self {
             admin,
-            repo: ApiKeyRepo::new(db),
+            repo: ApiKeyRepo::new(db.clone()),
+            users: UserQueryService::new(db),
         }
     }
 
     /// 当前生效的 JWT 密钥（DB 持久化优先于 env）
     pub fn jwt_secret_active(&self) -> String {
         self.admin.jwt_secret_active()
+    }
+
+    /// 凭据里的 `user_id` 在库里**还在不在**。
+    ///
+    /// 两条认证路径解出来的身份都可能指向一个**已经被删掉**的用户：
+    /// JWT 只验签名（`sub` 是签发那一刻的事实），API key 只证明"这把钥匙登记过"
+    /// （`api_key` 表连 `user` 的外键都没有，行会留下来）。
+    ///
+    /// 不拦的话后果是分层的、而且方向很坏：读请求静默返回空结果（外键不参与查询），
+    /// 写请求撞在 `card.user_id → user(id)` 这类外键上，回一个
+    /// `DB_ERROR` + `FOREIGN KEY constraint failed` 的 **500** ——
+    /// 把"你的登录已经失效了"说成了"服务器出错了"，用户既不知道原因也不知道该做什么。
+    /// 所以判在认证边界上：一次主键查询，换一个准确的 401。
+    pub async fn user_exists(&self, user_id: i32) -> Result<bool, ServiceError> {
+        Ok(self.users.find_by_id(user_id).await?.is_some())
     }
 
     /// 通过 API key 认证：把 key 行翻译成 [`Actor`]（认证边界的一部分）。

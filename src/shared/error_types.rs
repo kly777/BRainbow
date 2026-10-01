@@ -149,6 +149,15 @@ pub fn unauthorized(message: impl Into<String>) -> Response {
     json_error(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", message)
 }
 
+/// 401（机器可读错误码 SESSION_INVALID）：凭据本身有效，但它指向的**用户已经不在了**。
+///
+/// 与 [`unauthorized`] 分开是为了让前端能把话说明白：那两个是"你还没登录"，
+/// 这个是"你登录的那张身份证已经失效"—— 前端据此清掉本地那份凭据并请对方重新登录。
+/// 状态码同为 401，所以不认识这个码的调用方（老前端、脚本）仍按"未登录"处理。
+pub fn session_invalid(message: impl Into<String>) -> Response {
+    json_error(StatusCode::UNAUTHORIZED, "SESSION_INVALID", message)
+}
+
 /// 403（机器可读错误码 FORBIDDEN）
 pub fn forbidden(message: impl Into<String>) -> Response {
     json_error(StatusCode::FORBIDDEN, "FORBIDDEN", message)

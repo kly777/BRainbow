@@ -109,6 +109,54 @@ describe("handleGlobalError 副作用链", () => {
 			globalThis.removeEventListener("auth:required", handler);
 		}
 	});
+
+	it("SESSION_INVALID → 说明账号已不存在，并照样弹登录框", async () => {
+		let fired = 0;
+		const handler = () => fired++;
+		globalThis.addEventListener("auth:required", handler);
+		try {
+			const { handleGlobalError } = await freshRequestModule();
+			const { showToast } = await import("@shared/utils/toastStore.ts");
+
+			await handleGlobalError("/cards", {
+				status: 401,
+				code: "SESSION_INVALID",
+				message: "账号不存在或已被移除，请重新登录",
+				details: undefined,
+			} as never);
+
+			// 弹窗照旧（AuthDialog 收到事件后会 logout + 开登录框）
+			expect(fired).toBe(1);
+			expect(showToast).toHaveBeenCalledWith(
+				expect.objectContaining({
+					title: "登录状态已失效",
+					message: expect.stringContaining("重新登录"),
+				}),
+			);
+		} finally {
+			globalThis.removeEventListener("auth:required", handler);
+		}
+	});
+
+	it("普通 401 仍说「请先登录」，不冒充登录失效", async () => {
+		const { handleGlobalError } = await freshRequestModule();
+		const { showToast } = await import("@shared/utils/toastStore.ts");
+
+		await handleGlobalError("/api/x", {
+			status: 401,
+			code: "UNAUTHORIZED",
+			message: "请先登录",
+			details: undefined,
+		} as never);
+
+		expect(showToast).toHaveBeenCalledWith(
+			expect.objectContaining({ title: "请先登录" }),
+		);
+		// 别把"没登录"说成"账号没了"
+		expect(showToast).not.toHaveBeenCalledWith(
+			expect.objectContaining({ title: "登录状态已失效" }),
+		);
+	});
 });
 
 describe("streamRequest 解析边界", () => {

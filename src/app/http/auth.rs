@@ -1,14 +1,16 @@
 use axum::{
     extract::{Extension, Path, Request, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     middleware::Next,
     response::{IntoResponse, Json, Response},
 };
 
 use crate::app::auth::service::{AuthService, DeleteApiKeyResult};
 use crate::shared::actor::Actor;
-use crate::shared::error_types::{ServiceError, forbidden, json_error, not_found, unauthorized};
-pub use crate::shared::jwt::{extract_api_key, extract_token, verify_token};
+use crate::shared::error_types::{
+    ServiceError, forbidden, json_error, not_found, session_invalid, unauthorized,
+};
+use crate::shared::jwt::{api_key_header, bearer_token, verify_token};
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -24,12 +26,66 @@ pub struct ApiKeyResponse {
 // 中间件
 // ============================================================
 
+/// 认证边界的一次判决。
+///
+/// 把"解凭据"和"判这个人还在不在"合成一个结果，是为了让**所有**消费凭据的地方
+/// （[`auth`] 与 [`optional_actor`]）走同一条路 —— 两条路各自实现过一次，就会各自漏掉
+/// 一次（`optional_actor` 曾经就没有这一步）。
+enum Session {
+    /// 凭据有效，且它指向的用户还在库里。
+    Valid(Actor),
+    /// 没有凭据，或凭据无效 / 过期。
+    Anonymous,
+    /// 凭据有效，但它指向的用户已经不在库里。
+    Invalidated,
+    /// 没法判定（查库失败）：既不能放行，也不能断定是"用户没了"。载荷只进日志。
+    Failed(String),
+}
+
+/// 凭据 → 身份，并确认这个身份**现在还在**。
+///
+/// 顺序与老实现一致：先 JWT，无效再试 API key。多出来的一步是最后那次存在性判断，
+/// 理由见 [`AuthService::user_exists`]。
+async fn resolve_session(auth_service: &AuthService, headers: &HeaderMap) -> Session {
+    let secret = auth_service.jwt_secret_active();
+
+    // ── 1. JWT ──
+    if let Some(token) = bearer_token(headers)
+        && let Some(claims) = verify_token(&token, &secret)
+    {
+        return check_user_exists(auth_service, Actor::from(&claims)).await;
+    }
+
+    // ── 2. API key ──
+    let Some(key) = api_key_header(headers) else {
+        return Session::Anonymous;
+    };
+    match auth_service.authenticate_api_key(&key).await {
+        Ok(Some(actor)) => check_user_exists(auth_service, actor).await,
+        Ok(None) => Session::Anonymous,
+        Err(e) => Session::Failed(format!("API key 验证查询失败: {e}")),
+    }
+}
+
+/// 身份解出来了，但签名只证明"这串凭据是我们发的"，不证明这个人还在。
+async fn check_user_exists(auth_service: &AuthService, actor: Actor) -> Session {
+    match auth_service.user_exists(actor.user_id()).await {
+        Ok(true) => Session::Valid(actor),
+        Ok(false) => Session::Invalidated,
+        Err(e) => Session::Failed(format!("用户存在性查询失败: {e}")),
+    }
+}
+
 /// 认证中间件：先验证 JWT，再尝试 X-API-Key，把凭据翻译成 [`Actor`] 注入 request extensions。
 /// 两者都失败返回 401。
 ///
 /// **这里是认证边界，也是生产代码里唯一的 `Actor` 产出口**：JWT 载荷 / API key 行
 /// （凭据语言）在这一处变成领域身份（`sub`→`user_id`、`role=="admin"`→`is_admin`），
 /// 之后各层只见 `Actor`，见 `shared/actor.rs` 的说明与 `doc/design/authorization.md`。
+///
+/// 凭据有效但用户已被删掉时不放行，回 **401 `SESSION_INVALID`**（不是 500）：
+/// 让这种身份继续走下去，写请求会在外键上炸成 `FOREIGN KEY constraint failed`，
+/// 把"登录失效"说成"服务器出错"。前端据这个码清掉本地会话并请对方重新登录。
 ///
 /// 用法：挂载到需要登录的路由组上。
 ///   Router::new().nest(…).layer(from_fn_with_state(state, auth::auth))
@@ -38,40 +94,29 @@ pub async fn auth(
     mut request: Request,
     next: Next,
 ) -> Response {
-    let secret = auth_service.jwt_secret_active();
-
-    // ── 1. JWT ──
-    if let Some(token) = extract_token(&request)
-        && let Some(claims) = verify_token(&token, &secret)
-    {
-        request.extensions_mut().insert(Actor::from(&claims));
-        return next.run(request).await;
-    }
-
-    // ── 2. API key ──
-    if let Some(key) = extract_api_key(&request) {
-        let row = auth_service.authenticate_api_key(&key).await;
-        let row = match row {
-            Ok(row) => row,
-            Err(e) => {
-                tracing::error!("API key 验证查询失败: {e}");
-                drain_rejected_body(&mut request).await;
-                return json_error(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "INTERNAL",
-                    "服务器内部错误",
-                );
-            }
-        };
-
-        if let Some(actor) = row {
+    match resolve_session(&auth_service, request.headers()).await {
+        Session::Valid(actor) => {
             request.extensions_mut().insert(actor);
-            return next.run(request).await;
+            next.run(request).await
+        }
+        Session::Anonymous => {
+            drain_rejected_body(&mut request).await;
+            unauthorized("请先登录")
+        }
+        Session::Invalidated => {
+            drain_rejected_body(&mut request).await;
+            session_invalid("账号不存在或已被移除，请重新登录")
+        }
+        Session::Failed(detail) => {
+            tracing::error!("{detail}");
+            drain_rejected_body(&mut request).await;
+            json_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "INTERNAL",
+                "服务器内部错误",
+            )
         }
     }
-
-    drain_rejected_body(&mut request).await;
-    unauthorized("请先登录")
 }
 
 /// 解析可选凭据：JWT 优先，其次 API Key；缺失或无效都返回 `None`（不报错）。
@@ -79,32 +124,23 @@ pub async fn auth(
 /// 用在公开路由上"带了凭据就能多看点东西"的场景 —— 目前是私密文件的内容路由：
 /// 公开文件无需凭据（`<img>` 内嵌不带 Authorization），私密文件必须带凭据且为上传者。
 /// 与 [`auth`] 中间件同一套翻译：这里也产出 `Actor`（`None` = 匿名）。
-pub async fn optional_actor(
-    auth_service: &AuthService,
-    headers: &axum::http::HeaderMap,
-) -> Option<Actor> {
-    let secret = auth_service.jwt_secret_active();
-
-    if let Some(token) = headers
-        .get("Authorization")
-        .and_then(|v| v.to_str().ok())
-        .and_then(|s| s.strip_prefix("Bearer "))
-        && let Some(claims) = verify_token(token, &secret)
-    {
-        return Some(Actor::from(&claims));
+///
+/// 凭据指向的用户已经不存在时同样返回 `None`（退回匿名）：这一路上没有"请重新登录"
+/// 可讲（`<img>` 弹不出对话框），能做的只是**别把失效凭据当成身份**——
+/// 否则归属判据会拿着一个已经不存在的 user_id 去比，等于让吊销不生效。
+pub async fn optional_actor(auth_service: &AuthService, headers: &HeaderMap) -> Option<Actor> {
+    match resolve_session(auth_service, headers).await {
+        Session::Valid(actor) => Some(actor),
+        Session::Invalidated => {
+            tracing::warn!("凭据指向的用户已不存在，按匿名处理");
+            None
+        }
+        Session::Anonymous => None,
+        Session::Failed(detail) => {
+            tracing::error!("{detail}");
+            None
+        }
     }
-
-    if let Some(key) = headers
-        .get("X-API-Key")
-        .and_then(|v| v.to_str().ok())
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        && let Ok(Some(actor)) = auth_service.authenticate_api_key(key).await
-    {
-        return Some(actor);
-    }
-
-    None
 }
 
 /// 拒绝请求前消费（丢弃）请求体。
@@ -255,94 +291,81 @@ mod tests {
         }
     }
 
-    // ── extract_token ──
+    // ── bearer_token ──
 
-    #[test]
-    fn extract_token_from_bearer_header() {
-        use axum::body::Body;
-        let req = Request::builder()
-            .header("Authorization", "Bearer my-token-123")
-            .body(Body::empty())
-            .unwrap();
-        assert_eq!(extract_token(&req), Some("my-token-123".to_string()));
+    /// 直接构造请求头：这些用例只关心"从请求头里取凭据"这一件事，
+    /// 不需要为它造一个完整的 Request。
+    fn headers(pairs: &[(&str, &str)]) -> HeaderMap {
+        let mut map = HeaderMap::new();
+        for (name, value) in pairs {
+            map.insert(
+                axum::http::HeaderName::from_bytes(name.as_bytes()).unwrap(),
+                axum::http::HeaderValue::from_str(value).unwrap(),
+            );
+        }
+        map
     }
 
     #[test]
-    fn extract_token_missing_header() {
-        use axum::body::Body;
-        let req = Request::builder().body(Body::empty()).unwrap();
-        assert_eq!(extract_token(&req), None);
+    fn bearer_token_from_authorization_header() {
+        let h = headers(&[("Authorization", "Bearer my-token-123")]);
+        assert_eq!(bearer_token(&h), Some("my-token-123".to_string()));
     }
 
     #[test]
-    fn extract_token_without_bearer_prefix() {
-        use axum::body::Body;
-        let req = Request::builder()
-            .header("Authorization", "Basic somebase64")
-            .body(Body::empty())
-            .unwrap();
-        assert_eq!(extract_token(&req), None);
+    fn bearer_token_missing_header() {
+        assert_eq!(bearer_token(&headers(&[])), None);
     }
 
     #[test]
-    fn extract_token_empty_bearer() {
-        use axum::body::Body;
-        let req = Request::builder()
-            .header("Authorization", "Bearer ")
-            .body(Body::empty())
-            .unwrap();
-        assert_eq!(extract_token(&req), Some("".to_string()));
+    fn bearer_token_without_bearer_prefix() {
+        let h = headers(&[("Authorization", "Basic somebase64")]);
+        assert_eq!(bearer_token(&h), None);
     }
 
     #[test]
-    fn extract_token_lowercase_bearer() {
-        use axum::body::Body;
-        let req = Request::builder()
-            .header("Authorization", "bearer my-token")
-            .body(Body::empty())
-            .unwrap();
+    fn bearer_token_empty_bearer() {
+        let h = headers(&[("Authorization", "Bearer ")]);
+        assert_eq!(bearer_token(&h), Some("".to_string()));
+    }
+
+    #[test]
+    fn bearer_token_lowercase_bearer() {
+        let h = headers(&[("Authorization", "bearer my-token")]);
         // strip_prefix is case-sensitive, so "bearer" should NOT match "Bearer"
-        assert_eq!(extract_token(&req), None);
+        assert_eq!(bearer_token(&h), None);
     }
 
     #[test]
-    fn extract_token_with_extra_whitespace() {
-        use axum::body::Body;
-        let req = Request::builder()
-            .header("Authorization", "Bearer  my-token")
-            .body(Body::empty())
-            .unwrap();
+    fn bearer_token_with_extra_whitespace() {
+        let h = headers(&[("Authorization", "Bearer  my-token")]);
         // strip_prefix removes exactly "Bearer ", so extra space stays in result
-        assert_eq!(extract_token(&req), Some(" my-token".to_string()));
+        assert_eq!(bearer_token(&h), Some(" my-token".to_string()));
     }
 
     // ── API key ──
 
     #[test]
-    fn extract_api_key_header() {
-        use axum::body::Body;
-        let req = Request::builder()
-            .header("X-API-Key", "abc123")
-            .body(Body::empty())
-            .unwrap();
-        assert_eq!(extract_api_key(&req), Some("abc123".to_string()));
+    fn api_key_header_present() {
+        let h = headers(&[("X-API-Key", "abc123")]);
+        assert_eq!(api_key_header(&h), Some("abc123".to_string()));
     }
 
     #[test]
-    fn extract_api_key_missing() {
-        use axum::body::Body;
-        let req = Request::builder().body(Body::empty()).unwrap();
-        assert_eq!(extract_api_key(&req), None);
+    fn api_key_header_missing() {
+        assert_eq!(api_key_header(&headers(&[])), None);
     }
 
     #[test]
-    fn extract_api_key_trimmed() {
-        use axum::body::Body;
-        let req = Request::builder()
-            .header("X-API-Key", "  abc  ")
-            .body(Body::empty())
-            .unwrap();
-        assert_eq!(extract_api_key(&req), Some("abc".to_string()));
+    fn api_key_header_trimmed() {
+        let h = headers(&[("X-API-Key", "  abc  ")]);
+        assert_eq!(api_key_header(&h), Some("abc".to_string()));
+    }
+
+    #[test]
+    fn api_key_header_blank_is_absent() {
+        // 全空白等于没给：别拿它去查库
+        assert_eq!(api_key_header(&headers(&[("X-API-Key", "   ")])), None);
     }
 
     #[test]
@@ -370,5 +393,187 @@ mod tests {
         assert_eq!(deserialized.sub, 5);
         assert_eq!(deserialized.role, "admin");
         assert_eq!(deserialized.exp, 9999999999);
+    }
+
+    // ── 认证边界：凭据指向的用户还在不在 ──
+    //
+    // 这一组守的是"签名有效 ≠ 人还在"：账号被删之后，老 token 在过期前
+    // 仍然验得过签名，老 API key 行也还在表里（api_key 连 user 外键都没有）。
+    // 从前这两条路都会放行，于是写请求在外键上炸成 500 —— 现在必须在边界上判掉。
+
+    use crate::modules::admin::service::{AdminService, ServerPaths};
+    use sqlx::SqlitePool;
+    use std::sync::Arc;
+
+    /// 系统信息用的路径：这组用例不关心它，给个够用的默认值。
+    fn test_paths() -> ServerPaths {
+        ServerPaths {
+            upload_dir: std::path::PathBuf::from("uploads"),
+            thumbs_dir: std::path::PathBuf::from("uploads/file/thumbs"),
+            favicon_dir: std::path::PathBuf::from("uploads/favicons"),
+            backup_dir: None,
+        }
+    }
+
+    /// 一个真的接在内存库上的 AuthService（认证边界要连库，假不了）。
+    async fn auth_service() -> (AuthService, Arc<SqlitePool>) {
+        let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
+        crate::db::migrate(&pool).await.unwrap();
+        let admin = AdminService::new(
+            pool.clone(),
+            TEST_SECRET.into(),
+            false,
+            test_paths(),
+        );
+        (AuthService::new(admin, pool.clone()), pool)
+    }
+
+    /// 建一个用户（走运行时的 sqlx::query，别为测试再加一条 query! 宏查询
+    /// ——那会要求同步刷新 .sqlx/ 离线数据）。
+    async fn insert_user(pool: &SqlitePool, id: i32) {
+        sqlx::query("INSERT INTO user (id, name, password_hash) VALUES (?, ?, 'x')")
+            .bind(id)
+            .bind(format!("user{id}"))
+            .execute(pool)
+            .await
+            .unwrap();
+    }
+
+    async fn delete_user(pool: &SqlitePool, id: i32) {
+        sqlx::query("DELETE FROM user WHERE id = ?")
+            .bind(id)
+            .execute(pool)
+            .await
+            .unwrap();
+    }
+
+    fn bearer(token: &str) -> HeaderMap {
+        let value = format!("Bearer {token}");
+        headers(&[("Authorization", value.as_str())])
+    }
+
+    #[tokio::test]
+    async fn session_is_valid_while_the_user_exists() {
+        let (service, pool) = auth_service().await;
+        insert_user(&pool, 7).await;
+
+        let token = create_token(7, "user", TEST_SECRET, 864000);
+        assert!(
+            matches!(resolve_session(&service, &bearer(&token)).await, Session::Valid(actor) if actor.user_id() == 7),
+            "用户还在，token 应当解出身份"
+        );
+    }
+
+    #[tokio::test]
+    async fn session_is_invalidated_once_the_user_is_gone() {
+        let (service, pool) = auth_service().await;
+        insert_user(&pool, 7).await;
+        let token = create_token(7, "user", TEST_SECRET, 864000);
+
+        // 先确认删之前是好用的 —— 否则这条用例可能因为别的原因"通过"
+        assert!(matches!(
+            resolve_session(&service, &bearer(&token)).await,
+            Session::Valid(_)
+        ));
+
+        delete_user(&pool, 7).await;
+
+        assert!(
+            matches!(
+                resolve_session(&service, &bearer(&token)).await,
+                Session::Invalidated
+            ),
+            "签名照样有效，但人已经没了 —— 不能当成身份放行"
+        );
+    }
+
+    /// API key 那一侧同样的坑：`api_key` 表对 `user` **没有外键**，
+    /// 删用户不会带走 key 行，行里的 user_id 就此悬空。
+    #[tokio::test]
+    async fn api_key_pointing_at_a_deleted_user_is_invalidated() {
+        let (service, pool) = auth_service().await;
+        insert_user(&pool, 3).await;
+
+        let key = service
+            .create_api_key(&Actor::user(3))
+            .await
+            .unwrap()
+            .key
+            .unwrap();
+        let h = headers(&[("X-API-Key", key.as_str())]);
+        assert!(matches!(
+            resolve_session(&service, &h).await,
+            Session::Valid(_)
+        ));
+
+        delete_user(&pool, 3).await;
+
+        assert!(
+            matches!(resolve_session(&service, &h).await, Session::Invalidated),
+            "key 行还在，但它归属的人没了"
+        );
+    }
+
+    #[tokio::test]
+    async fn no_credentials_is_anonymous_not_invalidated() {
+        let (service, _pool) = auth_service().await;
+        // 空手而来是"没登录"，不是"登录失效" —— 两者提示不一样，别混
+        assert!(matches!(
+            resolve_session(&service, &headers(&[])).await,
+            Session::Anonymous
+        ));
+    }
+
+    #[tokio::test]
+    async fn a_forged_token_is_anonymous_not_invalidated() {
+        let (service, pool) = auth_service().await;
+        insert_user(&pool, 7).await;
+
+        let forged = create_token(7, "user", "not-the-real-secret", 864000);
+        assert!(matches!(
+            resolve_session(&service, &bearer(&forged)).await,
+            Session::Anonymous
+        ));
+    }
+
+    #[tokio::test]
+    async fn an_expired_token_is_anonymous_not_invalidated() {
+        use crate::shared::claims::Claims;
+        use jsonwebtoken::{EncodingKey, Header as JwtHeader};
+
+        let (service, pool) = auth_service().await;
+        insert_user(&pool, 7).await;
+
+        // 不能用 create_token 造过期 token：它把 ttl 抬到至少 60 秒。
+        // 直接签一份 exp 已经过去的 claims。
+        let expired = jsonwebtoken::encode(
+            &JwtHeader::default(),
+            &Claims {
+                sub: 7,
+                role: "user".to_string(),
+                exp: 1,
+            },
+            &EncodingKey::from_secret(TEST_SECRET.as_bytes()),
+        )
+        .unwrap();
+
+        // 过期是"没登录"，不是"登录失效"：前端一个提示请重新登录，
+        // 另一个还得说"账号不存在"，别把两件事说成一件。
+        assert!(matches!(
+            resolve_session(&service, &bearer(&expired)).await,
+            Session::Anonymous
+        ));
+    }
+
+    #[tokio::test]
+    async fn user_exists_follows_the_row() {
+        let (service, pool) = auth_service().await;
+        assert!(!service.user_exists(7).await.unwrap(), "没有这一行");
+
+        insert_user(&pool, 7).await;
+        assert!(service.user_exists(7).await.unwrap());
+
+        delete_user(&pool, 7).await;
+        assert!(!service.user_exists(7).await.unwrap());
     }
 }

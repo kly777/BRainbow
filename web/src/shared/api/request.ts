@@ -15,16 +15,22 @@ let _authFiredAt = 0;
 /**
  * 触发登录弹窗 + 一条集中 toast（3 秒去重防并发）。
  * 组件层的 notifyError 对 401 静默，避免一人犯错全楼挨骂。
+ *
+ * 弹窗那一侧（AuthDialog）收到事件后会 `logout()`：清掉本地凭据与缓存再开登录框，
+ * 所以"会话已经不可用了"这件事由它一处收口，这里只负责把话说到位。
+ *
+ * `notice` 用来改文案：同样是 401，"没登录"和"登录的那个人已经不存在了"
+ * 对用户是两件事（后者要说明白为什么突然要重新登录）。
  */
-function triggerAuthRequired(): void {
+function triggerAuthRequired(notice?: { title: string; message: string }): void {
 	const now = Date.now();
 	if (now - _authFiredAt < 3000) return;
 	_authFiredAt = now;
 	globalThis.dispatchEvent(new CustomEvent(AUTH_REQUIRED_EVENT));
 	toast({
 		type: "warning",
-		title: "请先登录",
-		message: "登录已过期或尚未登录",
+		title: notice?.title ?? "请先登录",
+		message: notice?.message ?? "登录已过期或尚未登录",
 		duration: 4000,
 	});
 }
@@ -137,6 +143,18 @@ export async function handleGlobalError(
 
 	// ── 401 → 静默触发登录弹窗（AuthDialog 对话框是唯一的 UI）──
 	if (status === 401) {
+		// SESSION_INVALID：凭据本身没问题（签名有效、没过期），是它指向的**账号
+		// 已经不在后端了** —— 被删号，或本地连着的是另一个数据库。
+		// 这种情况下后端以前会回一个外键报错的 500，用户只看到"服务器错误"，
+		// 而每一个写操作都会继续失败。现在说清楚，并请对方重新登录。
+		// 清凭据与开登录框由 AUTH_REQUIRED_EVENT 的监听方负责（见 triggerAuthRequired）。
+		if (code === "SESSION_INVALID") {
+			triggerAuthRequired({
+				title: "登录状态已失效",
+				message: "当前账号不存在或已被移除，请重新登录",
+			});
+			return;
+		}
 		triggerAuthRequired();
 		return;
 	}

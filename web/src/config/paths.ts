@@ -53,3 +53,15 @@ export type PathValue = (typeof PATHS)[PathKey];
 export function fillPath(pattern: string, value: string | number): string {
 	return pattern.replace(":id", String(value));
 }
+
+/**
+ * 这是不是一条**可直接跳转的实路径**：带占位段的模板（`/file/:id`、`/card/edit/:id`）
+ * 不是 —— 跳过去只会得到坏页面。
+ *
+ * 凡"拿来就跳"的清单都要先过它：命令面板的 `/` 导航（此前把 `/file/:id` 这类模板
+ * 也当候选搜出来，选中后跳到字面量路径）、最近访问之类。要有具体某个文件/卡片，
+ * 那是站内搜索（`?`）的活。
+ */
+export function isConcretePath(path: string): boolean {
+	return !path.includes(":");
+}

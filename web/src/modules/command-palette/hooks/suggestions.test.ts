@@ -1,8 +1,8 @@
-// ── 全局搜索目标的 URL 解析与模块标签 ──
+// ── 全局搜索目标的 URL 解析、模块标签、导航候选 ──
 
-import { fillPath, PATHS } from "@config/paths";
+import { fillPath, isConcretePath, PATHS } from "@config/paths";
 import { describe, expect, it } from "vitest";
-import { KIND_LABEL, resolveTargetUrl } from "./suggestions.ts";
+import { buildNavItems, KIND_LABEL, resolveTargetUrl } from "./suggestions.ts";
 
 describe("resolveTargetUrl", () => {
 	it("File 目标用 stored_id 解析为文件详情页", () => {
@@ -39,5 +39,43 @@ describe("KIND_LABEL", () => {
 	it("文件模块有中文标签", () => {
 		expect(KIND_LABEL.file).toBe("文件");
 		expect(KIND_LABEL.card).toBe("卡片");
+	});
+});
+
+describe("buildNavItems（/ 模式的候选）", () => {
+	const noop = () => {};
+
+	/** 候选项的路径都在 extra 里（导航建议必带 extra） */
+	const pathsOf = (q: string) =>
+		buildNavItems(q, noop, noop)
+			.map((s) => s.extra)
+			.filter((p): p is string => typeof p === "string");
+
+	it("搜索时不把带参数的模板路径当候选（跳过去是坏页面）", () => {
+		// "file" 会命中「文件」这个页面，也会命中 /file/:id 模板（此前就是这么漏出来的）
+		const hits = pathsOf("file");
+		expect(hits).toContain(PATHS.file);
+		expect(hits).not.toContain(PATHS.fileDetail);
+
+		// 任何查询、任何一条候选都必须是可直接跳转的实路径
+		for (const q of ["file", "card", "edit", "detail", "reading", "id"]) {
+			for (const path of pathsOf(q)) {
+				expect(isConcretePath(path), `q=${q} 给出了模板路径 ${path}`).toBe(
+					true,
+				);
+			}
+		}
+	});
+
+	it("nav:false 的**实路径**页面仍可搜到（add / manage 这类管理页）", () => {
+		const hits = pathsOf("add");
+		expect(hits).toContain(PATHS.cardAdd);
+		expect(hits).toContain(PATHS.memoryAdd);
+	});
+
+	it("空查询列出导航页（不含模板）", () => {
+		const paths = pathsOf("");
+		expect(paths).toContain(PATHS.file);
+		expect(paths.every(isConcretePath)).toBe(true);
 	});
 });

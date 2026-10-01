@@ -1,7 +1,7 @@
 // ── 建议列表构建（nav / cmd / 站内搜索）：纯函数，usePalette 以 memo 组合 ──
 
 import { NAV_ITEMS, NAV_ROUTES } from "@config/navigation";
-import { fillPath, PATHS } from "@config/paths";
+import { fillPath, isConcretePath, PATHS } from "@config/paths";
 // 这个文件跑在 node 环境的测试里，**不能走 `@shared/utils` 的 barrel**：
 // 它会把整棵工具图拉进来，其中 @solidjs/router 在导入期就碰 `window`（会炸）
 import { highlightKeywords } from "@shared/utils/highlight.ts";
@@ -71,7 +71,18 @@ export function resolveTargetUrl(target: SearchTarget): string {
 	}
 }
 
-/** 路由导航建议（/ 前缀模式）：最近访问优先，搜索时扩展到全部页面 */
+/**
+ * 导航模式的候选页面：**只留能直接跳的实路径**。
+ *
+ * `NAV_ITEMS` 里还有一批详情页模板（`/file/:id`、`/card/edit/:id`…，`nav: false`），
+ * 它们不是目的地 —— 选中后跳过去是字面量 URL 的坏页面。此前搜索分支把整份 NAV_ITEMS
+ * 都拿去模糊匹配，于是 `/` 模式下能搜出这些模板来。
+ *
+ * 具体某个文件/卡片要看，走站内搜索（`?`）—— 那儿才有真实的 id。
+ */
+const NAVIGABLE_ITEMS = NAV_ITEMS.filter((r) => isConcretePath(r.path));
+
+/** 路由导航建议（/ 前缀模式）：最近访问优先；搜索时扩展到全部可跳页面（含 nav:false 的管理页） */
 export function buildNavItems(
 	q: string,
 	navigate: (path: string) => void,
@@ -95,8 +106,7 @@ export function buildNavItems(
 		return [...recentItems.map(makeItem), ...otherItems.map(makeItem)];
 	}
 
-	// 搜索时使用全部页面（包括详情页等非 nav 页面）
-	const filtered = fuzzyFilter(NAV_ITEMS, q, (r) => [
+	const filtered = fuzzyFilter(NAVIGABLE_ITEMS, q, (r) => [
 		r.path.slice(1),
 		r.label,
 		r.desc,

@@ -26,9 +26,72 @@ pub use migrations::migrate;
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::helpers::column_exists;
-    use super::migrations::{LATEST_USER_VERSION, migrate};
+    use super::migrations::{LATEST_USER_VERSION, apply_full_chain_for_test, migrate};
     use super::schema::create_tables;
     use sqlx::SqlitePool;
+
+    /// `sqlite_master` 的结构快照（表 / 索引 / 触发器 / 视图 + 各自的 DDL），
+    /// **按创建顺序**（rowid）—— 顺序有意义：AFTER 触发器按创建顺序触发，
+    /// 时间归一化触发器（嵌套 UPDATE）建在 FTS 触发器之前才是对的。
+    async fn schema_dump(pool: &SqlitePool) -> Vec<(String, String, String)> {
+        sqlx::query_as(
+            "SELECT type, name, COALESCE(sql, '') FROM sqlite_master \
+             WHERE name NOT LIKE 'sqlite_%' ORDER BY rowid",
+        )
+        .fetch_all(pool)
+        .await
+        .unwrap()
+    }
+
+    /// **基线 ≡ 基线 + 完整迁移链**：`migrate()` 正是靠这条才敢在全新库上跳过迁移链
+    /// （跳过后后端测试执行从 51s 降到 6s）。
+    ///
+    /// 它同时把 AGENTS.md「新增列/表四步」里的第 ①④ 步变成**可执行**的约束：
+    /// 只加了迁移、忘了往基线补，这条会红 —— 在此之前那条约定是纯人工的，
+    /// 而 v12（FTS）、v13/v14 的列都已经漂移过一轮。
+    #[tokio::test]
+    async fn fresh_db_baseline_equals_the_full_migration_chain() {
+        let baseline = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        create_tables(&baseline).await.unwrap();
+
+        let chained = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        // 迁移链假定基线已建（旧库路径就是"先有表、再加列"），所以这侧也要先建基线
+        create_tables(&chained).await.unwrap();
+        apply_full_chain_for_test(&chained).await.unwrap();
+
+        let base = schema_dump(&baseline).await;
+        let chain = schema_dump(&chained).await;
+
+        // ① 结构全等：对象清单 + 各自 DDL（顺序无关）
+        let mut sorted_base = base.clone();
+        let mut sorted_chain = chain.clone();
+        sorted_base.sort();
+        sorted_chain.sort();
+        let names = |dump: &[(String, String, String)]| -> Vec<String> {
+            dump.iter().map(|(t, n, _)| format!("{t} {n}")).collect()
+        };
+        assert_eq!(
+            names(&sorted_base),
+            names(&sorted_chain),
+            "基线与「基线 + 完整迁移链」的对象清单不一致"
+        );
+        assert_eq!(sorted_base, sorted_chain, "同名对象的 DDL 不一致");
+
+        // ② 触发器**创建顺序**也要一致：AFTER 触发器按创建顺序触发，
+        // 而时间归一化触发器（内含 UPDATE）与 FTS 触发器的先后是能撞出
+        // "database disk image is malformed" 的（见 create_tables 里的注释）
+        let trigger_order = |dump: &[(String, String, String)]| -> Vec<String> {
+            dump.iter()
+                .filter(|(t, _, _)| t == "trigger")
+                .map(|(_, n, _)| n.clone())
+                .collect()
+        };
+        assert_eq!(
+            trigger_order(&base),
+            trigger_order(&chain),
+            "触发器的创建顺序不一致（决定 AFTER 触发器的触发顺序）"
+        );
+    }
 
     async fn user_version(pool: &SqlitePool) -> i64 {
         sqlx::query_scalar("PRAGMA user_version")

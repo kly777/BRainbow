@@ -5,64 +5,20 @@
 //! 1-2字符查询仍由 LIKE 兜底（调用方判断）。
 //!
 //! 迁移步骤：删除旧触发器 → 删除旧虚拟表 → 以 trigram 重建 → 重建索引。
+//! **重建后的结构就是 `schema::create_fts_indexes` 的形状**（trigram + 那套触发器），
+//! 所以这里只负责"先拆掉旧的"，建的部分调那份共享定义 —— DDL 只有一处。
+//!
+//! 这一步对**已经跑过 v12 的库**是必需的：那些库里是 unicode61 的索引，
+//! 光改代码不会让它们变成 trigram。
 
 use sqlx::SqliteConnection;
 
 use super::super::helpers::migration_failed;
-
-/// (fts 表, 源表, rowid 列, 索引列, 触发器前缀) — 与 v12 SPECS 一致
-const SPECS: &[(&str, &str, &str, &[&str], &str)] = &[
-    ("card_fts", "card", "id", &["content"], "card"),
-    ("task_fts", "task", "id", &["title", "description"], "task"),
-    (
-        "bookmark_fts",
-        "bookmark",
-        "id",
-        &["title", "url", "description"],
-        "bookmark",
-    ),
-    ("onto_fts", "onto", "id", &["name", "description"], "onto"),
-    (
-        "text_note_fts",
-        "text_note",
-        "id",
-        &["name", "content"],
-        "text_note",
-    ),
-    (
-        "reading_article_fts",
-        "reading_article",
-        "id",
-        &["title", "content"],
-        "reading_article",
-    ),
-    (
-        "conv_titles_fts",
-        "conv_titles",
-        "id",
-        &["title"],
-        "conv_titles",
-    ),
-    (
-        "articles_fts",
-        "articles",
-        "id",
-        &["title", "content"],
-        "articles",
-    ),
-    (
-        "chat_node_fts",
-        "chat_node",
-        "id",
-        &["content"],
-        "chat_node",
-    ),
-    ("chunk_fts", "chunk", "id", &["content"], "chunk"),
-];
+use super::super::schema::{FTS_SPECS, create_fts_indexes};
 
 pub async fn migrate(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
     // 1. 删除旧触发器
-    for (_, _src, _, _, prefix) in SPECS {
+    for (_, _src, _, _, prefix) in FTS_SPECS {
         for suffix in ["_ai", "_ad", "_au"] {
             let name = format!("{prefix}_fts{suffix}");
             sqlx::query(sqlx::AssertSqlSafe(format!(
@@ -75,74 +31,20 @@ pub async fn migrate(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
     }
 
     // 2. 删除旧 FTS5 虚拟表（含附属表 config/data/docsize/idx）
-    for (fts, _, _, _, _) in SPECS {
+    for (fts, _, _, _, _) in FTS_SPECS {
         sqlx::query(sqlx::AssertSqlSafe(format!("DROP TABLE IF EXISTS {fts}")))
             .execute(&mut *conn)
             .await
             .map_err(|e| migration_failed(&format!("v14 删除 {fts}"), &e))?;
     }
 
-    // 3. 以 trigram tokenizer 重建 FTS5 虚拟表
-    for (fts, src, rowid, cols, _) in SPECS {
-        let col_def = cols.to_vec().join(", ");
-        let create = format!(
-            "CREATE VIRTUAL TABLE {fts} USING fts5({col_def}, content='{src}', content_rowid='{rowid}', tokenize='trigram')"
-        );
-        sqlx::query(sqlx::AssertSqlSafe(create))
-            .execute(&mut *conn)
-            .await
-            .map_err(|e| migration_failed(&format!("v14 创建 {fts}"), &e))?;
-    }
-
-    // 4. 重建触发器（与 v12 逻辑一致）
-    for (fts, src, rowid, cols, prefix) in SPECS {
-        let ins_cols = cols.to_vec().join(", ");
-        let ins_new = cols
-            .iter()
-            .map(|c| format!("new.{c}"))
-            .collect::<Vec<_>>()
-            .join(", ");
-
-        // INSERT 触发器
-        sqlx::query(sqlx::AssertSqlSafe(format!(
-            "CREATE TRIGGER {prefix}_fts_ai AFTER INSERT ON {src} BEGIN
-               INSERT INTO {fts}(rowid, {ins_cols}) VALUES (new.{rowid}, {ins_new});
-             END"
-        )))
-        .execute(&mut *conn)
+    // 3. 以 trigram tokenizer 重建（与基线共用同一份 DDL）
+    create_fts_indexes(&mut *conn)
         .await
-        .map_err(|e| migration_failed(&format!("v14 创建 {prefix}_fts_ai"), &e))?;
+        .map_err(|e| migration_failed("v14 重建 FTS 虚拟表与触发器", &e))?;
 
-        let del_old = cols
-            .iter()
-            .map(|c| format!("old.{c}"))
-            .collect::<Vec<_>>()
-            .join(", ");
-
-        // DELETE 触发器
-        sqlx::query(sqlx::AssertSqlSafe(format!(
-            "CREATE TRIGGER {prefix}_fts_ad AFTER DELETE ON {src} BEGIN
-               INSERT INTO {fts}({fts}, rowid, {ins_cols}) VALUES ('delete', old.{rowid}, {del_old});
-             END"
-        )))
-        .execute(&mut *conn)
-        .await
-        .map_err(|e| migration_failed(&format!("v14 创建 {prefix}_fts_ad"), &e))?;
-
-        // UPDATE 触发器
-        sqlx::query(sqlx::AssertSqlSafe(format!(
-            "CREATE TRIGGER {prefix}_fts_au AFTER UPDATE ON {src} BEGIN
-               INSERT INTO {fts}({fts}, rowid, {ins_cols}) VALUES ('delete', old.{rowid}, {del_old});
-               INSERT INTO {fts}(rowid, {ins_cols}) VALUES (new.{rowid}, {ins_new});
-             END"
-        )))
-        .execute(&mut *conn)
-        .await
-        .map_err(|e| migration_failed(&format!("v14 创建 {prefix}_fts_au"), &e))?;
-    }
-
-    // 5. 从源表重建索引
-    for (fts, _, _, _, _) in SPECS {
+    // 4. 从源表重建索引
+    for (fts, _, _, _, _) in FTS_SPECS {
         sqlx::query(sqlx::AssertSqlSafe(format!(
             "INSERT INTO {fts}({fts}) VALUES('rebuild')"
         )))

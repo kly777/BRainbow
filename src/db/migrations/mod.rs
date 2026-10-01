@@ -46,10 +46,46 @@ pub async fn migrate(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     }
 
     if current == 0 {
+        // `user_version = 0` 但**已有表** = 历史库（或手工造的旧 schema）：那些表是
+        // `CREATE TABLE IF NOT EXISTS` 补不齐的（老表缺后来的列），必须走迁移链。
+        // 所以这个计数要在 create_tables **之前**做。
+        let existing_tables: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table'")
+                .fetch_one(pool)
+                .await?;
+
         create_tables(pool).await?;
+
+        // 只有**真正的新库**（一张表都没有）才跳过迁移链：基线 DDL 就是最新 schema
+        // （"新增列/表四步"第 ①④ 步要求每次变更都补进基线），空库上再跑一遍迁移链
+        // 全是 no-op —— 而它们逐条 PRAGMA 检查 + 建 FTS/触发器的开销不小
+        // （实测：跳过后后端测试执行 51s → 17s）。
+        if existing_tables == 0 {
+            // 这条"基线 ≡ 基线 + 完整链"的等价性由 `db::tests::
+            // fresh_db_baseline_equals_the_full_migration_chain` 钉住：只加迁移、
+            // 忘了补基线，那条测试会红。
+            sqlx::query(sqlx::AssertSqlSafe(format!(
+                "PRAGMA user_version = {LATEST_USER_VERSION}"
+            )))
+            .execute(pool)
+            .await?;
+            return Ok(());
+        }
     }
 
     for target in (current.max(1) + 1)..=LATEST_USER_VERSION {
+        apply_migration(pool, target).await?;
+    }
+    Ok(())
+}
+
+/// 测试用：跑**完整迁移链**（新库路径的老行为），给"基线等价性"测试做对照。
+///
+/// 常规入口是 [`migrate`] —— 它在全新库上只建基线就直接置版本号，所以对照那侧
+/// 需要这个函数显式地把 v2…v20 都跑一遍。
+#[cfg(test)]
+pub(crate) async fn apply_full_chain_for_test(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    for target in 2..=LATEST_USER_VERSION {
         apply_migration(pool, target).await?;
     }
     Ok(())

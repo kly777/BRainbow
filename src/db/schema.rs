@@ -1,6 +1,30 @@
 //! 基线 schema（v1）：只负责幂等建表，列级变更走版本迁移函数。
 
-use sqlx::SqlitePool;
+use sqlx::{SqliteConnection, SqlitePool};
+
+/// 表是否具备全部列（表不存在、列缺失都算"不具备"）。
+///
+/// 给"只在结构齐了才建"的附属 DDL（索引 / 触发器 / FTS）用：`create_tables` 会在
+/// **已有表的库**上跑（`user_version = 0` 但表已存在的历史库），那些老表缺后来的列，
+/// 此时建索引或触发器会直接报 "no such column"。
+///
+/// 一次查完整张表的列（`pragma_table_xinfo`），不是按列逐个 PRAGMA —— 这条在
+/// 每条测试的建库路径上都会走，往返次数值得省（实测：逐列查约 5s 税）。
+async fn columns_exist(
+    conn: &mut SqliteConnection,
+    table: &str,
+    columns: &[&str],
+) -> Result<bool, sqlx::Error> {
+    let safe_table = crate::shared::db_query::sanitize_table_name(table)?;
+    let existing: Vec<String> = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+        "SELECT name FROM pragma_table_xinfo('{safe_table}')"
+    )))
+    .fetch_all(&mut *conn)
+    .await?;
+    Ok(columns
+        .iter()
+        .all(|wanted| existing.iter().any(|name| name == wanted)))
+}
 
 /// 创建基线 schema（v1）：所有表的 CREATE TABLE IF NOT EXISTS。
 ///
@@ -391,6 +415,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             stability_after REAL,
             difficulty_after REAL,
             state_after TEXT,
+            duration_secs REAL,
             FOREIGN KEY (mem_id) REFERENCES mem(id)
         )
         "#,
@@ -625,6 +650,7 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
             role TEXT NOT NULL CHECK (role IN ('user','assistant')),
             content TEXT NOT NULL,
             revised_from INTEGER,
+            reasoning TEXT,
             created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now'))
         )
         "#,
@@ -696,5 +722,279 @@ pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     .execute(pool)
     .await?;
 
+    // ── user_id 索引（v11 引入的隔离列）──
+    //
+    // 这几条原先只在 v11 里建，于是新库（走基线）没有它们 —— 基线必须等于
+    // 「基线 + 完整迁移链」，`fresh_db_baseline_equals_the_full_migration_chain` 盯着。
+    //
+    // 守卫：`create_tables` 会在**已有表的库**上跑（用户版本号为 0 但有表的历史库，
+    // 那些表是 `IF NOT EXISTS` 补不齐的）。老表可能还没有 user_id，此时建索引会报
+    // "no such column" —— 跳过即可，v11 补完列后会自己建（同一句 DDL）。
+    let mut conn = pool.acquire().await?;
+    for table in [
+        "chunk",
+        "mem",
+        "onto",
+        "signifier_signified",
+        "text_note",
+        "bookmark",
+        "bookmark_tag",
+        "reading_article",
+        "reading_user_word",
+        "conv_titles",
+        "articles",
+    ] {
+        if !columns_exist(&mut conn, table, &["user_id"]).await? {
+            continue;
+        }
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "CREATE INDEX IF NOT EXISTS idx_{table}_user_id ON {table}(user_id)"
+        )))
+        .execute(&mut *conn)
+        .await?;
+    }
+
+    // 访问频率排序用的索引（v13 引入 visit_count 时一并建的）
+    if columns_exist(&mut conn, "bookmark", &["visit_count"]).await? {
+        sqlx::query(
+            "CREATE INDEX IF NOT EXISTS idx_bookmark_visit_count ON bookmark(visit_count DESC)",
+        )
+        .execute(&mut *conn)
+        .await?;
+    }
+
+    // ── 时间归一化触发器（v8 引入）──
+    //
+    // **必须建在 FTS 触发器之前**：AFTER 触发器按创建顺序触发，而时间归一化的
+    // UPDATE 会连带触发 FTS 的 `_au`（delete + 重插）—— 顺序反了（FTS 先），
+    // 这个嵌套删除会在 external content 的 FTS5 上撞出 "database disk image is
+    // malformed"（实测：同样的 DDL，只换创建顺序就从 corrupt 变正常）。
+    // 链里也是这个顺序：v8 建时间触发器、v12/v14 才建 FTS 触发器。
+    //
+    // 守卫同上：历史库的老表可能还没有时间列，建触发器会报 "no such column"
+    // （SQLite 在建触发器时就解析 NEW.<列>）—— 交给 v8（它按同一份清单建）。
+    create_time_iso_triggers(&mut conn).await?;
+
+    // ── FTS5 全文索引（v12 引入，v14 换成 trigram）──
+    //
+    // 与迁移 v12/v14 共用同一份定义（见 `create_fts_indexes`）：新库直接建好，
+    // 老库由 v12 补建 + v14 换成 trigram 并 rebuild 回填索引。
+    create_fts_indexes(&mut conn).await?;
+
     Ok(())
 }
+
+/// 时间归一化触发器：应用层写入任意可解析格式的时间，数据库层统一成
+/// `%Y-%m-%dT%H:%M:%S+00:00`（不用 `Z` 是为对齐 sqlx 的 DateTime 文本编码）。
+///
+/// **定义只有这一份**：基线（`create_tables`）与迁移 v8 都调它 —— 分两份写迟早漂移。
+///
+/// 守卫：表或它的时间列还不存在时跳过（历史库的老表可能缺列；SQLite 在建触发器时
+/// 就解析 `NEW.<列>`，缺列直接报错）。老库那侧由 v8 补列后建。
+pub(crate) async fn create_time_iso_triggers(
+    conn: &mut sqlx::SqliteConnection,
+) -> Result<(), sqlx::Error> {
+    for (table, pk, columns) in TIME_COLUMNS {
+        let mut wanted = vec![*pk];
+        wanted.extend_from_slice(columns);
+        if !columns_exist(conn, table, &wanted).await? {
+            continue;
+        }
+
+        let own_suffix = "+00:00";
+        let other_suffix = "Z";
+
+        let set_clause = columns
+            .iter()
+            .map(|column| {
+                format!(
+                    "{column} = CASE WHEN NEW.{column} IS NULL THEN NULL \
+                     WHEN NEW.{column} = '' THEN '' \
+                     WHEN NEW.{column} GLOB '????-??-??T??:??:??*{own_suffix}' THEN NEW.{column} \
+                     WHEN NEW.{column} GLOB '????-??-??T??:??:??*{other_suffix}' \
+                       THEN replace(NEW.{column}, '{other_suffix}', '{own_suffix}') \
+                     ELSE strftime('%Y-%m-%dT%H:%M:%S{own_suffix}', NEW.{column}) END"
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(", ");
+        let when_clause = columns
+            .iter()
+            .map(|column| {
+                format!(
+                    "(NEW.{column} IS NOT NULL AND NEW.{column} <> '' \
+                     AND NEW.{column} GLOB '????-??-??*' \
+                     AND NEW.{column} NOT GLOB '????-??-??T??:??:??*{own_suffix}')"
+                )
+            })
+            .collect::<Vec<_>>()
+            .join(" OR ");
+
+        for (suffix, timing) in [("ins", "INSERT"), ("upd", "UPDATE")] {
+            sqlx::query(sqlx::AssertSqlSafe(format!(
+                "CREATE TRIGGER IF NOT EXISTS trg_{table}_time_iso_{suffix} \
+                 AFTER {timing} ON {table} FOR EACH ROW WHEN {when_clause} \
+                 BEGIN UPDATE {table} SET {set_clause} WHERE {pk} = NEW.{pk}; END"
+            )))
+            .execute(&mut *conn)
+            .await?;
+        }
+    }
+    Ok(())
+}
+
+/// 需要时间归一化的表：(表, 主键列, 时间列)。
+///
+/// 基线、v8（规范化历史数据 + 建触发器）、v9（`Z` → `+00:00`）共用这一份清单。
+pub(crate) const TIME_COLUMNS: &[(&str, &str, &[&str])] = &[
+    ("card", "id", &["created_at", "updated_at"]),
+    ("task", "id", &["completed_at", "created_at", "updated_at"]),
+    (
+        "time_window",
+        "id",
+        &["start_time", "end_time", "recurrence_until"],
+    ),
+    // media 表已在 v15 中删除，此处移除；历史库中 v8 早已执行，不会重跑
+    ("signifier_signified", "id", &["created_at"]),
+    ("text_note", "id", &["created_at", "updated_at"]),
+    ("chunk", "id", &["created_at", "updated_at"]),
+    ("mem", "id", &["due_at", "last_review_at", "created_at"]),
+    ("revlog", "id", &["review_time"]),
+    ("mem_mnemonic", "mem_id", &["created_at"]),
+    ("tag", "id", &["created_at"]),
+    ("conv_titles", "id", &["created_at"]),
+    ("articles", "id", &["created_at"]),
+    ("bookmark", "id", &["created_at", "updated_at"]),
+    ("bookmark_tag", "id", &["created_at"]),
+    ("reading_article", "id", &["created_at"]),
+    ("reading_user_word", "id", &["first_seen_at", "updated_at"]),
+    ("chat_tree", "id", &["created_at", "updated_at"]),
+    ("chat_node", "id", &["created_at"]),
+    ("prompt_preset", "id", &["created_at"]),
+    ("ai_settings", "user_id", &["updated_at"]),
+    ("api_key", "id", &["created_at"]),
+];
+
+/// FTS5 全文索引：虚拟表（外部内容表）+ 三个同步触发器。
+///
+/// **定义只有这一份**：基线（`create_tables`）、迁移 v12（首建）与 v14（`unicode61` →
+/// `trigram` 重建）都调它 —— 分几份写迟早漂移，而漂移的后果是"新库搜不到、老库能搜到"
+/// 这类只在一侧复现的问题（v14 的 trigram 就曾经只在迁移里）。
+///
+/// 只建结构、不重建索引：v12/v14 在补建后还要对已有数据 `rebuild`（它们各自那一遍）。
+///
+/// 守卫：源表或它的索引列还不存在时跳过（理由同 `create_time_iso_triggers`）。
+pub(crate) async fn create_fts_indexes(
+    conn: &mut sqlx::SqliteConnection,
+) -> Result<(), sqlx::Error> {
+    for (fts, src, rowid, cols, prefix) in FTS_SPECS {
+        let mut wanted = vec![*rowid];
+        wanted.extend_from_slice(cols);
+        if !columns_exist(conn, src, &wanted).await? {
+            continue;
+        }
+
+        let col_def = cols.join(", ");
+        let ins_cols = col_def.clone();
+        let ins_new = cols
+            .iter()
+            .map(|c| format!("new.{c}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let del_old = cols
+            .iter()
+            .map(|c| format!("old.{c}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+
+        // 虚拟表：trigram tokenizer（CJK 3 字符滑窗；unicode61 对中文等于不索引）
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "CREATE VIRTUAL TABLE IF NOT EXISTS {fts} USING fts5({col_def}, content='{src}', content_rowid='{rowid}', tokenize='trigram')"
+        )))
+        .execute(&mut *conn)
+        .await?;
+
+        for stmt in [
+            format!(
+                "CREATE TRIGGER IF NOT EXISTS {prefix}_fts_ai AFTER INSERT ON {src} BEGIN
+               INSERT INTO {fts}(rowid, {ins_cols}) VALUES (new.{rowid}, {ins_new});
+             END"
+            ),
+            format!(
+                "CREATE TRIGGER IF NOT EXISTS {prefix}_fts_ad AFTER DELETE ON {src} BEGIN
+               INSERT INTO {fts}({fts}, rowid, {ins_cols}) VALUES ('delete', old.{rowid}, {del_old});
+             END"
+            ),
+            format!(
+                "CREATE TRIGGER IF NOT EXISTS {prefix}_fts_au AFTER UPDATE ON {src} BEGIN
+               INSERT INTO {fts}({fts}, rowid, {ins_cols}) VALUES ('delete', old.{rowid}, {del_old});
+               INSERT INTO {fts}(rowid, {ins_cols}) VALUES (new.{rowid}, {ins_new});
+             END"
+            ),
+        ] {
+            sqlx::query(sqlx::AssertSqlSafe(stmt))
+                .execute(&mut *conn)
+                .await?;
+        }
+    }
+    for (fts, _, _, _, _) in FTS_SPECS {
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "INSERT INTO {fts}({fts}) VALUES('rebuild')"
+        )))
+        .execute(&mut *conn)
+        .await?;
+    }
+    Ok(())
+}
+
+/// 全文索引清单：(fts 表, 源表, rowid 列, 索引列, 触发器前缀)
+///
+/// 基线、v12（首建）、v14（trigram 重建）共用这一份。
+pub(crate) const FTS_SPECS: &[(&str, &str, &str, &[&str], &str)] = &[
+    ("card_fts", "card", "id", &["content"], "card"),
+    ("task_fts", "task", "id", &["title", "description"], "task"),
+    (
+        "bookmark_fts",
+        "bookmark",
+        "id",
+        &["title", "url", "description"],
+        "bookmark",
+    ),
+    ("onto_fts", "onto", "id", &["name", "description"], "onto"),
+    (
+        "text_note_fts",
+        "text_note",
+        "id",
+        &["name", "content"],
+        "text_note",
+    ),
+    (
+        "reading_article_fts",
+        "reading_article",
+        "id",
+        &["title", "content"],
+        "reading_article",
+    ),
+    (
+        "conv_titles_fts",
+        "conv_titles",
+        "id",
+        &["title"],
+        "conv_titles",
+    ),
+    (
+        "articles_fts",
+        "articles",
+        "id",
+        &["title", "content"],
+        "articles",
+    ),
+    (
+        "chat_node_fts",
+        "chat_node",
+        "id",
+        &["content"],
+        "chat_node",
+    ),
+    ("chunk_fts", "chunk", "id", &["content"], "chunk"),
+];

@@ -76,34 +76,40 @@
  * 在宿主元素上声明该属性，并优先使用 @container 而非 @media 处理组件内部布局。
  * ════════════════════════════════════════════════════════════════ */
 
+/* ════════════════════════════════════════════════════════════════
+ * 基础层
+ *
+ * 浏览器基线就是 build.target 的 chrome111 / edge111 / firefox114 /
+ * safari16.4 / ios16.4（见 vite.config.ts），**前缀由 build 的 lightningcss
+ * 按这份基线补齐，这里不手写 -webkit-**。也因此不收留 modern-normalize 里
+ * 那些给更老浏览器打的补丁。下面每条都对应一个**当前浏览器仍然存在的
+ * 行为差异**，或本项目自己的约定 —— 不满足这条就别往这里加。
+ * ════════════════════════════════════════════════════════════════ */
+
 *,
 ::before,
 ::after {
 	box-sizing: border-box;
 }
 
-/**
-1. Improve consistency of default fonts in all browsers. (https://github.com/sindresorhus/modern-normalize/issues/3)
-2. Correct the line height in all browsers.
-3. Prevent adjustments of font size after orientation changes in iOS.
-4. Use a more readable tab size (opinionated).
-*/
-
 html {
+	/* 全站基础字族。字号刻意不写死：所有 rem 相对根字号，
+	   字号档位（shared/styles/theme.ts 的 fontScales）靠改根字号实现 */
 	font-family:
 		system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif,
-		"Apple Color Emoji", "Segoe UI Emoji"; /* 1 */
-
-	line-height: 1.15; /* 2 */
-	-webkit-text-size-adjust: 100%; /* 3 */
-	text-size-adjust: 100%;
-	tab-size: 4; /* 4 */
+		"Apple Color Emoji", "Segoe UI Emoji";
+	text-size-adjust: 100%; /* iOS 横竖屏切换时不放大正文 */
+	tab-size: 4;
 }
 
 /* 横向溢出兜底：clip 而非 hidden（保留 sticky 子元素可用） */
 html,
 body {
 	overflow-x: clip;
+}
+
+body {
+	margin: 0;
 }
 
 /* ── 展示字体：标题层全局走 display 面（editorial 语音的核心载体） ── */
@@ -115,60 +121,49 @@ h3 {
 	letter-spacing: -0.01em;
 }
 
-/*
-Sections
-========
-*/
-
-/**
-Remove the margin in all browsers.
-*/
-
-body {
+/* ── 表单控件：浏览器给的是 UA 字族字号，必须显式继承 ──
+ * font-size: 100% 让控件跟随所在上下文。注意它的特异度是 (0,0,1)，会压过
+ * Control 原语 :where(.control) 的 (0,0,0) —— 原语的字号因此靠 .control 单类
+ * 提权，改那边时别把这条删了（见 components/ui/atoms/Control.module.css）。
+ * line-height: 1.15 是本项目控件高度的基准：高度 = 行高 × 字号 + 内边距 + 边框。 */
+button,
+input,
+optgroup,
+select,
+textarea {
+	font-family: inherit;
+	font-size: 100%;
+	line-height: 1.15;
 	margin: 0;
 }
 
-/*
-Text-level semantics
-====================
-*/
-
-/**
-Add the correct font weight in Chrome and Safari.
-*/
-
-b,
-strong {
-	font-weight: bolder;
-}
-
-/**
-1. Improve consistency of default fonts in all browsers. (https://github.com/sindresorhus/modern-normalize/issues/3)
-2. Correct the odd 'em' font sizing in all browsers.
-*/
-
+/* 这三条都对着一个**当前仍存在**的浏览器默认：
+ * code/pre 系列不指定字族会落到 UA 的 monospace（并命中 13px 的字号 quirk）；
+ * Safari 的 input[type=search] 自带圆角与放大镜，与全站控件形态冲突；
+ * 原生"选择文件"按钮的文字不走 inherit，会跟页面字体打架。 */
 code,
 kbd,
 samp,
 pre {
 	font-family:
-		ui-monospace, sfmono-regular, consolas, "Liberation Mono", menlo, monospace; /* 1 */
-
-	font-size: 1em; /* 2 */
+		ui-monospace, sfmono-regular, consolas, "Liberation Mono", menlo, monospace;
+	font-size: 1em;
 }
 
-/**
-Add the correct font size in all browsers.
-*/
-
-small {
-	font-size: 80%;
+[type="search"] {
+	appearance: textfield;
+	outline-offset: -2px;
 }
 
-/**
-Prevent 'sub' and 'sup' elements from affecting the line height in all browsers.
-*/
+::-webkit-search-decoration {
+	appearance: none;
+}
 
+::-webkit-file-upload-button {
+	font: inherit;
+}
+
+/* 上下标会撑大行高（KaTeX 与富文本常见），压回行内 */
 sub,
 sup {
 	font-size: 75%;
@@ -185,115 +180,19 @@ sup {
 	top: -0.5em;
 }
 
-/*
-Tabular data
-============
-*/
-
-/**
-Correct table border color inheritance in Chrome and Safari. (https://issues.chromium.org/issues/40615503, https://bugs.webkit.org/show_bug.cgi?id=195016)
-*/
-
-table {
-	border-color: currentcolor;
+/* <details> 的三角标在 Safari 上要显式 list-item 才出得来 */
+summary {
+	display: list-item;
 }
 
-/*
-Forms
-=====
-*/
-
-/**
-1. Change the font styles in all browsers.
-2. Remove the margin in Firefox and Safari.
-*/
-
-button,
-input,
-optgroup,
-select,
-textarea {
-	font-family: inherit; /* 1 */
-	font-size: 100%; /* 1 */
-	line-height: 1.15; /* 1 */
-	margin: 0; /* 2 */
-}
-
-/**
-Correct the inability to style clickable types in iOS and Safari.
-*/
-
-button,
-[type="button"],
-[type="reset"],
-[type="submit"] {
-	appearance: auto;
-}
-
-/**
-Remove the padding so developers are not caught out when they zero out 'fieldset' elements in all browsers.
-*/
-
+/* legend 在 Firefox/Safari 上自带内边距，会让 fieldset 内容对不齐 */
 legend {
 	padding: 0;
 }
 
-/**
-Add the correct vertical alignment in Chrome and Firefox.
-*/
-
-progress {
-	vertical-align: baseline;
-}
-
-/**
-Correct the cursor style of increment and decrement buttons in Safari.
-*/
-
-::-webkit-inner-spin-button,
-::-webkit-outer-spin-button {
-	height: auto;
-}
-
-/**
-1. Correct the odd appearance in Chrome and Safari.
-2. Correct the outline style in Safari.
-*/
-
-[type="search"] {
-	appearance: textfield; /* 1 */
-	outline-offset: -2px; /* 2 */
-}
-
-/**
-Remove the inner padding in Chrome and Safari on macOS.
-*/
-
-::-webkit-search-decoration {
-	appearance: none;
-}
-
-/**
-1. Correct the inability to style clickable types in iOS and Safari.
-2. Change font properties to 'inherit' in Safari.
-*/
-
-::-webkit-file-upload-button {
-	appearance: auto; /* 1 */
-	font: inherit; /* 2 */
-}
-
-/*
-Interactive
-===========
-*/
-
-/*
-Add the correct display in Chrome and Safari.
-*/
-
-summary {
-	display: list-item;
+/* 表格继承文字色时边框色不跟随（Chrome/Safari），显式跟随当前色 */
+table {
+	border-color: currentcolor;
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -334,18 +233,6 @@ summary {
 	}
 }
 
-@keyframes slide-in-right {
-	from {
-		opacity: 0;
-		transform: translateX(1rem);
-	}
-
-	to {
-		opacity: 1;
-		transform: translateX(0);
-	}
-}
-
 @keyframes slide-in-down {
 	from {
 		opacity: 0;
@@ -355,27 +242,6 @@ summary {
 	to {
 		opacity: 1;
 		transform: translateY(0);
-	}
-}
-
-@keyframes shimmer {
-	0% {
-		background-position: -200% 0;
-	}
-
-	100% {
-		background-position: 200% 0;
-	}
-}
-
-@keyframes pulse-soft {
-	0%,
-	100% {
-		opacity: 1;
-	}
-
-	50% {
-		opacity: 0.6;
 	}
 }
 
@@ -402,8 +268,6 @@ summary {
 	animation: skeleton-pulse 1.5s ease-in-out infinite;
 	border-radius: var(--radius-md);
 }
-
-/* ── 页面容器入场（motion-cut：已废除全局内容入场动画） ── */
 
 /* ══════════════════════════════════════════
  * 全局滚动行为优化
@@ -445,24 +309,6 @@ a:not([class]):hover {
 	text-decoration-thickness: 2px;
 }
 
-/* 跳过链接（屏幕阅读器） */
-.skip-link {
-	position: absolute;
-	top: -100%;
-	left: var(--space-md);
-	z-index: var(--z-toast);
-	padding: var(--space-sm) var(--space-md);
-	background: var(--t-color-accent);
-	color: var(--t-color-on-solid);
-	border-radius: var(--radius-md);
-	text-decoration: none;
-	font-weight: 600;
-}
-
-.skip-link:focus {
-	top: var(--space-md);
-}
-
 /* 表单元素增强 */
 input:where(:not([type="checkbox"], [type="radio"])),
 select,
@@ -499,9 +345,9 @@ textarea {
 	border: 0;
 }
 
-/* ════════════════════════════════════════════════════════════
+/* ════════════════════════════════════════════════════════════════
  * 打印样式（适应性即无障碍：页面可能被打印/另存为 PDF）
- * ════════════════════════════════════════════════════════════ */
+ * ════════════════════════════════════════════════════════════════ */
 
 /* stylelint-disable declaration-no-important */
 @media print {

@@ -93,11 +93,12 @@
 }
 
 html {
-	/* 全站基础字族。字号刻意不写死：所有 rem 相对根字号，
+	/* 全站基础字族。**定义只有一处**（tokens.css 的 --t-font-body）：
+	   这里从前自己写了一份，和令牌那份各差几个字族（那份点名了中文面、这份没有），
+	   于是"改字体只改一个地方"就成了假话 —— 正文实际走的是这一份。
+	   字号刻意不写死：所有 rem 相对根字号，
 	   字号档位（shared/styles/theme.ts 的 fontScales）靠改根字号实现 */
-	font-family:
-		system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif,
-		"Apple Color Emoji", "Segoe UI Emoji";
+	font-family: var(--t-font-body);
 	text-size-adjust: 100%; /* iOS 横竖屏切换时不放大正文 */
 	tab-size: 4;
 }

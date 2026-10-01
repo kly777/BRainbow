@@ -10,7 +10,12 @@
 
 :root,
 :root[data-theme="paper"] {
-	/* ── 字体（三主题共用；自托管 @fontsource-variable，CSP 安全） ── */
+	/* ── 字体（三主题共用；自托管 @fontsource-variable，CSP 安全） ──
+	 *
+	 * 正文栈里**三平台各自的中文面都要点名**：不点名，中文就落回浏览器的默认
+	 * 回退（Windows 上通常是宋体），而宋体在屏上笔画会被抗锯齿吃掉 —— 正文读不下去。
+	 * 拉丁面排在中文面之前是有意的：拉丁字体里没有汉字，浏览器自然会往后落到
+	 * 中文面，于是混排时拉丁用 system-ui、汉字用苹方/思源/雅黑，各取各的。 */
 	--t-font-display:
 		"Fraunces Variable", "Noto Serif SC Variable", georgia, "Songti SC",
 		"SimSun", serif;
@@ -18,7 +23,9 @@
 		"JetBrains Mono Variable", ui-monospace, sfmono-regular, consolas,
 		"Liberation Mono", menlo, monospace;
 	--t-font-body:
-		system-ui, "Segoe UI", "Roboto", "PingFang SC", "Noto Sans SC", sans-serif;
+		system-ui, "Segoe UI", "Roboto", "Helvetica", "Arial", "PingFang SC",
+		"Noto Sans SC", "Microsoft YaHei", sans-serif, "Apple Color Emoji",
+		"Segoe UI Emoji";
 
 	/* ── 模块识别色（品牌彩虹族；landing/home 共用，主题无关） ── */
 	--m-task: var(--t-color-accent);

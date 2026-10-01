@@ -1,8 +1,12 @@
 .markdown-content {
-	font-family:
-		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-		Arial, sans-serif;
-	line-height: var(--leading-normal);
+	/* 走全站令牌，不自己写一份字族：这里从前那份里一个中文面都没有，
+	   中文于是落回浏览器默认（Windows 上常是宋体）—— 而这段是**正文**，
+	   正文中文用宋体在屏上读不下去。 */
+	font-family: var(--t-font-body);
+
+	/* 长文行距用 relaxed（1.8），不是 normal（1.6）：
+	   这一段是拿来读的，不是拿来扫的；阅读页（reading 的 .content）用的也是它。 */
+	line-height: var(--leading-relaxed);
 	color: var(--t-color-ink);
 }
 
@@ -19,6 +23,13 @@
 	color: var(--t-color-ink);
 }
 
+/* 档位：2 / 1.5 / 1.25 / 1.125 / 1 / 0.875（逐级严格递减）。
+ *
+ * 这套值是从 GitHub 的 markdown.css 里抄来的那一版改的 —— 原版尾巴是
+ * 1 / 0.875 / 0.85：h4 与正文同号、h5 与 h6 只差 0.4px（16px 下），三级挤在
+ * 一起，等于"四级以后没有层级"。标题层级是正文的导航，挤掉了就读不出结构，
+ * 所以尾巴按等比补齐：每一级既区别于相邻级，也区别于正文（h5 与正文同号，
+ * 但字重 600 + tight 行距，仍分得开）。 */
 .markdown-content h1 {
 	font-size: 2em;
 	border-bottom: 2px solid var(--t-color-border);
@@ -36,15 +47,15 @@
 }
 
 .markdown-content h4 {
-	font-size: 1em;
+	font-size: 1.125em;
 }
 
 .markdown-content h5 {
-	font-size: 0.875em;
+	font-size: 1em;
 }
 
 .markdown-content h6 {
-	font-size: 0.85em;
+	font-size: 0.875em;
 	color: var(--t-color-ink-muted);
 }
 
@@ -89,7 +100,7 @@
 
 /* 代码 */
 .markdown-content code {
-	font-family: sfmono-regular, consolas, "Liberation Mono", menlo, monospace;
+	font-family: var(--t-font-mono);
 	font-size: 0.875em;
 	padding: 0.2em 0.4em;
 	background-color: var(--t-color-surface-raised);
@@ -98,7 +109,7 @@
 }
 
 .markdown-content pre {
-	font-family: sfmono-regular, consolas, "Liberation Mono", menlo, monospace;
+	font-family: var(--t-font-mono);
 	font-size: 0.875em;
 	padding: 1em;
 	background-color: var(--t-color-surface-raised);
@@ -123,9 +134,10 @@
 	margin-bottom: 0.75em;
 	padding: 0.35em 0;
 	border-bottom: 1px solid var(--t-color-border);
-	font-family:
-		-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-		Arial, sans-serif;
+
+	/* 工具条是界面文字，不是代码：走正文字族（原先是把 .markdown-content
+	   那份字族又抄了一遍，两份一起过期） */
+	font-family: var(--t-font-body);
 }
 
 .markdown-content .md-code-lang {
@@ -274,9 +286,9 @@
 		font-size: 1.375em;
 	}
 
-	.markdown-content h3 {
-		font-size: 1.125em;
-	}
+	/* h3 不再跟着缩：它本来就只比正文大一档（1.25em），再压到 1.125em
+	   就与 h4 同号了 —— 小屏上更看不出层级。h4 以下是"本来就小"的几级，
+	   不需要为了小屏再缩。 */
 
 	.markdown-content pre {
 		font-size: 0.8125em;

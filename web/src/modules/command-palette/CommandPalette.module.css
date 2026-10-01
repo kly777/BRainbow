@@ -1,9 +1,20 @@
 /* Hallmark · component: command-palette · genre: technical · theme: design.md
  * states: default · hover · focus · active · disabled · loading · error · success
  * contrast: pass (46–50)
+ *
+ * 重设计要点（参考 Raycast / Linear / cmdk 的通行做法，落在本项目的令牌与语音上）：
+ * 1. **一张卡片**：输入、列表、页脚同属一个面板（此前是"连体两张卡"+ 条件边框）。
+ *    边框、圆角、阴影、焦点环都只在这一层，别的元素不再各自描边。
+ * 2. **行解剖**：`[字形] 名称 · 描述 · 右侧提示`。字形就是应用自己的词汇
+ *    （`/` 页面、`:` 指令、`?` 转搜索、`•` 命中），一列对齐后名称能一眼扫下来。
+ * 3. **选中态**：`surface-raised` 底 + 左侧色条。**不用 accent-soft** ——
+ *    那个色是给正文里的 `<mark>` 用的，两者撞色会让选中行里的命中词看不见。
+ * 4. **页脚是状态条**：左"多少项"（兼读屏播报），右快捷键提示（右对齐，Linear 式）。
+ * 5. **移动端是底部抽屉**：全宽、上圆角、48px 行、隐藏快捷键、留可见关闭。
  */
 
-/* ── Overlay ── */
+/* ── Overlay ──
+   平铺遮罩（与 Modal 同一语言，不做模糊）：这是全站的浮层语音，不在这里另开一套 */
 .overlay {
 	position: fixed;
 	inset: 0;
@@ -23,8 +34,7 @@
 }
 
 .overlay:hover {
-	/* 悬停略加深：在遮罩令牌上叠一成墨色（合成后 alpha ≈ 0.5×0.9 + 1×0.1 = 0.55，
-	   与原先硬编码的 55% 黑一致，但随主题走且不再是内联字面量） */
+	/* 悬停略加深：在遮罩令牌上叠一成墨色（合成后随主题走，不再是硬编码黑） */
 	background: color-mix(
 		in srgb,
 		var(--t-color-overlay) 90%,
@@ -32,7 +42,7 @@
 	);
 }
 
-/* ── Bar ── */
+/* ── Panel（唯一一张卡片） ── */
 .bar {
 	position: fixed;
 	top: 5rem;
@@ -41,90 +51,66 @@
 	z-index: var(--z-palette);
 	display: flex;
 	flex-direction: column;
-	width: var(--cmp-width, 38rem);
-	max-width: 90vw;
-	max-height: 60vh;
-	overflow-wrap: break-word;
-	animation: slide-in-down 200ms var(--ease-out-expo) both;
-}
+	width: var(--cmp-width, 40rem);
+	max-width: min(92vw, 40rem);
 
-/* ── Suggestions Panel (before .bar:has(.input-row:focus-within) .suggestions) ── */
-.suggestions {
-	display: flex;
-	flex-direction: column;
+	/* 视口守卫：矮屏或移动端键盘弹出时都要装得下（dvh 才跟着浏览器 UI 变）。
+	   真正会收缩的是列表那一段（flex 链上的 min-height: 0） */
+	max-height: min(60vh, calc(100dvh - 6rem));
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border-strong);
-	border-top: none;
-	border-radius: 0 0 var(--radius-xl) var(--radius-xl);
-	box-shadow: var(--shadow-lg);
+	border-radius: var(--radius-2xl);
+	box-shadow: var(--shadow-lv3);
 	overflow: hidden;
+	animation: panel-in 160ms var(--ease-out-expo) both;
 }
 
-/* ── Input Row ── */
-.input-row {
+.bar:focus-within {
+	border-color: var(--t-color-accent);
+	box-shadow: var(--shadow-lv3), var(--t-ring-accent);
+}
+
+/* ── Header（输入行 = 面板的标题栏） ── */
+.header {
 	display: flex;
 	align-items: center;
-	gap: var(--space-sm);
-	padding: var(--space-md) var(--space-lg);
-	border: 1px solid var(--t-color-border-strong);
-	border-radius: var(--radius-xl);
-	background: var(--t-color-surface);
-	box-shadow: var(--shadow-lg);
-	transition:
-		border-color var(--t-transition-normal),
-		box-shadow var(--t-transition-normal);
+	gap: var(--space-md);
+	flex: 0 0 auto;
+	padding: var(--space-sm) var(--space-md) var(--space-sm) var(--space-lg);
+	border-bottom: 1px solid var(--t-color-border);
 }
 
-/* 连体时：输入框与列表一体化 */
-.input-row:has(+ .suggestions) {
-	border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-	border-bottom: none;
-}
-
-/* 焦点状态：输入框聚焦时高亮边框 */
-.input-row:focus-within {
-	border-color: var(--t-color-accent);
-	box-shadow: var(--shadow-lg), var(--t-ring-accent);
-}
-
-/* 连体时：列表随输入框聚焦同步高亮 */
-.bar:has(.input-row:focus-within) .suggestions {
-	border-color: var(--t-color-accent);
-	box-shadow: var(--shadow-lg), var(--t-ring-accent);
-}
-
-/* ── Mode Tag ── */
-.mode-tag {
-	font-size: var(--text-2xs);
-	font-family: var(--t-font-mono);
-	color: var(--t-color-accent);
-	background: var(--t-color-accent-soft);
-	padding: 0 var(--space-xs);
-	border-radius: var(--radius-xs);
-	font-weight: 600;
-	letter-spacing: 0.05em;
-	text-transform: uppercase;
-}
-
-/* ── Prefix ── */
-.prefix {
-	font-size: var(--text-lg);
-	font-family: var(--t-font-mono);
-	color: var(--t-color-accent);
-	font-weight: 700;
-	min-width: 0.875rem;
+/* 模式字形：固定宽度，打不打前缀都不跳位。idle 显示 ⌘（应用自己的词汇） */
+.mode-glyph {
+	flex: 0 0 auto;
+	width: 1.125rem;
 	text-align: center;
+	font-family: var(--t-font-mono);
+	font-size: var(--text-lg);
+	font-weight: 700;
+	line-height: 1;
+	color: var(--t-color-accent);
+}
+
+.mode-name {
+	flex: 0 0 auto;
+	font-size: var(--text-xs);
+	font-family: var(--t-font-mono);
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--t-color-ink-faint);
 }
 
 /* ── Input ──
- * 命令面板的输入框改用原语 <Input class={styles.field}>：它有意做成"无框"——
- * 外框与焦点环由包裹层 .input-row（含 :focus-within）负责，所以这里把原语基础类的
- * 内边距与底色覆盖掉，并关掉控件自身的焦点环（原语基础类在 :where() 里，特异度 0，
- * 这些覆盖必定生效）。padding 必须显式归零：原语自带 sm/md 内边距，否则输入区内缩一圈。
- * 字号写成 `input.field`：面板是聚焦式浮层，有意比工具面大一号（16px），
- * 而原语的字号基础类是单类 (0,1,0) —— 同权时胜负看产物顺序，必须 element+class 才稳。 */
+ * 用原语 <Input class={styles.field}>：有意做成"无框"—— 边框与焦点环由 .bar
+ * 统一负责，所以这里把原语基础类的内边距与底色覆盖掉，并关掉控件自身的焦点环
+ * （原语基础类在 :where() 里，特异度 0，这些覆盖必定生效）。padding 必须显式归零，
+ * 否则输入区内缩一圈。字号写成 `input.field`：面板是聚焦式浮层，有意比工具面大一号
+ * （16px），而原语的字号基础类是单类 (0,1,0) —— 同权时胜负看产物顺序，必须
+ * element+class 才稳。 */
 input.field {
 	flex: 1;
+	min-width: 0;
 	padding: 0;
 	border: none;
 	background: transparent;
@@ -138,71 +124,97 @@ input.field {
 	border-color: transparent;
 }
 
-/* ── Scroll Area ── */
-.sug-scroll {
+/* ── 关闭按钮 ──
+   桌面隐藏（有 Esc），窄屏才出现：移动端没有 Esc 键，浮层必须有个看得见的出口 */
+.close-btn {
+	display: none;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	width: 2rem;
+	height: 2rem;
+	padding: 0;
+	border: none;
+	border-radius: var(--radius-full);
+	background: transparent;
+	color: var(--t-color-ink-muted);
+	cursor: pointer;
+	transition: background var(--t-transition-fast);
+}
+
+.close-btn:hover {
+	background: var(--t-color-surface-raised);
+}
+
+.close-btn:focus-visible {
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: 2px;
+}
+
+/* ── Body（列表或状态，二者只占一份空间） ── */
+.body {
+	display: flex;
+	flex-direction: column;
+	flex: 1 1 auto;
+
+	/* 不加它，flex 子项不肯缩到内容高度以下 —— 矮屏时整个面板会溢出视口 */
+	min-height: 0;
+}
+
+/* ── List ── */
+.list {
+	flex: 1 1 auto;
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+}
+
+.scroll {
+	flex: 1 1 auto;
+
+	/* 矮屏时先收缩列表（配合 .bar 的视口守卫），而不是把面板顶出视口 */
+	min-height: 0;
 	overflow-y: auto;
-	max-height: 26rem;
 	padding: var(--space-xs);
+
+	/* 滚到底不带动背后的页面（浮层里的滚动条不该把页面一起滚） */
+	overscroll-behavior: contain;
+
+	/* 滚动内边距：选中项滚进来时不贴着上下边 */
+	scroll-padding-block: var(--space-xs);
 	scrollbar-gutter: stable;
 	scrollbar-width: thin;
 	scrollbar-color: var(--t-color-border-strong) transparent;
 }
 
-.sug-scroll::-webkit-scrollbar {
+.scroll::-webkit-scrollbar {
 	width: 0.5rem;
 }
 
-.sug-scroll::-webkit-scrollbar-thumb {
+.scroll::-webkit-scrollbar-thumb {
 	border-radius: var(--radius-full);
 	border: 2px solid transparent;
 	background-clip: padding-box;
 	background-color: var(--t-color-border-strong);
 }
 
-.sug-scroll::-webkit-scrollbar-track {
+.scroll::-webkit-scrollbar-track {
 	background: transparent;
 	margin: var(--space-xs) 0;
 }
 
-/* ── Footer ── */
-.sug-footer {
+/* ── Row（一行建议） ── */
+.row {
 	display: flex;
-	gap: var(--space-md);
 	align-items: center;
-	justify-content: center;
-	padding: var(--space-sm) var(--space-md);
-	border-top: 1px solid var(--t-color-border-strong);
-	background: var(--t-color-surface);
-	font-size: var(--text-xs);
-	font-family: var(--t-font-mono);
-	color: var(--t-color-ink-faint);
-	border-radius: 0 0 var(--radius-xl) var(--radius-xl);
-}
+	gap: var(--space-sm);
 
-.sug-footer kbd,
-.search-hint kbd {
-	display: inline-block;
+	/* 行高按"触屏最小目标"的一半起步（40px），窄屏再抬到 48px（见媒体查询）；
+	   行内文字一律单行截断，长片段不会把行的节奏撑变形 */
+	min-height: 2.5rem;
 	padding: var(--space-2xs) var(--space-sm);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-xs);
-	background: var(--t-color-bg);
-	font-family: var(--t-font-mono);
-	font-size: var(--text-xs);
-	color: var(--t-color-ink);
-}
-
-.sug-footer kbd + kbd {
-	margin-left: 2px;
-}
-
-/* ── Suggestion Item (states in correct order: focus → active → hover → active-class) ── */
-.suggestion-item {
-	display: flex;
-	align-items: center;
-	gap: var(--space-md);
-	padding: var(--space-sm) var(--space-md);
 	border: none;
-	border-radius: var(--radius-md);
+	border-radius: var(--radius-lg);
 	background: transparent;
 	cursor: pointer;
 	font: inherit;
@@ -213,24 +225,28 @@ input.field {
 	transition: background var(--t-transition-fast);
 }
 
-/* 焦点状态 */
-.suggestion-item:focus-visible {
-	outline: none;
+/* 三个状态选择器都用 :where() 把特异度压到与 .row 同级：
+   状态之间只靠**顺序**分胜负（悬停 < 按下 < 选中），不靠特异度打架
+   —— 这也让 stylelint 的 no-descending-specificity 满意 */
+
+/* 悬停：比选中轻一档 —— 鼠标扫过是"预览"，方向键选中的才占满色 */
+.row:where(:hover) {
+	background: var(--t-color-surface-raised);
+	opacity: 0.75;
 }
 
-/* 按下状态 */
-.suggestion-item:active {
+.row:where(:active) {
 	background: var(--t-color-accent-soft);
-	opacity: 0.8;
+	opacity: 1;
 }
 
-/* 活跃状态 */
-.suggestion-item:is(.suggestion-active) {
-	background: var(--t-color-accent-soft);
+/* 选中：填色 + 左侧色条（双重信号，色弱与高对比下也认得出） */
+.row-active {
+	background: var(--t-color-surface-raised);
+	opacity: 1;
 }
 
-/* 活跃指示条 */
-.suggestion-item:is(.suggestion-active)::before {
+.row-active::before {
 	content: "";
 	position: absolute;
 	left: 0;
@@ -241,69 +257,234 @@ input.field {
 	background: var(--t-color-accent);
 }
 
-/* 默认 → 悬停 */
-.suggestion-item:hover:not(:is(.suggestion-active)) {
-	background: var(--t-color-surface-raised);
+.row:where(:focus-visible) {
+	outline: none;
 }
 
-/* ── Suggestion Labels ── */
-.sug-label {
-	font-size: var(--text-base);
-	font-weight: 600;
+/* 字形槽：`/` `:` `?` `•` 一列对齐 */
+.row-glyph {
+	flex: 0 0 auto;
+	width: 1.125rem;
+	text-align: center;
 	font-family: var(--t-font-mono);
-	color: var(--t-color-ink);
-	min-width: 3.75rem;
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-faint);
 }
 
-.sug-desc {
+.row-active .row-glyph {
+	color: var(--t-color-accent);
+}
+
+/* 命中类的行（搜索结果）：字形换模块色，与分组标题同色 */
+.row[data-kind="task"] .row-glyph {
+	color: var(--m-task);
+}
+
+.row[data-kind="card"] .row-glyph {
+	color: var(--m-card);
+}
+
+.row[data-kind="mem"] .row-glyph {
+	color: var(--m-mem);
+}
+
+.row[data-kind="onto"] .row-glyph {
+	color: var(--m-onto);
+}
+
+.row[data-kind="chat"] .row-glyph {
+	color: var(--m-chat);
+}
+
+.row[data-kind="bookmark"] .row-glyph {
+	color: var(--m-bookmark);
+}
+
+.row[data-kind="text"] .row-glyph {
+	color: var(--m-text);
+}
+
+.row[data-kind="file"] .row-glyph {
+	color: var(--m-image);
+}
+
+/* ── Row 三列 ──
+   名称 · 描述 · 右侧提示，一律单行截断：命令/页面名短，min-width 保住对齐；
+   搜索结果的文件名可以很长，允许它收缩并打省略号 */
+.row-label {
+	flex: 0 1 auto;
+	min-width: 3.75rem;
+	font-size: var(--text-sm);
+	font-weight: 500;
+	color: var(--t-color-ink);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* 命令与路径是字面语法，用等宽（页面名与内容标题用正文字体） */
+.row-label-mono {
+	font-family: var(--t-font-mono);
+	font-weight: 600;
+}
+
+.row-active .row-label {
+	color: var(--t-color-ink-strong);
+}
+
+.row-desc {
+	flex: 1 1 auto;
+	min-width: 0;
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
-	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
-/* 搜索关键词高亮（innerHTML 渲染，非 CSS Modules 作用域） */
-.sug-desc mark {
+/* 搜索关键词高亮（innerHTML 渲染，非 CSS Modules 作用域）。
+   注意它用的 accent-soft **不再**与选中行底色相同（见文件头第 3 条） */
+.row-desc mark {
 	background: var(--t-color-accent-soft);
 	color: var(--t-color-ink);
 	border-radius: var(--radius-xs);
 	padding: 0 0.125em;
 }
 
-.sug-path {
-	font-size: var(--text-sm);
-	font-family: var(--t-font-mono);
-	color: var(--t-color-ink-faint);
-}
-
-/* ── Group Header ── */
-.sug-header {
-	padding: var(--space-xs) var(--space-md);
-	margin-top: var(--space-2xs);
-}
-
-.sug-header-label {
+.row-hint {
+	flex: 0 1 auto;
 	font-size: var(--text-xs);
-	font-weight: 700;
 	font-family: var(--t-font-mono);
 	color: var(--t-color-ink-faint);
-	text-transform: uppercase;
-	letter-spacing: 0.05em;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
-.searching {
+/* ── Group Header ──
+   吸顶：滚到列表中部也看得见"这组是什么"（底色与面板同面，滚过的行从它身后穿过） */
+.group {
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+	padding: var(--space-sm) var(--space-sm) var(--space-2xs);
+	margin-top: var(--space-xs);
+	background: var(--t-color-surface);
+}
+
+/* 模块色圆点：没有对应令牌的模块退回灰点（将来补 `--m-file` 之类就换个选择器即可） */
+.group-dot {
+	width: 0.375rem;
+	height: 0.375rem;
+	border-radius: var(--radius-full);
+	background: var(--t-color-ink-faint);
+}
+
+.group[data-kind="task"] .group-dot {
+	background: var(--m-task);
+}
+
+.group[data-kind="card"] .group-dot {
+	background: var(--m-card);
+}
+
+.group[data-kind="mem"] .group-dot {
+	background: var(--m-mem);
+}
+
+.group[data-kind="onto"] .group-dot {
+	background: var(--m-onto);
+}
+
+.group[data-kind="chat"] .group-dot {
+	background: var(--m-chat);
+}
+
+.group[data-kind="bookmark"] .group-dot {
+	background: var(--m-bookmark);
+}
+
+.group[data-kind="text"] .group-dot {
+	background: var(--m-text);
+}
+
+.group[data-kind="file"] .group-dot {
+	background: var(--m-image);
+}
+
+.group-label {
+	font-size: var(--text-xs);
+	font-weight: 600;
+	font-family: var(--t-font-mono);
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--t-color-ink-faint);
+}
+
+/* ── 状态（未匹配 / 搜索中 / 只差一次回车） ── */
+.state {
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	gap: var(--space-sm);
+	flex: 1 1 auto;
+	min-height: 4.5rem;
 	padding: var(--space-lg);
 	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+}
+
+.state kbd {
+	display: inline-block;
+	padding: var(--space-2xs) var(--space-sm);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-xs);
+	background: var(--t-color-bg);
+	font-family: var(--t-font-mono);
+	font-size: var(--text-xs);
+	color: var(--t-color-ink);
+}
+
+/* ── Footer（状态条） ── */
+.footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-md);
+	flex: 0 0 auto;
+	padding: var(--space-xs) var(--space-md) var(--space-xs) var(--space-lg);
+	border-top: 1px solid var(--t-color-border);
+	font-size: var(--text-xs);
 	color: var(--t-color-ink-faint);
 }
 
-.search-hint {
-	padding: var(--space-sm) var(--space-lg);
-	font-size: var(--text-sm);
+.status {
+	font-family: var(--t-font-mono);
+}
+
+.hints {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2xs);
+}
+
+.hints kbd {
+	display: inline-block;
+	margin-left: var(--space-xs);
+	padding: 0.0625rem var(--space-xs);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-xs);
+	background: var(--t-color-bg);
+	font-family: var(--t-font-mono);
+	font-size: var(--text-xs);
 	color: var(--t-color-ink-muted);
+}
+
+.hints kbd:first-child {
+	margin-left: 0;
 }
 
 /* ── Mobile FAB ── */
@@ -311,7 +492,49 @@ input.field {
 	display: none;
 }
 
+/* ── 窄屏：底部抽屉 ──
+   触屏：行抬到 48px（触达）；键盘提示没有意义（没有 Esc/方向键）改留可见关闭按钮；
+   面板从"居中的有限浮层"变成**贴底的抽屉** —— 拇指够得着。 */
 @media (width <= 768px) {
+	.bar {
+		top: auto;
+		bottom: 0;
+		left: 0;
+		transform: none;
+		width: 100%;
+		max-width: none;
+		max-height: min(80dvh, calc(100dvh - 3rem));
+		border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+		border-bottom: none;
+		animation: sheet-up 200ms var(--ease-out-expo) both;
+	}
+
+	.header {
+		padding-block: var(--space-md);
+	}
+
+	.row {
+		min-height: 3rem;
+	}
+
+	.hints {
+		display: none;
+	}
+
+	.close-btn {
+		display: flex;
+	}
+
+	.scroll {
+		/* 顺手抬一点滚动条宽度，手指好抓 */
+		scrollbar-width: auto;
+	}
+
+	.footer {
+		/* iOS 的 home indicator 区域 */
+		padding-bottom: max(var(--space-xs), env(safe-area-inset-bottom));
+	}
+
 	.fab {
 		display: flex;
 		align-items: center;
@@ -358,6 +581,16 @@ input.field {
 	}
 }
 
+/* ── Forced Colors ──
+   高对比模式下底色被系统色接管，"选中"只靠底色就等于没有选中态：
+   补一圈系统高亮色的边框（与 tokens.css 的约定一致，装饰属性在各组件里收敛） */
+@media (forced-colors: active) {
+	.row-active {
+		outline: 1px solid Highlight;
+		outline-offset: -1px;
+	}
+}
+
 /* ── Keyframes ── */
 
 @keyframes fade-in {
@@ -370,14 +603,26 @@ input.field {
 	}
 }
 
-@keyframes slide-in-down {
+@keyframes panel-in {
 	from {
 		opacity: 0;
-		transform: translateX(-50%) translateY(-0.5rem);
+		transform: translateX(-50%) translateY(-0.5rem) scale(0.98);
 	}
 
 	to {
 		opacity: 1;
-		transform: translateX(-50%) translateY(0);
+		transform: translateX(-50%) translateY(0) scale(1);
+	}
+}
+
+@keyframes sheet-up {
+	from {
+		opacity: 0.6;
+		transform: translateY(1.5rem);
+	}
+
+	to {
+		opacity: 1;
+		transform: translateY(0);
 	}
 }

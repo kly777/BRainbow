@@ -68,6 +68,14 @@ export interface Suggestion {
 	/** 带关键词高亮的描述（HTML），用于搜索结果展示 */
 	highlightedDesc?: string;
 	extra?: string;
+	/**
+	 * 行首字形：就是应用自己的那套词汇 —— `/` 页面、`:` 指令、`?` 转搜索、
+	 * `•` 搜索结果、`↗` 外部搜索、`↻` 搜索历史。字形的宽窄由 CSS 统一，
+	 * 列因此对齐（见 CommandPalette.module.css 的 .row-glyph）。
+	 */
+	glyph?: string;
+	/** 模块标识（file / card / mem…）：分组圆点的颜色照它取 `--m-*` */
+	kind?: string;
 	/** 是否为分组标题（不可选中） */
 	isHeader?: boolean;
 	onSelect: () => void;

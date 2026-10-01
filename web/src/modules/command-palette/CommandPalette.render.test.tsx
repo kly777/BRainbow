@@ -147,6 +147,21 @@ describe("命令面板的键盘与 a11y 契约", () => {
 		dispose();
 	});
 
+	it("有一个可见的关闭按钮（窄屏用，CSS 控制显隐），点它关面板", async () => {
+		const { dispose } = await mountPalette();
+		key(document.body, { key: "k", ctrlKey: true });
+
+		const close = document.querySelector(
+			'button[aria-label="关闭"]',
+		) as HTMLElement;
+		expect(close).toBeTruthy();
+		close.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+		await Promise.resolve();
+		expect(paletteInput()).toBeNull();
+
+		dispose();
+	});
+
 	it("无前缀打开就列出可跳页面；打字给「在站内搜索」一行，选中即切 ? 模式", async () => {
 		const { dispose } = await mountPalette();
 		key(document.body, { key: "k", ctrlKey: true });

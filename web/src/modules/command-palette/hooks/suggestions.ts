@@ -94,6 +94,7 @@ export function buildIdleItems(
 			label: `在站内搜索「${trimmed}」`,
 			desc: "任务 / 卡片 / 记忆 / 文件…",
 			extra: "search",
+			glyph: "?",
 			onSelect: () => switchToSearch(trimmed),
 		},
 	];
@@ -120,6 +121,7 @@ export function buildNavItems(
 		label: r.label,
 		desc: r.desc,
 		extra: r.path,
+		glyph: "/",
 		onSelect: () => {
 			navigate(r.path);
 			close();
@@ -155,6 +157,7 @@ export function buildCmdItems(q: string, commands: CmdEntry[]): Suggestion[] {
 		return commands.map((c) => ({
 			label: c.label,
 			desc: c.desc,
+			glyph: ":",
 			onSelect: c.action,
 		}));
 	}
@@ -162,6 +165,7 @@ export function buildCmdItems(q: string, commands: CmdEntry[]): Suggestion[] {
 	return filtered.map((c) => ({
 		label: c.label,
 		desc: c.desc,
+		glyph: ":",
 		onSelect: c.action,
 	}));
 }
@@ -181,6 +185,7 @@ export function buildSearchItems(
 					label: `在浏览器中搜索「${q}」`,
 					desc: "站内未命中时使用外部搜索引擎",
 					extra: "web",
+					glyph: "↗",
 					onSelect: () => {
 						searchWeb(q);
 						close();
@@ -202,12 +207,13 @@ export function buildSearchItems(
 	const items: Suggestion[] = [];
 	for (const [kind, groupHits] of groups) {
 		const label = KIND_LABEL[kind] ?? kind;
-		// 多组时添加分组标题
+		// 多组时添加分组标题（kind 让圆点取到模块色）
 		if (groups.size > 1) {
 			items.push({
 				label: `${label}（${groupHits.length}）`,
 				desc: "",
 				extra: "",
+				kind,
 				isHeader: true,
 				onSelect: () => {},
 			});
@@ -218,6 +224,8 @@ export function buildSearchItems(
 				desc: h.snippet,
 				highlightedDesc: highlightKeywords(h.snippet, q),
 				extra: groups.size === 1 ? label : undefined,
+				glyph: "•",
+				kind,
 				onSelect: () => {
 					navigate(resolveTargetUrl(h.target));
 					close();
@@ -231,6 +239,7 @@ export function buildSearchItems(
 			label: `在浏览器中搜索「${q}」`,
 			desc: "站内未命中时使用外部搜索引擎",
 			extra: "web",
+			glyph: "↗",
 			onSelect: () => {
 				searchWeb(q);
 				close();

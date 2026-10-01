@@ -39,6 +39,7 @@ export function usePaletteSearch(opts: UsePaletteSearchOpts) {
 			label: q,
 			desc: "搜索历史",
 			extra: "history",
+			glyph: "↻",
 			onSelect: () => {
 				opts.setQuery(`?${q}`);
 			},
@@ -47,6 +48,7 @@ export function usePaletteSearch(opts: UsePaletteSearchOpts) {
 			label: "清除搜索历史",
 			desc: "移除所有历史记录",
 			extra: "",
+			glyph: "×",
 			onSelect: () => {
 				clearSearchHistory();
 			},

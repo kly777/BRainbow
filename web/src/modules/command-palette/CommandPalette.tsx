@@ -1,7 +1,8 @@
 // ── 命令面板（⌘K）：导航 / 站内搜索 / 指令 / 移动端 FAB ──
 
 import { EmptyState, Input, Spinner, Tooltip } from "@components/ui";
-import { createMemo, For, Show } from "solid-js";
+import { X } from "@components/ui/icons";
+import { createMemo, For, type JSX, Show } from "solid-js";
 import styles from "./CommandPalette.module.css";
 import {
 	MODE_PLACEHOLDER,
@@ -24,36 +25,45 @@ function SuggestionItem(props: {
 }) {
 	if (props.item.isHeader) {
 		return (
-			<div class={styles.sugHeader} role="presentation">
-				<span class={styles.sugHeaderLabel}>{props.item.label}</span>
+			<div class={styles.group} role="presentation" data-kind={props.item.kind}>
+				<span class={styles.groupDot} />
+				<span class={styles.groupLabel}>{props.item.label}</span>
 			</div>
 		);
 	}
+	// 命令与路径是字面语法（`:home`、`/file`），用等宽；页面名与搜索结果标题用正文字体
+	const mono = props.item.glyph === ":" || props.item.glyph === "/";
 	return (
 		<button
 			type="button"
 			id={optionDomId(props.index)}
-			class={styles.suggestionItem}
-			classList={{ [styles.suggestionActive]: props.active }}
+			class={styles.row}
+			classList={{ [styles.rowActive]: props.active }}
 			onMouseDown={(e) => e.preventDefault()}
 			onMouseEnter={props.onHover}
 			onClick={props.item.onSelect}
 			role="option"
 			aria-selected={props.active}
+			data-kind={props.item.kind}
 		>
-			<span class={styles.sugLabel}>{props.item.label}</span>
+			<span class={styles.rowGlyph} aria-hidden="true">
+				{props.item.glyph ?? "•"}
+			</span>
+			<span class={styles.rowLabel} classList={{ [styles.rowLabelMono]: mono }}>
+				{props.item.label}
+			</span>
 			{props.item.highlightedDesc ? (
 				<span
-					class={styles.sugDesc}
+					class={styles.rowDesc}
 					// 这里用 innerHTML 是刻意的：命中的关键词要加 <mark>；内容在
 					// 组装建议时已经先转义再插标记（见 shared/utils/highlight.ts）
 					innerHTML={props.item.highlightedDesc}
 				/>
 			) : (
-				<span class={styles.sugDesc}>{props.item.desc}</span>
+				<span class={styles.rowDesc}>{props.item.desc}</span>
 			)}
 			{props.item.extra && (
-				<span class={styles.sugPath}>{props.item.extra}</span>
+				<span class={styles.rowHint}>{props.item.extra}</span>
 			)}
 		</button>
 	);
@@ -66,8 +76,8 @@ function SuggestionList(props: {
 	listRef: (el: HTMLDivElement) => void;
 }) {
 	return (
-		<div class={styles.suggestions} id={LISTBOX_ID} role="listbox">
-			<div ref={props.listRef} class={styles.sugScroll}>
+		<div class={styles.list} id={LISTBOX_ID} role="listbox">
+			<div ref={props.listRef} class={styles.scroll}>
 				<For each={props.items}>
 					{(s, i) => (
 						<SuggestionItem
@@ -79,68 +89,25 @@ function SuggestionList(props: {
 					)}
 				</For>
 			</div>
-			<div class={styles.sugFooter}>
-				<span>
-					<kbd>↑</kbd>
-					<kbd>↓</kbd> 选择
-				</span>
-				<span>
-					<kbd>Enter</kbd> 打开
-				</span>
-				<span>
-					<kbd>Esc</kbd> 关闭
-				</span>
-			</div>
 		</div>
 	);
 }
 
-/** 面板内的空态：换成共享 EmptyState，只保留面板自己的滚动容器 */
-function EmptyPanel(props: { text: string }) {
-	return (
-		<div class={styles.suggestions}>
-			<div class={styles.sugScroll}>
-				<EmptyState title={props.text} compact />
-			</div>
-		</div>
-	);
+/** 面板里"不是列表"的那几种：未匹配 / 搜索中 / 只差一次回车。同一个版式，居中一行 */
+function PanelState(props: { children: JSX.Element }) {
+	return <div class={styles.state}>{props.children}</div>;
 }
 
-function SearchingState() {
-	return (
-		<div class={styles.suggestions}>
-			<div class={styles.sugScroll}>
-				<div class={styles.searching}>
-					<Spinner />
-					搜索中…
-				</div>
-			</div>
-		</div>
-	);
-}
+/** 模式名（显示在输入框右侧）；idle 不显示 */
+const MODE_NAME: Record<Mode, string> = {
+	idle: "",
+	nav: "导航",
+	search: "搜索",
+	cmd: "指令",
+};
 
-function SearchHint(props: { query: string }) {
-	return (
-		<div class={styles.suggestions}>
-			<div class={styles.sugScroll}>
-				<div class={styles.searchHint}>
-					<kbd>Enter</kbd> 搜索 「{props.query}」
-				</div>
-			</div>
-		</div>
-	);
-}
-
-function ModeTag(props: { mode: Mode }) {
-	const labels: Record<Mode, string> = {
-		idle: "",
-		nav: "导航",
-		search: "搜索",
-		cmd: "指令",
-	};
-	if (!labels[props.mode]) return null;
-	return <span class={styles.modeTag}>{labels[props.mode]}</span>;
-}
+/** idle 的字形：应用自己的词汇（FAB 与落页提示都用 ⌘），有前缀时就显示那个前缀 */
+const IDLE_GLYPH = "⌘";
 
 export default function CommandPalette() {
 	const p = usePalette();
@@ -178,7 +145,12 @@ export default function CommandPalette() {
 						listRef={p.bindSugScroll}
 					/>
 				);
-			if (q) return <EmptyPanel text="未匹配" />;
+			if (q)
+				return (
+					<PanelState>
+						<EmptyState title="未匹配" compact />
+					</PanelState>
+				);
 		}
 		if (m === "cmd") {
 			if (p.cmdItems().length > 0)
@@ -190,7 +162,12 @@ export default function CommandPalette() {
 						listRef={p.bindSugScroll}
 					/>
 				);
-			if (q) return <EmptyPanel text={p.auth().user ? "已登录" : "未登录"} />;
+			if (q)
+				return (
+					<PanelState>
+						<EmptyState title={p.auth().user ? "已登录" : "未登录"} compact />
+					</PanelState>
+				);
 		}
 		if (m === "search") {
 			if (p.searchItems().length > 0)
@@ -202,8 +179,19 @@ export default function CommandPalette() {
 						listRef={p.bindSugScroll}
 					/>
 				);
-			if (p.searching() && q) return <SearchingState />;
-			if (q) return <SearchHint query={q} />;
+			if (p.searching() && q)
+				return (
+					<PanelState>
+						<Spinner />
+						搜索中…
+					</PanelState>
+				);
+			if (q)
+				return (
+					<PanelState>
+						<kbd>Enter</kbd> 搜索「{q}」
+					</PanelState>
+				);
 		}
 		return null;
 	};
@@ -224,9 +212,10 @@ export default function CommandPalette() {
 					aria-modal="true"
 					aria-label="命令面板"
 				>
-					<div class={styles.inputRow}>
-						<span class={styles.prefix}>{MODE_PREFIX[p.mode() as Mode]}</span>
-						<ModeTag mode={p.mode()} />
+					<div class={styles.header}>
+						<span class={styles.modeGlyph} aria-hidden="true">
+							{MODE_PREFIX[p.mode() as Mode] || IDLE_GLYPH}
+						</span>
 						<Input
 							ref={p.bindInput}
 							class={styles.field}
@@ -248,12 +237,32 @@ export default function CommandPalette() {
 							aria-activedescendant={p.activeOptionId()}
 							aria-label="搜索或执行命令"
 						/>
-						{/* 结果条数播报：读屏用户看不到列表在收窄 */}
-						<span class="sr-only" aria-live="polite">
+						{/* 模式名（idle 不显示）：输入框右侧，替代原先左侧的重复色块 */}
+						<span class={styles.modeName}>{MODE_NAME[p.mode() as Mode]}</span>
+						{/* 窄屏才显示（CSS 控制）：移动端没有 Esc，浮层得有个看得见的出口。
+						    可访问名用"关闭"而不是"关闭命令面板"——遮罩按钮已经占了后者 */}
+						<button
+							type="button"
+							class={styles.closeBtn}
+							onClick={p.close}
+							aria-label="关闭"
+						>
+							<X size={16} />
+						</button>
+					</div>
+					<div class={styles.body}>{ActionPanel()}</div>
+					{/* 页脚 = 状态条：左"多少项"（兼读屏播报），右快捷键提示（窄屏隐藏） */}
+					<div class={styles.footer}>
+						<span class={styles.status} aria-live="polite">
 							{resultAnnouncement()}
 						</span>
+						<span class={styles.hints}>
+							<kbd>↑</kbd>
+							<kbd>↓</kbd> 选择
+							<kbd>↵</kbd> 打开
+							<kbd>esc</kbd> 关闭
+						</span>
 					</div>
-					{ActionPanel()}
 				</div>
 			</Show>
 

@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT c.conv_id, c.title\n               FROM conv_titles_fts fts\n               JOIN conv_titles c ON c.id = fts.rowid\n               WHERE conv_titles_fts MATCH ?2\n                 AND (?1 IS NULL OR c.user_id = ?1)\n               ORDER BY rank\n               LIMIT ?3",
+  "describe": {
+    "columns": [
+      {
+        "name": "conv_id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "conv_titles",
+            "name": "conv_id"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "conv_titles",
+            "name": "title"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "32a817dfc9323e645f49bc112f391b1c8052e97d01c131eb8a97d636d46c7f7d"
+}

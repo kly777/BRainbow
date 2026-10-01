@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COUNT(*) FROM mem WHERE (?1 IS NULL OR user_id = ?1) AND state = 'new' AND buried = 0 AND state != 'suspended'",
+  "describe": {
+    "columns": [
+      {
+        "name": "COUNT(*)",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "506a6113958c5c34eba276552bd5a64dc097d6957c5f503129cad08168f73cb0"
+}

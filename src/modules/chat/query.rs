@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use sqlx::SqlitePool;
 
+use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{
     SearchHit as GlobalSearchHit, SearchPort, fts_query, normalize_search,
@@ -25,11 +26,11 @@ impl ChatQueryService {
     /// LIKE 搜索消息内容 + 树标题，命中节点优先，标题命中树级。
     pub async fn search(
         &self,
-        user_id: i32,
+        actor: &Actor,
         q: &str,
         limit: i64,
     ) -> Result<SearchResponse, ServiceError> {
-        self.repo.search(user_id, q, limit).await
+        self.repo.search(actor, q, limit).await
     }
 }
 
@@ -37,7 +38,7 @@ impl ChatQueryService {
 impl SearchPort for ChatQueryService {
     async fn search(
         &self,
-        user_id: i32,
+        actor: &Actor,
         q: &str,
         limit: i64,
     ) -> Result<Vec<GlobalSearchHit>, ServiceError> {
@@ -45,9 +46,9 @@ impl SearchPort for ChatQueryService {
             return Ok(vec![]);
         };
         if let Some(fts) = fts_query(q) {
-            self.repo.search_hits_fts(user_id, &fts, cap).await
+            self.repo.search_hits_fts(actor, &fts, cap).await
         } else {
-            self.repo.search_hits(user_id, &like, cap).await
+            self.repo.search_hits(actor, &like, cap).await
         }
     }
 }

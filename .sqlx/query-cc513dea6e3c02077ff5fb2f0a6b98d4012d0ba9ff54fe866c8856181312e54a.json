@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR IGNORE INTO mem_tag (mem_id, tag_id)\n                   SELECT ?1, ?2\n                   WHERE EXISTS (SELECT 1 FROM mem m WHERE m.id = ?1 AND (?3 IS NULL OR m.user_id = ?3))\n                     AND EXISTS (SELECT 1 FROM tag t WHERE t.id = ?2 AND (?3 IS NULL OR t.user_id = ?3))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "cc513dea6e3c02077ff5fb2f0a6b98d4012d0ba9ff54fe866c8856181312e54a"
+}

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE mem SET state=?1, step_index=?2, due_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?3 AND (?4 IS NULL OR user_id = ?4)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "0f350af4a8d049973962d07b488853549e685421cecaa97f78a93ca248ae2f04"
+}

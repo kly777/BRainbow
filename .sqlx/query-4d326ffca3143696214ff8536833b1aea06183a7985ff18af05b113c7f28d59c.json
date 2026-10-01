@@ -1,0 +1,62 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT n.id AS node_id, t.id AS tree_id, t.title, n.content\n               FROM chat_node n JOIN chat_tree t ON t.id = n.tree_id\n               WHERE (?1 IS NULL OR t.user_id = ?1) AND n.content LIKE ?2 ESCAPE '\\'\n               ORDER BY n.id DESC LIMIT ?3",
+  "describe": {
+    "columns": [
+      {
+        "name": "node_id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "tree_id",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "chat_tree",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chat_tree",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "name": "content",
+        "ordinal": 3,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chat_node",
+            "name": "content"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "4d326ffca3143696214ff8536833b1aea06183a7985ff18af05b113c7f28d59c"
+}

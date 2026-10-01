@@ -6,6 +6,9 @@ mod repository;
 mod response;
 pub(crate) mod service;
 
+#[cfg(test)]
+mod authz_tests;
+
 use std::sync::Arc;
 
 use axum::{

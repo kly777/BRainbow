@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, name, description FROM onto\n               WHERE (?1 IS NULL OR user_id = ?1)\n                 AND (name LIKE ?2 ESCAPE '\\' OR description LIKE ?2 ESCAPE '\\')\n               ORDER BY id DESC LIMIT ?3",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "onto",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "onto",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "name": "description",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "onto",
+            "name": "description"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "81b6587d51b95c2f23ef497d4190c438873081c9784dffdafd49d739e36280b1"
+}

@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT conv_id, title FROM conv_titles\n               WHERE (?1 IS NULL OR user_id = ?1) AND title LIKE ?2 ESCAPE '\\'\n               ORDER BY conv_id DESC LIMIT ?3",
+  "describe": {
+    "columns": [
+      {
+        "name": "conv_id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "conv_titles",
+            "name": "conv_id"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "conv_titles",
+            "name": "title"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "49ef0b30d6533ac7485d139c39a21eeda053730ecbdf7f78def59d8db6a85089"
+}

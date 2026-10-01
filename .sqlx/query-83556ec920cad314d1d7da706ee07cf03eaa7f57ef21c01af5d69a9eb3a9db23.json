@@ -1,0 +1,21 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT COUNT(*) FROM signifier_signified WHERE signified = ?1 AND (?2 IS NULL OR user_id = ?2)",
+  "describe": {
+    "columns": [
+      {
+        "name": "COUNT(*)",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "83556ec920cad314d1d7da706ee07cf03eaa7f57ef21c01af5d69a9eb3a9db23"
+}

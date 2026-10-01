@@ -2,21 +2,14 @@
 //!
 //! 每个子文件实现 `impl super::super::MemRepo` 的一个方法组。
 //! `new` 与模块声明保留在 `mod.rs`。
+//!
+//! `create_chunk` / `update_chunk` 是端口方法（带归属，见 `trait_impl.rs`），
+//! 这里只留测试用的 `get_chunk`。
 
 use super::super::super::model::*;
 use super::super::*;
-#[allow(dead_code)]
-impl super::super::MemRepo {
-    pub async fn create_chunk(&self, user_id: i32, content: &str) -> Result<i32, sqlx::Error> {
-        sqlx::query_scalar!(
-            r#"INSERT INTO chunk (content, user_id) VALUES (?1, ?2) RETURNING id AS "id!: i32""#,
-            content,
-            user_id
-        )
-        .fetch_one(&*self.pool)
-        .await
-    }
 
+impl super::super::MemRepo {
     #[cfg_attr(not(test), allow(dead_code))]
     pub async fn get_chunk(&self, id: i32) -> Result<Option<Chunk>, sqlx::Error> {
         sqlx::query_as!(
@@ -38,23 +31,4 @@ impl super::super::MemRepo {
             })
         })
     }
-
-    pub async fn update_chunk(
-        &self,
-        user_id: i32,
-        id: i32,
-        content: &str,
-    ) -> Result<(), sqlx::Error> {
-        sqlx::query!(
-            "UPDATE chunk SET content=?1, updated_at=strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now') WHERE id=?2 AND (user_id = ?3 OR user_id IS NULL)",
-            content,
-            id,
-            user_id
-        )
-        .execute(&*self.pool)
-        .await?;
-        Ok(())
-    }
-
-    // ── Mem CRUD ──
 }

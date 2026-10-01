@@ -9,6 +9,7 @@ use super::limits;
 use super::mime;
 use super::model::{File, FileCategory, NewFile, UpdateFileRequest};
 use super::repository::FileRepository;
+use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 
 // 维护侧的动作（目录体检 / 哈希回填 / 孤儿回收 / 临时文件）自成一块，放子模块 ——
@@ -85,21 +86,25 @@ impl FileService {
         svc
     }
 
-    /// 改名 / 改标签 / 切换可见性 / 删除的权限：仅上传者本人。
+    /// 改名 / 改标签 / 切换可见性 / 删除的权限：上传者本人与 admin。
     ///
-    /// 匿名的老文件（`user_id` 为 NULL）没有归属人，视为公共资源，任何登录用户可整理。
+    /// 公开可读 ≠ 谁都能改：`is_private` 只管"看不看得见"，写一律只认归属
+    /// （判据在 `shared/actor.rs`，别在这里拼 user_id）。
+    ///
+    /// 越权按**"不存在"**处理（404）—— 不泄露"这个 id 存在但不是你的"；
+    /// 无主行（`user_id IS NULL` 的历史数据）同理：v20 已认领给 admin，
+    /// 现在只有 admin 改得动（fail-closed）。
+    ///
+    /// 归属列上传之后不可变，所以"先查行、再判定、后写"不存在 TOCTOU 窗口。
     fn ensure_can_mutate(
         &self,
         file: &super::repository::FileRow,
-        viewer: Option<i64>,
+        actor: &Actor,
     ) -> Result<(), ServiceError> {
-        match (file.user_id, viewer) {
-            (Some(owner), Some(uid)) if owner != uid => {
-                Err(ServiceError::Forbidden("只能修改自己上传的文件".into()))
-            }
-            (Some(_), None) => Err(ServiceError::Forbidden("请先登录".into())),
-            _ => Ok(()),
+        if actor.can_write(file.user_id) {
+            return Ok(());
         }
+        Err(ServiceError::NotFound("文件不存在".into()))
     }
 
     /// 磁盘上是否缺少该文件内容（写侧返回 DTO 时用；读侧见 `FileQueryService::is_missing`）
@@ -121,6 +126,9 @@ impl FileService {
     /// `head` 为文件前若干字节（图片尺寸解析只需头部）。
     /// 类别由 `final_mime` 现算（不接收调用方的——结构精炼会改 mime）。
     /// 出错时由本方法负责清理 `tmp_path`。
+    ///
+    /// `owner` 是**新行的归属目标**（不是可见性判据）：认证上传传 `Some(&Actor)`，
+    /// `None` 只留匿名老路径（HTTP 上传路由在认证组内，走不到这一档）。
     // 参数看着多，但前四个是"流式上传的物理输入"（临时文件、字节数、哈希、文件头），
     // 后四个是归属与客户端线索（后者已收进 UploadHints）。再抽一层结构体只会把
     // 这一条链路绕得更长 —— 入口是 upload / upload_with_hints 两个简写。
@@ -133,7 +141,7 @@ impl FileService {
         head: &[u8],
         original_name: &str,
         final_mime: &str,
-        user_id: Option<i64>,
+        owner: Option<&Actor>,
         hints: UploadHints,
     ) -> Result<UploadOutcome, ServiceError> {
         let UploadHints {
@@ -189,7 +197,8 @@ impl FileService {
                 width: None,
                 height: None,
                 duration_ms,
-                user_id,
+                // 归属写调用者的 id（admin 也是某个人，别写成 NULL/0 —— 见授权文档 §5）
+                user_id: owner.map(|a| i64::from(a.user_id)),
                 // force 副本显式不参与去重：写 NULL 退出唯一索引约束
                 content_hash: if force { None } else { Some(&hash) },
                 // 上传一律公开；需要私密时由上传者在详情页切换（匿名上传无归属，不能私密）
@@ -239,10 +248,13 @@ impl FileService {
                 .await;
         }
 
-        // 标签（匿名上传无 user_id 时无法归属标签，静默忽略；
-        // 避免 user_id.unwrap_or(0) 写入不存在的用户导致外键失败）
-        let tag_names = match (tags, user_id) {
-            (Some(t), Some(uid)) => self.set_tags_for_file(file_row.id, uid, &t).await?,
+        // 标签（匿名老路径没有归属人，无法归属标签，静默忽略 —— 直接跳过，
+        // 别拿 0 兜底：那会写出一条 user_id=0 的标签并撞外键）
+        let tag_names = match (tags, owner) {
+            (Some(t), Some(actor)) => {
+                self.set_tags_for_file(file_row.id, i64::from(actor.user_id), &t)
+                    .await?
+            }
             _ => Vec::new(),
         };
 
@@ -283,7 +295,7 @@ impl FileService {
         data: &[u8],
         original_name: &str,
         client_mime: &str,
-        user_id: Option<i64>,
+        owner: Option<&Actor>,
         tags: Option<Vec<String>>,
         force: bool,
     ) -> Result<UploadOutcome, ServiceError> {
@@ -291,7 +303,7 @@ impl FileService {
             data,
             original_name,
             client_mime,
-            user_id,
+            owner,
             UploadHints {
                 tags,
                 duration_ms: None,
@@ -307,7 +319,7 @@ impl FileService {
         data: &[u8],
         original_name: &str,
         client_mime: &str,
-        user_id: Option<i64>,
+        owner: Option<&Actor>,
         hints: UploadHints,
     ) -> Result<UploadOutcome, ServiceError> {
         let final_mime = mime::resolve_mime(data, client_mime, original_name)?;
@@ -325,7 +337,7 @@ impl FileService {
             data,
             original_name,
             &final_mime,
-            user_id,
+            owner,
             hints,
         )
         .await
@@ -465,12 +477,14 @@ impl FileService {
         Ok(names)
     }
 
-    /// 更新文件信息
+    /// 更新文件信息（改名 / 标签 / 元信息 / 公开-私密切换）。
+    ///
+    /// 写一律先过归属判定（上传者与 admin；越权 → 404）。
     pub async fn update(
         &self,
         stored_id: &str,
         req: UpdateFileRequest,
-        user_id: Option<i64>,
+        actor: &Actor,
     ) -> Result<File, ServiceError> {
         // 查找文件
         let file_row = self
@@ -480,10 +494,10 @@ impl FileService {
             .map_err(ServiceError::Db)?
             .ok_or_else(|| ServiceError::NotFound("文件不存在".into()))?;
 
-        // 权限：仅上传者本人（匿名的老文件无归属人，任何登录用户可整理）
-        self.ensure_can_mutate(&file_row, user_id)?;
+        // 权限：上传者本人与 admin（无主的老文件只有 admin 能动）
+        self.ensure_can_mutate(&file_row, actor)?;
 
-        // 切换公开 / 私密（匿名上传没有归属用户，"对应的人"不存在，因此不允许私密）
+        // 切换公开 / 私密（无主的历史数据没有"上传者"可授权，私密等于谁都看不见）
         if let Some(private) = req.is_private {
             if private && file_row.user_id.is_none() {
                 return Err(ServiceError::InvalidInput(
@@ -505,9 +519,9 @@ impl FileService {
                 .map_err(ServiceError::Db)?;
         }
 
-        // 更新标签
+        // 更新标签（标签的创建者记调用者本人 —— admin 也一样，别写 NULL/0）
         let tags = if let Some(tag_names) = req.tags {
-            self.set_tags_for_file(file_row.id, user_id.unwrap_or(0), &tag_names)
+            self.set_tags_for_file(file_row.id, i64::from(actor.user_id), &tag_names)
                 .await?
         } else {
             self.repo
@@ -564,13 +578,13 @@ impl FileService {
         })
     }
 
-    /// 文件库统计（占用与类别分布）
+    /// 文件库统计（占用与类别分布）。`viewer` 为 `None` = 未认证（只统计公开文件）。
     pub async fn stats(
         &self,
-        user_id: Option<i64>,
+        viewer: Option<&Actor>,
     ) -> Result<crate::modules::file::model::FileStats, ServiceError> {
         let (total_count, total_bytes, rows) =
-            self.repo.stats(user_id).await.map_err(ServiceError::Db)?;
+            self.repo.stats(viewer).await.map_err(ServiceError::Db)?;
         Ok(crate::modules::file::model::FileStats {
             total_count,
             total_bytes,
@@ -623,12 +637,12 @@ impl FileService {
             .map_err(ServiceError::Db)
     }
 
-    /// 删除文件（仅上传者本人；匿名的老文件任何登录用户可删）
+    /// 删除文件（上传者与 admin；越权 → 404）
     pub async fn delete(
         &self,
         stored_id: &str,
         force: bool,
-        user_id: Option<i64>,
+        actor: &Actor,
     ) -> Result<(), ServiceError> {
         let existing = self
             .repo
@@ -636,7 +650,7 @@ impl FileService {
             .await
             .map_err(ServiceError::Db)?
             .ok_or_else(|| ServiceError::NotFound("文件不存在".into()))?;
-        self.ensure_can_mutate(&existing, user_id)?;
+        self.ensure_can_mutate(&existing, actor)?;
 
         // 引用检查：force 表示用户已在二次确认中接受后果，跳过 4 张内容表的全表 LIKE 扫描
         if !force {
@@ -788,7 +802,14 @@ mod tests {
         let ctx = setup_service().await;
         let clip = ctx
             .svc
-            .upload(MP4_MIN, "片段.mp4", "video/mp4", Some(7), None, false)
+            .upload(
+                MP4_MIN,
+                "片段.mp4",
+                "video/mp4",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .unwrap()
             .file;
@@ -847,7 +868,7 @@ mod tests {
                 clip,
                 "片段.mp4",
                 "video/mp4",
-                Some(7),
+                Some(&Actor::user(7)),
                 UploadHints {
                     duration_ms: Some(125_000),
                     ..Default::default()
@@ -867,7 +888,7 @@ mod tests {
                 PNG_1X1,
                 "图.png",
                 "image/png",
-                Some(7),
+                Some(&Actor::user(7)),
                 UploadHints {
                     duration_ms: Some(125_000),
                     ..Default::default()
@@ -888,7 +909,7 @@ mod tests {
                 PNG_1X1,
                 "照片.png",
                 "image/png",
-                Some(7),
+                Some(&Actor::user(7)),
                 Some(vec!["图片".into()]),
                 false,
             )
@@ -943,7 +964,7 @@ mod tests {
                 b"hello world",
                 "note.txt",
                 "text/plain",
-                Some(7),
+                Some(&Actor::user(7)),
                 None,
                 false,
             )
@@ -960,7 +981,14 @@ mod tests {
         let data = [0xDE, 0xAD, 0xBE, 0xEF, 0x00, 0x01];
         let err = ctx
             .svc
-            .upload(&data, "x.png", "image/png", Some(7), None, false)
+            .upload(
+                &data,
+                "x.png",
+                "image/png",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .unwrap_err();
         assert!(matches!(err, ServiceError::InvalidInput(_)));
@@ -972,7 +1000,14 @@ mod tests {
         let ctx = setup_service().await;
         let err = ctx
             .svc
-            .upload(b"", "empty.txt", "text/plain", Some(7), None, false)
+            .upload(
+                b"",
+                "empty.txt",
+                "text/plain",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .unwrap_err();
         assert!(err.to_string().contains("空文件"));
@@ -1000,7 +1035,7 @@ mod tests {
                 &bytes,
                 "老人与海.epub",
                 "application/epub",
-                Some(7),
+                Some(&Actor::user(7)),
                 None,
                 false,
             )
@@ -1032,7 +1067,14 @@ mod tests {
         let sheet = fs::read(&path).expect("读回 zip");
         let f = ctx
             .svc
-            .upload(&sheet, "报表.docx", DOCX, Some(7), None, false)
+            .upload(
+                &sheet,
+                "报表.docx",
+                DOCX,
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .expect("xlsx 结构应当能上传")
             .file;
@@ -1054,7 +1096,7 @@ mod tests {
                 &word,
                 "无后缀文档",
                 "application/octet-stream",
-                Some(7),
+                Some(&Actor::user(7)),
                 None,
                 true,
             )
@@ -1082,7 +1124,7 @@ mod tests {
         ] {
             let f = ctx
                 .svc
-                .upload(bytes, name, mime, Some(7), None, false)
+                .upload(bytes, name, mime, Some(&Actor::user(7)), None, false)
                 .await
                 .unwrap_or_else(|e| panic!("{name} 应当能上传：{e}"))
                 .file;
@@ -1101,7 +1143,7 @@ mod tests {
                 OLE_MIN,
                 "老文档.doc",
                 "application/msword",
-                Some(7),
+                Some(&Actor::user(7)),
                 None,
                 false,
             )
@@ -1126,7 +1168,7 @@ mod tests {
                 ZIP_MIN,
                 "文档.odt",
                 "application/vnd.oasis.opendocument.text",
-                Some(7),
+                Some(&Actor::user(7)),
                 None,
                 false,
             )
@@ -1144,7 +1186,14 @@ mod tests {
         let ctx = setup_service().await;
         let f = ctx
             .svc
-            .upload(PNG_1X1, "x.txt", "text/plain", Some(7), None, false)
+            .upload(
+                PNG_1X1,
+                "x.txt",
+                "text/plain",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .expect("内容验明是 PNG 就按 PNG 收")
             .file;
@@ -1159,7 +1208,14 @@ mod tests {
         let ctx = setup_service().await;
         let f = ctx
             .svc
-            .upload(ZIP_MIN, "x.zip", "application/zip", Some(7), None, false)
+            .upload(
+                ZIP_MIN,
+                "x.zip",
+                "application/zip",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .unwrap()
             .file;
@@ -1177,7 +1233,14 @@ mod tests {
         big.resize(limits::SVG_MAX_SIZE as usize + 1, b' ');
         let err = ctx
             .svc
-            .upload(&big, "big.svg", "image/svg+xml", Some(7), None, false)
+            .upload(
+                &big,
+                "big.svg",
+                "image/svg+xml",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .unwrap_err();
         assert!(err.to_string().contains("文件过大"));
@@ -1189,7 +1252,14 @@ mod tests {
         // user_id 指向不存在的用户 → 插库外键失败 → 临时文件必须被清理
         let err = ctx
             .svc
-            .upload(PNG_1X1, "x.png", "image/png", Some(9999), None, false)
+            .upload(
+                PNG_1X1,
+                "x.png",
+                "image/png",
+                Some(&Actor::user(9999)),
+                None,
+                false,
+            )
             .await
             .unwrap_err();
         assert!(matches!(err, ServiceError::Db(_)));
@@ -1259,7 +1329,7 @@ mod tests {
                 b"fn main() {}\n",
                 "demo.rs",
                 "application/octet-stream",
-                Some(7),
+                Some(&Actor::user(7)),
                 None,
                 false,
             )
@@ -1276,7 +1346,14 @@ mod tests {
         let svg = b"<?xml version=\"1.0\"?>\n<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"10\" height=\"10\"><rect width=\"10\" height=\"10\"/></svg>";
         let f = ctx
             .svc
-            .upload(svg, "icon.svg", "image/svg+xml", Some(7), None, false)
+            .upload(
+                svg,
+                "icon.svg",
+                "image/svg+xml",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .unwrap()
             .file;
@@ -1314,7 +1391,7 @@ mod tests {
                 ply,
                 "model.ply",
                 "application/octet-stream",
-                Some(7),
+                Some(&Actor::user(7)),
                 None,
                 false,
             )
@@ -1333,7 +1410,7 @@ mod tests {
                 binary,
                 "scan.ply",
                 "application/octet-stream",
-                Some(7),
+                Some(&Actor::user(7)),
                 None,
                 false,
             )
@@ -1361,7 +1438,7 @@ mod tests {
                 PNG_1X1,
                 "写入.png",
                 "image/png",
-                Some(7),
+                Some(&Actor::user(7)),
                 UploadHints {
                     tags: Some(vec!["t".into()]),
                     ..Default::default()
@@ -1387,7 +1464,14 @@ mod tests {
         let ctx = setup_service().await;
         let first = ctx
             .svc
-            .upload(PNG_1X1, "a.png", "image/png", Some(7), None, false)
+            .upload(
+                PNG_1X1,
+                "a.png",
+                "image/png",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .unwrap();
         let tmp = format!("{}/tmp_dup.tmp", ctx.dir.0);
@@ -1402,7 +1486,7 @@ mod tests {
                 PNG_1X1,
                 "b.png",
                 "image/png",
-                Some(7),
+                Some(&Actor::user(7)),
                 UploadHints::default(),
             )
             .await
@@ -1431,7 +1515,14 @@ mod tests {
         let html = b"<!DOCTYPE html><html><body><svg><rect/></svg></body></html>".as_slice();
         let first = ctx
             .svc
-            .upload(html, "saved.html", "text/html", Some(7), None, false)
+            .upload(
+                html,
+                "saved.html",
+                "text/html",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .unwrap();
         assert_eq!(first.file.mime_type, "text/html");
@@ -1454,7 +1545,14 @@ mod tests {
         // 重传同一份内容 → 命中去重（不新建记录），但类型被纠正回来
         let again = ctx
             .svc
-            .upload(html, "saved.html", "text/html", Some(7), None, false)
+            .upload(
+                html,
+                "saved.html",
+                "text/html",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .unwrap();
         assert!(again.duplicate);
@@ -1469,12 +1567,26 @@ mod tests {
         let ctx = setup_service().await;
         let first = ctx
             .svc
-            .upload(PNG_1X1, "a.png", "image/png", Some(7), None, false)
+            .upload(
+                PNG_1X1,
+                "a.png",
+                "image/png",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .unwrap();
         let again = ctx
             .svc
-            .upload(PNG_1X1, "a.png", "image/png", Some(7), None, false)
+            .upload(
+                PNG_1X1,
+                "a.png",
+                "image/png",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .unwrap();
         assert!(again.duplicate);
@@ -1494,7 +1606,14 @@ mod tests {
         let ctx = setup_service().await;
         let first = ctx
             .svc
-            .upload(PNG_1X1, "a.png", "image/png", Some(7), None, false)
+            .upload(
+                PNG_1X1,
+                "a.png",
+                "image/png",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .unwrap();
         assert!(!first.duplicate);
@@ -1503,7 +1622,14 @@ mod tests {
         // 第二次相同内容 → 复用已有记录，不新建、不重复占盘
         let second = ctx
             .svc
-            .upload(PNG_1X1, "b.png", "image/png", Some(7), None, false)
+            .upload(
+                PNG_1X1,
+                "b.png",
+                "image/png",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .unwrap();
         assert!(second.duplicate);
@@ -1530,11 +1656,24 @@ mod tests {
         // 并发竞态：两个请求同时上传同一内容，"先查后插"各自未命中，
         // 靠 content_hash 唯一索引兜底 —— 最终只留一条记录、一份磁盘文件
         let ctx = setup_service().await;
+        let racer = Actor::user(7);
         let (a, b) = tokio::join!(
-            ctx.svc
-                .upload(PNG_1X1, "race-a.png", "image/png", Some(7), None, false),
-            ctx.svc
-                .upload(PNG_1X1, "race-b.png", "image/png", Some(7), None, false),
+            ctx.svc.upload(
+                PNG_1X1,
+                "race-a.png",
+                "image/png",
+                Some(&racer),
+                None,
+                false
+            ),
+            ctx.svc.upload(
+                PNG_1X1,
+                "race-b.png",
+                "image/png",
+                Some(&racer),
+                None,
+                false
+            ),
         );
         let a = a.expect("上传 A 不应失败");
         let b = b.expect("上传 B 不应失败");
@@ -1561,12 +1700,26 @@ mod tests {
         let ctx = setup_service().await;
         let first = ctx
             .svc
-            .upload(PNG_1X1, "a.png", "image/png", Some(7), None, false)
+            .upload(
+                PNG_1X1,
+                "a.png",
+                "image/png",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .unwrap();
         let forced = ctx
             .svc
-            .upload(PNG_1X1, "copy.png", "image/png", Some(7), None, true)
+            .upload(
+                PNG_1X1,
+                "copy.png",
+                "image/png",
+                Some(&Actor::user(7)),
+                None,
+                true,
+            )
             .await
             .unwrap();
 
@@ -1589,13 +1742,27 @@ mod tests {
         let ctx = setup_service().await;
         let mine = ctx
             .svc
-            .upload(PNG_1X1, "mine.png", "image/png", Some(7), None, false)
+            .upload(
+                PNG_1X1,
+                "mine.png",
+                "image/png",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .unwrap();
         // 单人项目：另一账号上传相同内容 → 全局唯一，复用同一 id（不重复占盘）
         let other = ctx
             .svc
-            .upload(PNG_1X1, "other.png", "image/png", Some(8), None, false)
+            .upload(
+                PNG_1X1,
+                "other.png",
+                "image/png",
+                Some(&Actor::user(8)),
+                None,
+                false,
+            )
             .await
             .unwrap();
 
@@ -1616,7 +1783,14 @@ mod tests {
         let ctx = setup_service().await;
         let a = ctx
             .svc
-            .upload(PNG_1X1, "a.png", "image/png", Some(7), None, false)
+            .upload(
+                PNG_1X1,
+                "a.png",
+                "image/png",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .unwrap();
         // 尾部加一个字节 → 内容不同，不应误判为重复
@@ -1624,7 +1798,14 @@ mod tests {
         other.push(0x00);
         let b = ctx
             .svc
-            .upload(&other, "b.png", "image/png", Some(7), None, false)
+            .upload(
+                &other,
+                "b.png",
+                "image/png",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .unwrap();
 
@@ -1643,7 +1824,7 @@ mod tests {
                 PNG_1X1,
                 "old.png",
                 "image/png",
-                Some(7),
+                Some(&Actor::user(7)),
                 Some(vec!["旧标签".into()]),
                 false,
             )
@@ -1661,7 +1842,7 @@ mod tests {
                     meta: Some(HashMap::from([("pages".into(), "3".into())])),
                     is_private: None,
                 },
-                Some(7),
+                &Actor::user(7),
             )
             .await
             .unwrap();
@@ -1694,7 +1875,7 @@ mod tests {
                     meta: None,
                     is_private: None,
                 },
-                Some(7),
+                &Actor::user(7),
             )
             .await
             .unwrap_err();
@@ -1708,14 +1889,24 @@ mod tests {
         let ctx = setup_service().await;
         let f = ctx
             .svc
-            .upload(PDF_MIN, "报告.pdf", "application/pdf", Some(7), None, false)
+            .upload(
+                PDF_MIN,
+                "报告.pdf",
+                "application/pdf",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .unwrap()
             .file;
         let disk = std::path::Path::new(&ctx.dir.0).join(&f.stored_id);
         assert!(disk.exists());
 
-        ctx.svc.delete(&f.stored_id, false, Some(7)).await.unwrap();
+        ctx.svc
+            .delete(&f.stored_id, false, &Actor::user(7))
+            .await
+            .unwrap();
 
         assert!(!disk.exists(), "删除后磁盘文件应被移除");
         let row: Option<i64> = sqlx::query_scalar("SELECT id FROM file WHERE stored_id = ?")
@@ -1731,7 +1922,14 @@ mod tests {
         let ctx = setup_service().await;
         let f = ctx
             .svc
-            .upload(PNG_1X1, "used.png", "image/png", Some(7), None, false)
+            .upload(
+                PNG_1X1,
+                "used.png",
+                "image/png",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
             .await
             .unwrap()
             .file;
@@ -1746,7 +1944,7 @@ mod tests {
         // 无 force：InUse 拒绝，记录与文件保留
         let err = ctx
             .svc
-            .delete(&f.stored_id, false, Some(7))
+            .delete(&f.stored_id, false, &Actor::user(7))
             .await
             .unwrap_err();
         assert!(matches!(err, ServiceError::InUse(_)));
@@ -1754,25 +1952,24 @@ mod tests {
         assert!(disk.exists());
 
         // force：删除成功
-        ctx.svc.delete(&f.stored_id, true, Some(7)).await.unwrap();
+        ctx.svc
+            .delete(&f.stored_id, true, &Actor::user(7))
+            .await
+            .unwrap();
         assert!(!disk.exists());
     }
 
     // ── 权限与可见性 ──
 
-    /// 别人的文件：改名/删除都拒绝（Forbidden）
-    #[tokio::test]
-    async fn cannot_mutate_other_users_file() {
-        let ctx = setup_service().await;
-        // user 8 上传的文件
-        let id = uuid::Uuid::new_v4().to_string();
+    /// 造一条"别人的文件"：归 user 8，磁盘上放一份内容
+    async fn seed_other_users_file(ctx: &Ctx, original_name: &str, is_private: bool) -> String {
         let stored = crate::modules::file::service::generate_stored_id();
         std::fs::write(std::path::Path::new(&ctx.dir.0).join(&stored), b"data").unwrap();
         ctx.svc
             .repo
             .insert(NewFile {
                 stored_id: &stored,
-                original_name: "other.png",
+                original_name,
                 mime_type: "image/png",
                 size_bytes: 4,
                 width: None,
@@ -1780,60 +1977,127 @@ mod tests {
                 duration_ms: None,
                 user_id: Some(8),
                 content_hash: None,
-                is_private: false,
+                is_private,
             })
             .await
             .unwrap();
-        let _ = id;
-
-        // user 7 改名 / 删除都被拒
-        let err = ctx
-            .svc
-            .update(
-                &stored,
-                UpdateFileRequest {
-                    original_name: Some("改名.png".into()),
-                    tags: None,
-                    meta: None,
-                    is_private: None,
-                },
-                Some(7),
-            )
-            .await
-            .unwrap_err();
-        assert!(matches!(err, ServiceError::Forbidden(_)), "{err:?}");
-
-        let err = ctx.svc.delete(&stored, true, Some(7)).await.unwrap_err();
-        assert!(matches!(err, ServiceError::Forbidden(_)), "{err:?}");
-
-        // 上传者本人可以
-        ctx.svc
-            .update(
-                &stored,
-                UpdateFileRequest {
-                    original_name: Some("改名.png".into()),
-                    tags: None,
-                    meta: None,
-                    is_private: Some(true),
-                },
-                Some(8),
-            )
-            .await
-            .unwrap();
-        let f = ctx
-            .svc
-            .repo
-            .find_by_stored_id(&stored)
-            .await
-            .unwrap()
-            .unwrap();
-        assert_eq!(f.is_private, 1);
-        assert_eq!(f.original_name, "改名.png");
+        stored
     }
 
-    /// 匿名老文件（user_id 为 NULL）没有归属人：任何登录用户可整理，但不能设为私密
+    /// 写路径的四态 × 公开/私密 矩阵：改名 / 删除 / 切私密都只认上传者与 admin。
+    ///
+    /// 越权一律按"不存在"处理（404）—— 不泄露"这文件存在但不是你的"。
+    /// 公开文件只是"人人可读"，**不等于谁都能改**，这条是 file 最容易搞错的地方。
     #[tokio::test]
-    async fn anonymous_file_is_public_resource_but_cannot_be_private() {
+    async fn write_matrix_owner_other_admin_only() {
+        let ctx = setup_service().await;
+        let owner8 = Actor::user(8);
+        let other7 = Actor::user(7);
+        let admin = Actor::admin(1);
+
+        for is_private in [false, true] {
+            // 他人（7）：改名 / 删除 / 切可见性都被按"不存在"回
+            let stored = seed_other_users_file(&ctx, "别人的.png", is_private).await;
+            let rename = UpdateFileRequest {
+                original_name: Some("改名.png".into()),
+                tags: None,
+                meta: None,
+                is_private: None,
+            };
+            let err = ctx.svc.update(&stored, rename, &other7).await.unwrap_err();
+            assert!(
+                matches!(err, ServiceError::NotFound(_)),
+                "is_private={is_private}: 越权改名应回 404，实得 {err:?}"
+            );
+            let err = ctx
+                .svc
+                .update(
+                    &stored,
+                    UpdateFileRequest {
+                        original_name: None,
+                        tags: None,
+                        meta: None,
+                        is_private: Some(!is_private),
+                    },
+                    &other7,
+                )
+                .await
+                .unwrap_err();
+            assert!(matches!(err, ServiceError::NotFound(_)), "{err:?}");
+            let err = ctx.svc.delete(&stored, true, &other7).await.unwrap_err();
+            assert!(matches!(err, ServiceError::NotFound(_)), "{err:?}");
+            // 三次越权尝试之后行没被动过
+            let row = ctx
+                .svc
+                .repo
+                .find_by_stored_id(&stored)
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(row.original_name, "别人的.png");
+            assert_eq!(row.is_private, i64::from(is_private));
+
+            // 上传者（8）：改名 + 切换可见性都可以
+            ctx.svc
+                .update(
+                    &stored,
+                    UpdateFileRequest {
+                        original_name: Some("改名.png".into()),
+                        tags: None,
+                        meta: None,
+                        is_private: Some(!is_private),
+                    },
+                    &owner8,
+                )
+                .await
+                .unwrap();
+            let row = ctx
+                .svc
+                .repo
+                .find_by_stored_id(&stored)
+                .await
+                .unwrap()
+                .unwrap();
+            assert_eq!(row.original_name, "改名.png");
+            assert_eq!(row.is_private, i64::from(!is_private));
+
+            // admin：别人的文件也改得动、删得掉
+            ctx.svc
+                .update(
+                    &stored,
+                    UpdateFileRequest {
+                        original_name: Some("admin 改的.png".into()),
+                        tags: None,
+                        meta: None,
+                        is_private: None,
+                    },
+                    &admin,
+                )
+                .await
+                .unwrap();
+            ctx.svc.delete(&stored, true, &admin).await.unwrap();
+            assert!(
+                ctx.svc
+                    .repo
+                    .find_by_stored_id(&stored)
+                    .await
+                    .unwrap()
+                    .is_none(),
+                "admin 应能删除别人的文件"
+            );
+            assert!(
+                !std::path::Path::new(&ctx.dir.0).join(&stored).exists(),
+                "删除应连磁盘内容一起清掉"
+            );
+        }
+    }
+
+    /// 无主老文件（`user_id` 为 NULL）：v20 认领之后只有 admin 能改。
+    ///
+    /// "任意登录用户可整理共享数据"那一档已取消（见 doc/design/authorization.md §1），
+    /// 这里仍插一条无主行钉住兜底行为（fail-closed）。
+    #[tokio::test]
+    async fn ownerless_file_is_admin_only() {
         let ctx = setup_service().await;
         let stored = crate::modules::file::service::generate_stored_id();
         std::fs::write(std::path::Path::new(&ctx.dir.0).join(&stored), b"data").unwrap();
@@ -1854,7 +2118,30 @@ mod tests {
             .await
             .unwrap();
 
-        // 任何登录用户都能改名
+        // 普通用户：改名 / 删除都按"不存在"回
+        let err = ctx
+            .svc
+            .update(
+                &stored,
+                UpdateFileRequest {
+                    original_name: Some("整理.png".into()),
+                    tags: None,
+                    meta: None,
+                    is_private: None,
+                },
+                &Actor::user(7),
+            )
+            .await
+            .unwrap_err();
+        assert!(matches!(err, ServiceError::NotFound(_)), "{err:?}");
+        let err = ctx
+            .svc
+            .delete(&stored, true, &Actor::user(7))
+            .await
+            .unwrap_err();
+        assert!(matches!(err, ServiceError::NotFound(_)), "{err:?}");
+
+        // admin：改得动
         ctx.svc
             .update(
                 &stored,
@@ -1864,12 +2151,12 @@ mod tests {
                     meta: None,
                     is_private: None,
                 },
-                Some(7),
+                &Actor::admin(1),
             )
             .await
             .unwrap();
 
-        // 但不能设为私密：没有"对应的人"可授权
+        // 但无主行仍然不能设为私密：没有"上传者"可授权，私密等于谁都看不见
         let err = ctx
             .svc
             .update(
@@ -1880,7 +2167,7 @@ mod tests {
                     meta: None,
                     is_private: Some(true),
                 },
-                Some(7),
+                &Actor::admin(1),
             )
             .await
             .unwrap_err();

@@ -1,0 +1,57 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, title, content,\n                      title LIKE ?2 ESCAPE '\\' AS \"title_hit!: i64\"\n               FROM reading_article\n               WHERE (?1 IS NULL OR user_id = ?1)\n                 AND (title LIKE ?2 ESCAPE '\\' OR content LIKE ?2 ESCAPE '\\')\n               ORDER BY (title LIKE ?2 ESCAPE '\\') DESC, id DESC LIMIT ?3",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "reading_article",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "reading_article",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "name": "content",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "reading_article",
+            "name": "content"
+          }
+        }
+      },
+      {
+        "name": "title_hit!: i64",
+        "ordinal": 3,
+        "type_info": "Null",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "be61d0ac2a9649cbc3e99d60808d07f9bc358de949666485012628990a17bc03"
+}

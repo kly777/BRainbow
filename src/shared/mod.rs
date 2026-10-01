@@ -5,6 +5,7 @@
 //! - `batch`：批量请求/响应形状
 //! - `outbound`：出网抓取的客户端与 SSRF 防线
 
+pub mod actor;
 pub mod batch;
 pub mod claims;
 pub mod config;

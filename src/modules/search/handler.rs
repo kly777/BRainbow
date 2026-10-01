@@ -6,6 +6,7 @@ use axum::{
 };
 use serde::Deserialize;
 
+use crate::shared::actor::Actor;
 use crate::shared::claims::Claims;
 use axum::extract::Extension;
 
@@ -35,7 +36,7 @@ pub async fn search_handler(
     Extension(claims): Extension<Claims>,
     Query(params): Query<SearchParams>,
 ) -> impl IntoResponse {
-    match service.search(claims.sub, &params.q, params.limit).await {
+    match service.search(&Actor::from(&claims), &params.q, params.limit).await {
         Ok(resp) => Json(resp).into_response(),
         Err(e) => e.into_response(),
     }

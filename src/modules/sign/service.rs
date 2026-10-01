@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use super::model::SignifierSignified;
 use super::repository::SignRepository;
+use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 
 /// 命令侧服务——只暴露写操作。
@@ -21,7 +22,7 @@ impl SignService {
 
     pub async fn create(
         &self,
-        user_id: i32,
+        actor: &Actor,
         signifier: String,
         signified: String,
         onto_id: Option<i32>,
@@ -36,7 +37,7 @@ impl SignService {
         }
         self.repo
             .create(
-                user_id,
+                actor.user_id,
                 signifier,
                 signified,
                 onto_id,
@@ -47,9 +48,9 @@ impl SignService {
             .map_err(ServiceError::Db)
     }
 
-    pub async fn delete(&self, user_id: i32, id: i32) -> Result<u64, ServiceError> {
+    pub async fn delete(&self, actor: &Actor, id: i32) -> Result<u64, ServiceError> {
         self.repo
-            .delete(user_id, id)
+            .delete(actor, id)
             .await
             .map_err(ServiceError::Db)
     }
@@ -73,7 +74,7 @@ mod tests {
     async fn create_valid() {
         let (svc, _qsvc) = setup().await;
         let s = svc
-            .create(1, "日".into(), "sun".into(), None, None, None)
+            .create(&Actor::user(1), "日".into(), "sun".into(), None, None, None)
             .await
             .unwrap();
         assert_eq!(s.signifier, "日");
@@ -83,7 +84,7 @@ mod tests {
     async fn create_empty_signifier_rejected() {
         let (svc, _qsvc) = setup().await;
         let err = svc
-            .create(1, "".into(), "sun".into(), None, None, None)
+            .create(&Actor::user(1), "".into(), "sun".into(), None, None, None)
             .await
             .unwrap_err();
         assert!(matches!(err, ServiceError::InvalidInput(_)));
@@ -93,7 +94,7 @@ mod tests {
     async fn create_empty_signified_rejected() {
         let (svc, _qsvc) = setup().await;
         let err = svc
-            .create(1, "日".into(), "  ".into(), None, None, None)
+            .create(&Actor::user(1), "日".into(), "  ".into(), None, None, None)
             .await
             .unwrap_err();
         assert!(matches!(err, ServiceError::InvalidInput(_)));
@@ -102,13 +103,13 @@ mod tests {
     #[tokio::test]
     async fn list_paginated() {
         let (svc, qsvc) = setup().await;
-        svc.create(1, "a".into(), "1".into(), None, None, None)
+        svc.create(&Actor::user(1), "a".into(), "1".into(), None, None, None)
             .await
             .unwrap();
-        svc.create(1, "b".into(), "2".into(), None, None, None)
+        svc.create(&Actor::user(1), "b".into(), "2".into(), None, None, None)
             .await
             .unwrap();
-        let (items, total) = qsvc.list(1, 1, 0).await.unwrap();
+        let (items, total) = qsvc.list(&Actor::user(1), 1, 0).await.unwrap();
         assert_eq!(total, 2);
         assert_eq!(items.len(), 1);
     }
@@ -116,10 +117,10 @@ mod tests {
     #[tokio::test]
     async fn by_signifier_query() {
         let (svc, qsvc) = setup().await;
-        svc.create(1, "月".into(), "moon".into(), None, None, None)
+        svc.create(&Actor::user(1), "月".into(), "moon".into(), None, None, None)
             .await
             .unwrap();
-        let (items, _) = qsvc.by_signifier(1, "月", 10, 0).await.unwrap();
+        let (items, _) = qsvc.by_signifier(&Actor::user(1), "月", 10, 0).await.unwrap();
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].signified, "moon");
     }
@@ -128,10 +129,10 @@ mod tests {
     async fn delete_sign() {
         let (svc, qsvc) = setup().await;
         let s = svc
-            .create(1, "x".into(), "y".into(), None, None, None)
+            .create(&Actor::user(1), "x".into(), "y".into(), None, None, None)
             .await
             .unwrap();
-        assert_eq!(svc.delete(1, s.id).await.unwrap(), 1);
-        assert!(qsvc.by_id(1, s.id).await.unwrap().is_none());
+        assert_eq!(svc.delete(&Actor::user(1), s.id).await.unwrap(), 1);
+        assert!(qsvc.by_id(&Actor::user(1), s.id).await.unwrap().is_none());
     }
 }

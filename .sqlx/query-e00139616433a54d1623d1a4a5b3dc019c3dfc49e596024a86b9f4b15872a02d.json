@@ -1,0 +1,45 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT t.id AS \"id!: i64\", t.name,\n                      COUNT(f.id) AS \"count!: i64\"\n               FROM file_tag t\n               LEFT JOIN file_tag_rel r ON r.tag_id = t.id\n               LEFT JOIN file f ON f.id = r.file_id\n                    AND (?1 IS NULL OR f.is_private = 0 OR f.user_id = ?1)\n               GROUP BY t.id, t.name\n               ORDER BY t.name",
+  "describe": {
+    "columns": [
+      {
+        "name": "id!: i64",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "file_tag",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "file_tag",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "name": "count!: i64",
+        "ordinal": 2,
+        "type_info": "Integer",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e00139616433a54d1623d1a4a5b3dc019c3dfc49e596024a86b9f4b15872a02d"
+}

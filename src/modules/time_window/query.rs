@@ -4,6 +4,7 @@ use sqlx::SqlitePool;
 
 use super::model::{TimeWindow, TimeWindowType};
 use super::repository::TimeWindowRepository;
+use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 
 /// 查询侧服务——纯读取，无副作用。
@@ -21,12 +22,16 @@ impl TimeWindowQueryService {
         }
     }
 
-    pub async fn by_id(&self, id: i32) -> Result<Option<TimeWindow>, ServiceError> {
-        self.repo.find_by_id(id).await.map_err(ServiceError::Db)
+    pub async fn by_id(&self, actor: &Actor, id: i32) -> Result<Option<TimeWindow>, ServiceError> {
+        self.repo
+            .find_by_id(actor, id)
+            .await
+            .map_err(ServiceError::Db)
     }
 
     pub async fn list_by_task(
         &self,
+        actor: &Actor,
         task_id: i32,
         window_type: Option<TimeWindowType>,
         limit: i64,
@@ -34,12 +39,12 @@ impl TimeWindowQueryService {
     ) -> Result<(Vec<TimeWindow>, i64), ServiceError> {
         if let Some(wt) = window_type {
             self.repo
-                .find_by_task_id_and_type_paginated(task_id, wt, limit, offset)
+                .find_by_task_id_and_type_paginated(actor, task_id, wt, limit, offset)
                 .await
                 .map_err(ServiceError::Db)
         } else {
             self.repo
-                .find_by_task_id_paginated(task_id, limit, offset)
+                .find_by_task_id_paginated(actor, task_id, limit, offset)
                 .await
                 .map_err(ServiceError::Db)
         }
@@ -47,6 +52,7 @@ impl TimeWindowQueryService {
 
     pub async fn get_task_time_stats(
         &self,
+        actor: &Actor,
         task_id: i32,
     ) -> Result<
         (
@@ -57,20 +63,21 @@ impl TimeWindowQueryService {
         ServiceError,
     > {
         self.repo
-            .get_task_time_stats(task_id)
+            .get_task_time_stats(actor, task_id)
             .await
             .map_err(ServiceError::Db)
     }
 
     pub async fn check_time_conflict(
         &self,
+        actor: &Actor,
         task_id: i32,
         start_time: chrono::DateTime<chrono::Utc>,
         end_time: chrono::DateTime<chrono::Utc>,
         exclude_id: Option<i32>,
     ) -> Result<bool, ServiceError> {
         self.repo
-            .check_time_conflict(task_id, start_time, end_time, exclude_id)
+            .check_time_conflict(actor, task_id, start_time, end_time, exclude_id)
             .await
             .map_err(ServiceError::Db)
     }

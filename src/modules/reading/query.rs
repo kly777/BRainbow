@@ -6,6 +6,7 @@ use async_trait::async_trait;
 
 use super::model::{Article, ArticleDetail, ArticleSummary, UnknownWord};
 use super::repository::ReadingRepo;
+use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{
     SearchHit, SearchPort, SearchTarget, fts_query, normalize_search, snippet,
@@ -34,10 +35,10 @@ impl ReadingQueryService {
     }
 
     /// 文章列表：按「最该阅读的下一篇」排序（认识率最接近 90% 优先，同分新文章优先）
-    pub async fn list_articles(&self, user_id: i32) -> Result<Vec<ArticleSummary>, ServiceError> {
+    pub async fn list_articles(&self, actor: &Actor) -> Result<Vec<ArticleSummary>, ServiceError> {
         let repo = &self.repo;
         let mut articles = repo
-            .get_all_article_summaries(user_id)
+            .get_all_article_summaries(actor)
             .await
             .map_err(ServiceError::Db)?;
         articles.sort_by(|a, b| {
@@ -52,12 +53,12 @@ impl ReadingQueryService {
     /// 获取单篇文章详情（含词状态 + notes）
     pub async fn article_detail(
         &self,
-        user_id: i32,
+        actor: &Actor,
         id: i64,
     ) -> Result<Option<ArticleDetail>, ServiceError> {
         let repo = &self.repo;
         match repo
-            .get_article(user_id, id)
+            .get_article(actor, id)
             .await
             .map_err(ServiceError::Db)?
         {
@@ -72,25 +73,25 @@ impl ReadingQueryService {
         }
     }
 
-    pub async fn article(&self, user_id: i32, id: i64) -> Result<Option<Article>, ServiceError> {
+    pub async fn article(&self, actor: &Actor, id: i64) -> Result<Option<Article>, ServiceError> {
         let repo = &self.repo;
-        repo.get_article(user_id, id)
+        repo.get_article(actor, id)
             .await
             .map_err(ServiceError::Db)
     }
 
     /// 获取文章中的所有词
-    pub async fn article_words(&self, user_id: i32, id: i64) -> Result<Vec<String>, ServiceError> {
+    pub async fn article_words(&self, actor: &Actor, id: i64) -> Result<Vec<String>, ServiceError> {
         let repo = &self.repo;
-        // 先校验文章所有权
-        repo.get_article(user_id, id).await?;
+        // 先校验文章归属（读不到就是 404，下面的词表不泄露存在性）
+        repo.get_article(actor, id).await?;
         repo.get_article_words(id).await.map_err(ServiceError::Db)
     }
 
     /// 获取所有不认识词
-    pub async fn unknown_words(&self, user_id: i32) -> Result<Vec<UnknownWord>, ServiceError> {
+    pub async fn unknown_words(&self, actor: &Actor) -> Result<Vec<UnknownWord>, ServiceError> {
         let repo = &self.repo;
-        repo.get_unknown_words(user_id)
+        repo.get_unknown_words(actor)
             .await
             .map_err(ServiceError::Db)
     }
@@ -98,11 +99,11 @@ impl ReadingQueryService {
     /// 推荐下一篇（认识率最接近 90%）
     pub async fn recommend_next(
         &self,
-        user_id: i32,
+        actor: &Actor,
         id: i64,
     ) -> Result<Option<ArticleSummary>, ServiceError> {
         let repo = &self.repo;
-        repo.recommend_article(user_id, id, TARGET_KNOWN_RATIO)
+        repo.recommend_article(actor, id, TARGET_KNOWN_RATIO)
             .await
             .map_err(ServiceError::Db)
     }
@@ -112,7 +113,7 @@ impl ReadingQueryService {
 impl SearchPort for ReadingQueryService {
     async fn search(
         &self,
-        user_id: i32,
+        actor: &Actor,
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
@@ -122,7 +123,7 @@ impl SearchPort for ReadingQueryService {
         let (rows, score) = if let Some(fts) = fts_query(q) {
             (
                 self.repo
-                    .search_hits_fts(user_id, &fts, cap)
+                    .search_hits_fts(actor, &fts, cap)
                     .await
                     .map_err(ServiceError::Db)?,
                 1.0f64,
@@ -130,7 +131,7 @@ impl SearchPort for ReadingQueryService {
         } else {
             (
                 self.repo
-                    .search_hits(user_id, &like, cap)
+                    .search_hits(actor, &like, cap)
                     .await
                     .map_err(ServiceError::Db)?,
                 0.0f64,
@@ -173,27 +174,27 @@ mod tests {
         let query = ReadingQueryService::new(pool);
 
         let a = service
-            .upload_article(1, "A: all unknown", "foo bar")
+            .upload_article(&Actor::user(1), "A: all unknown", "foo bar")
             .await
             .unwrap();
         let b = service
-            .upload_article(1, "B: mostly known", "alpha beta gamma delta")
+            .upload_article(&Actor::user(1), "B: mostly known", "alpha beta gamma delta")
             .await
             .unwrap();
         let c = service
-            .upload_article(1, "C: fully known", "one two")
+            .upload_article(&Actor::user(1), "C: fully known", "one two")
             .await
             .unwrap();
 
         // B: 75% 认识（距离 0.15），C: 100% 认识（距离 0.1），A: 0%（距离 0.9）
         for word in ["alpha", "beta", "gamma"] {
-            service.mark_word(1, word, "known").await.unwrap();
+            service.mark_word(&Actor::user(1), word, "known").await.unwrap();
         }
         for word in ["one", "two"] {
-            service.mark_word(1, word, "known").await.unwrap();
+            service.mark_word(&Actor::user(1), word, "known").await.unwrap();
         }
 
-        let list = query.list_articles(1).await.unwrap();
+        let list = query.list_articles(&Actor::user(1)).await.unwrap();
         assert_eq!(list.len(), 3);
         assert_eq!(list[0].id, c.id);
         assert_eq!(list[1].id, b.id);

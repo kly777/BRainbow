@@ -5,6 +5,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 use crate::modules::ai::service::AiService;
+use crate::shared::actor::Actor;
 use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
@@ -81,7 +82,7 @@ pub async fn create_bookmark_handler(
 ) -> impl IntoResponse {
     let result = service
         .create(
-            claims.sub,
+            &Actor::from(&claims),
             payload.title.trim(),
             payload.url.trim(),
             payload.description.trim(),
@@ -122,7 +123,7 @@ pub async fn get_bookmarks_handler(
     let sort = params.sort.as_deref().unwrap_or("created_at");
     let result = query
         .list(
-            claims.sub,
+            &Actor::from(&claims),
             pagination.limit(),
             pagination.offset(),
             tag,
@@ -143,7 +144,7 @@ pub async fn get_bookmark_handler(
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
     let result = query
-        .by_id(claims.sub, id)
+        .by_id(&Actor::from(&claims), id)
         .await
         .map(|opt| opt.map(BookmarkResponse::from));
     error::found_or(result, "获取书签")
@@ -157,7 +158,7 @@ pub async fn update_bookmark_handler(
 ) -> impl IntoResponse {
     let result = service
         .update(
-            claims.sub,
+            &Actor::from(&claims),
             id,
             payload.title.as_deref(),
             payload.url.as_deref(),
@@ -173,7 +174,7 @@ pub async fn delete_bookmark_handler(
     Extension(claims): Extension<Claims>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    error::deleted_or(service.delete(claims.sub, id).await, "删除书签")
+    error::deleted_or(service.delete(&Actor::from(&claims), id).await, "删除书签")
 }
 
 #[derive(Debug, Deserialize)]
@@ -207,7 +208,7 @@ pub async fn search_bookmarks_handler(
         .filter(|s| !s.is_empty());
     let result = query
         .search(
-            claims.sub,
+            &Actor::from(&claims),
             params.q.trim(),
             tag,
             pagination.limit(),
@@ -270,7 +271,10 @@ pub async fn import_bookmarks_handler(
         ));
     }
 
-    match service.import_netscape_html(claims.sub, &html).await {
+    match service
+        .import_netscape_html(&Actor::from(&claims), &html)
+        .await
+    {
         Ok(result) => Json(result).into_response(),
         Err(e) => e.into_response(),
     }
@@ -281,12 +285,14 @@ pub struct SearchTagsQuery {
     pub q: Option<String>,
 }
 
+/// `GET /bookmarks/tags?q=` 标签列表（带使用次数；归属见 repository::search_tags）
 pub async fn search_tags_handler(
     Query(params): Query<SearchTagsQuery>,
     State(query): State<BookmarkQueryService>,
+    Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let q = params.q.as_deref().map(str::trim).filter(|s| !s.is_empty());
-    match query.search_tags(q).await {
+    match query.search_tags(&Actor::from(&claims), q).await {
         Ok(tags) => {
             let tags: Vec<BookmarkTagWithCountResponse> = tags
                 .into_iter()
@@ -305,6 +311,7 @@ pub struct CreateTagRequest {
 
 pub async fn create_tag_handler(
     State(service): State<BookmarkService>,
+    Extension(claims): Extension<Claims>,
     Json(payload): Json<CreateTagRequest>,
 ) -> impl IntoResponse {
     let name = payload.name.trim();
@@ -312,17 +319,19 @@ pub async fn create_tag_handler(
         return error::bad_request("标签名不能为空");
     }
     let result = service
-        .create_tag(name)
+        .create_tag(&Actor::from(&claims), name)
         .await
         .map(BookmarkTagResponse::from);
     error::created_or(result, "创建标签")
 }
 
+/// `DELETE /bookmarks/tags/{id}` 删除标签 —— 越权/不存在按 404（0 行）
 pub async fn delete_tag_handler(
     State(service): State<BookmarkService>,
+    Extension(claims): Extension<Claims>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    error::deleted_or(service.delete_tag(id).await, "删除标签")
+    error::deleted_or(service.delete_tag(&Actor::from(&claims), id).await, "删除标签")
 }
 
 pub async fn get_bookmark_tags_handler(
@@ -330,7 +339,7 @@ pub async fn get_bookmark_tags_handler(
     Extension(claims): Extension<Claims>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    match query.get_bookmark_tags(claims.sub, id).await {
+    match query.get_bookmark_tags(&Actor::from(&claims), id).await {
         Ok(tags) => {
             let tags: Vec<BookmarkTagResponse> =
                 tags.into_iter().map(BookmarkTagResponse::from).collect();
@@ -347,7 +356,7 @@ pub async fn set_bookmark_tags_handler(
     Json(payload): Json<SetBookmarkTagsRequest>,
 ) -> impl IntoResponse {
     match service
-        .set_bookmark_tags(claims.sub, id, &payload.tags)
+        .set_bookmark_tags(&Actor::from(&claims), id, &payload.tags)
         .await
     {
         Ok(tags) => {
@@ -371,7 +380,7 @@ pub async fn check_url_handler(
     if url.is_empty() {
         return error::bad_request("URL 不能为空");
     }
-    match service.check_url(claims.sub, url).await {
+    match service.check_url(&Actor::from(&claims), url).await {
         Ok(resp) => {
             let response = CheckUrlResponseJson {
                 exists: resp.exists,
@@ -410,7 +419,7 @@ pub async fn suggest_tags_handler(
     Extension(claims): Extension<Claims>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    match service.suggest_tags(claims.sub, id, &ai).await {
+    match service.suggest_tags(&Actor::from(&claims), id, &ai).await {
         Ok(resp) => Json(resp).into_response(),
         Err(e) => e.into_response(),
     }
@@ -434,7 +443,7 @@ pub async fn batch_delete_handler(
         return error::bad_request("单次最多删除 100 条");
     }
     error::deleted_or(
-        service.batch_delete(claims.sub, &payload.ids).await,
+        service.batch_delete(&Actor::from(&claims), &payload.ids).await,
         "批量删除书签",
     )
 }
@@ -445,7 +454,10 @@ pub async fn increment_visit_handler(
     Extension(claims): Extension<Claims>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    error::ok_or(service.increment_visit(claims.sub, id).await, "记录访问")
+    error::ok_or(
+        service.increment_visit(&Actor::from(&claims), id).await,
+        "记录访问",
+    )
 }
 
 /// `GET /bookmarks/grouped-by-tag` 按标签分组获取书签
@@ -453,5 +465,8 @@ pub async fn grouped_by_tag_handler(
     State(query): State<BookmarkQueryService>,
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
-    error::ok_or(query.grouped_by_tag(claims.sub).await, "获取分组书签")
+    error::ok_or(
+        query.grouped_by_tag(&Actor::from(&claims)).await,
+        "获取分组书签",
+    )
 }

@@ -1,8 +1,6 @@
 use sqlx::{QueryBuilder, Row, SqlitePool};
 use std::sync::Arc;
 
-use crate::shared::db_query::like_contains;
-
 use super::dto::MemTagRow;
 use super::model::MemRow;
 

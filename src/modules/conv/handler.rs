@@ -7,6 +7,7 @@ use axum::{
     routing::get,
 };
 
+use crate::shared::actor::Actor;
 use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
 
@@ -39,7 +40,7 @@ pub async fn search_handler(
     let search_type = params.search_type.as_deref().unwrap_or("all");
 
     match query
-        .search(claims.sub, q, limit, offset, search_type)
+        .search(&Actor::from(&claims), q, limit, offset, search_type)
         .await
     {
         Ok(res) => Json(res).into_response(),
@@ -52,7 +53,7 @@ pub async fn conv_detail_handler(
     Extension(claims): Extension<Claims>,
     Path(id): Path<i64>,
 ) -> impl IntoResponse {
-    match query.detail(claims.sub, id).await {
+    match query.detail(&Actor::from(&claims), id).await {
         Ok(Some(detail)) => Json(detail).into_response(),
         Ok(None) => error::not_found("知识条目不存在"),
         Err(e) => e.into_response(),
@@ -69,7 +70,7 @@ pub async fn conv_concept_handler(
         return error::not_found("缺少 article 参数");
     };
 
-    match query.concept(claims.sub, id, article_title).await {
+    match query.concept(&Actor::from(&claims), id, article_title).await {
         Ok(Some(body)) => Json(body).into_response(),
         Ok(None) => error::not_found("文章不存在"),
         Err(e) => e.into_response(),

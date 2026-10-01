@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM task WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "fe2b18b2f716e4eebd385e333fb5e564ab8bc15e8be308e21ffd2a76cd603617"
+}

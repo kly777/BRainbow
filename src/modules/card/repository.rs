@@ -2,7 +2,8 @@ use chrono::Utc;
 use sqlx::{QueryBuilder, Row, SqlitePool};
 use std::sync::Arc;
 
-use crate::shared::db_query::like_contains;
+use crate::shared::actor::Actor;
+use crate::shared::db_query::{like_contains, push_owner_scope};
 
 use super::model::Card;
 
@@ -24,19 +25,19 @@ impl CardRepository {
         Self { db }
     }
 
-    /// 全局搜索命中（按用户过滤，兼容历史 NULL）
+    /// 全局搜索命中（admin 全量；普通用户只看自己的 —— 判据见 shared/actor.rs）
     pub async fn search_hits(
         &self,
-        user_id: i32,
+        actor: &Actor,
         like: &str,
         cap: i64,
     ) -> Result<Vec<CardHitRow>, sqlx::Error> {
         let rows = sqlx::query_as!(
             CardHitRow,
             r#"SELECT id, COALESCE(content, '') AS "content!: String" FROM card
-               WHERE (user_id = ?1 OR user_id IS NULL) AND content LIKE ?2 ESCAPE '\'
+               WHERE (?1 IS NULL OR user_id = ?1) AND content LIKE ?2 ESCAPE '\'
                ORDER BY id DESC LIMIT ?3"#,
-            user_id,
+            actor.owner_scope(),
             like,
             cap
         )
@@ -47,7 +48,7 @@ impl CardRepository {
 
     pub async fn search_hits_fts(
         &self,
-        user_id: i32,
+        actor: &Actor,
         fts_query: &str,
         cap: i64,
     ) -> Result<Vec<CardHitRow>, sqlx::Error> {
@@ -57,10 +58,10 @@ impl CardRepository {
                FROM card_fts fts
                JOIN card c ON c.id = fts.rowid
                WHERE card_fts MATCH ?2
-                 AND (c.user_id = ?1 OR c.user_id IS NULL)
+                 AND (?1 IS NULL OR c.user_id = ?1)
                ORDER BY rank
                LIMIT ?3"#,
-            user_id,
+            actor.owner_scope(),
             fts_query,
             cap
         )
@@ -72,13 +73,13 @@ impl CardRepository {
     /// 获取所有卡片（分页）
     pub async fn find_all_paginated(
         &self,
-        user_id: i32,
+        actor: &Actor,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Card>, i64), sqlx::Error> {
         let total: i64 = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM card WHERE user_id = ? OR user_id IS NULL",
-            user_id
+            "SELECT COUNT(*) FROM card WHERE (?1 IS NULL OR user_id = ?1)",
+            actor.owner_scope()
         )
         .fetch_one(&*self.db)
         .await?;
@@ -89,9 +90,9 @@ impl CardRepository {
                       COALESCE(content, '') AS "content!: String",
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
-               FROM card WHERE (user_id = ?1 OR user_id IS NULL)
+               FROM card WHERE (?1 IS NULL OR user_id = ?1)
                ORDER BY updated_at DESC LIMIT ?2 OFFSET ?3"#,
-            user_id,
+            actor.owner_scope(),
             limit,
             offset
         )
@@ -102,16 +103,16 @@ impl CardRepository {
     }
 
     /// 根据ID获取卡片
-    pub async fn find_by_id(&self, user_id: i32, id: i32) -> Result<Option<Card>, sqlx::Error> {
+    pub async fn find_by_id(&self, actor: &Actor, id: i32) -> Result<Option<Card>, sqlx::Error> {
         sqlx::query_as!(
             Card,
             r#"SELECT id AS "id: i32",
                       COALESCE(content, '') AS "content!: String",
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
-               FROM card WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)"#,
+               FROM card WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)"#,
             id,
-            user_id
+            actor.owner_scope()
         )
         .fetch_optional(&*self.db)
         .await
@@ -142,10 +143,10 @@ impl CardRepository {
         })
     }
 
-    /// 更新卡片
+    /// 更新卡片（admin 可改任意行；普通用户只能改自己的 —— 见 shared/actor.rs）
     pub async fn update(
         &self,
-        user_id: i32,
+        actor: &Actor,
         id: i32,
         content: Option<String>,
     ) -> Result<Card, sqlx::Error> {
@@ -162,9 +163,7 @@ impl CardRepository {
         builder.push_bind(now);
         builder.push(" WHERE id = ");
         builder.push_bind(id);
-        builder.push(" AND (user_id = ");
-        builder.push_bind(user_id);
-        builder.push(" OR user_id IS NULL)");
+        push_owner_scope(&mut builder, actor, "user_id");
         builder.push(" RETURNING id, content, created_at, updated_at");
 
         let result = builder.build().fetch_one(&*self.db).await?;
@@ -178,11 +177,11 @@ impl CardRepository {
     }
 
     /// 删除卡片
-    pub async fn delete(&self, user_id: i32, id: i32) -> Result<u64, sqlx::Error> {
+    pub async fn delete(&self, actor: &Actor, id: i32) -> Result<u64, sqlx::Error> {
         let result = sqlx::query!(
-            "DELETE FROM card WHERE id = ? AND (user_id = ? OR user_id IS NULL)",
+            "DELETE FROM card WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)",
             id,
-            user_id
+            actor.owner_scope()
         )
         .execute(&*self.db)
         .await?;
@@ -193,23 +192,23 @@ impl CardRepository {
     /// 根据内容搜索卡片（分页）
     pub async fn search_by_content_paginated(
         &self,
-        user_id: i32,
+        actor: &Actor,
         query: &str,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Card>, i64), sqlx::Error> {
         let keywords: Vec<&str> = query.split_whitespace().collect();
         if keywords.is_empty() {
-            return self.find_all_paginated(user_id, limit, offset).await;
+            return self.find_all_paginated(actor, limit, offset).await;
         }
 
         // ── Count ──
         // 用 QueryBuilder 动态拼 OR 子句。注意：每个 push + push_bind 算一次
         // 分隔插入，所以这里不用 Separated（Separated 的 push_bind 会把 "content LIKE"
         // 和 "?" 当成两个独立项）。改为直接在 QueryBuilder 上 push，手动控制 OR。
-        let mut count_builder = QueryBuilder::new("SELECT COUNT(*) FROM card WHERE (user_id = ");
-        count_builder.push_bind(user_id);
-        count_builder.push(" OR user_id IS NULL) AND (");
+        let mut count_builder = QueryBuilder::new("SELECT COUNT(*) FROM card WHERE 1 = 1");
+        push_owner_scope(&mut count_builder, actor, "user_id");
+        count_builder.push(" AND (");
         for (i, kw) in keywords.iter().enumerate() {
             if i > 0 {
                 count_builder.push(" OR ");
@@ -225,11 +224,10 @@ impl CardRepository {
             .await?;
 
         // ── Fetch ──
-        let mut fetch_builder = QueryBuilder::new(
-            "SELECT id, content, created_at, updated_at FROM card WHERE (user_id = ",
-        );
-        fetch_builder.push_bind(user_id);
-        fetch_builder.push(" OR user_id IS NULL) AND (");
+        let mut fetch_builder =
+            QueryBuilder::new("SELECT id, content, created_at, updated_at FROM card WHERE 1 = 1");
+        push_owner_scope(&mut fetch_builder, actor, "user_id");
+        fetch_builder.push(" AND (");
         for (i, kw) in keywords.iter().enumerate() {
             if i > 0 {
                 fetch_builder.push(" OR ");
@@ -274,6 +272,11 @@ mod tests {
     /// 测试统一用户
     const TEST_USER_ID: i32 = 1;
 
+    /// 测试调用者：普通用户（`owner` 就是 TEST_USER_ID）
+    fn actor() -> Actor {
+        Actor::user(TEST_USER_ID)
+    }
+
     async fn setup_db() -> CardRepository {
         let pool = SqlitePool::connect("sqlite::memory:")
             .await
@@ -304,7 +307,7 @@ mod tests {
         assert_eq!(card.content, "测试内容");
 
         let found = repo
-            .find_by_id(TEST_USER_ID, card.id)
+            .find_by_id(&actor(), card.id)
             .await
             .unwrap()
             .expect("应找到");
@@ -315,14 +318,14 @@ mod tests {
     #[tokio::test]
     async fn find_by_id_not_found() {
         let repo = setup_db().await;
-        let result = repo.find_by_id(TEST_USER_ID, 999).await.unwrap();
+        let result = repo.find_by_id(&actor(), 999).await.unwrap();
         assert!(result.is_none());
     }
 
     #[tokio::test]
     async fn find_all_paginated_empty() {
         let repo = setup_db().await;
-        let (items, total) = repo.find_all_paginated(TEST_USER_ID, 10, 0).await.unwrap();
+        let (items, total) = repo.find_all_paginated(&actor(), 10, 0).await.unwrap();
         assert!(items.is_empty());
         assert_eq!(total, 0);
     }
@@ -335,7 +338,7 @@ mod tests {
         repo.create(TEST_USER_ID, "B".to_string()).await.unwrap();
         repo.create(TEST_USER_ID, "C".to_string()).await.unwrap();
 
-        let (items, total) = repo.find_all_paginated(TEST_USER_ID, 10, 0).await.unwrap();
+        let (items, total) = repo.find_all_paginated(&actor(), 10, 0).await.unwrap();
         assert_eq!(total, 3);
         assert_eq!(items.len(), 3);
         // 默认按 updated_at DESC，最新的在后
@@ -351,7 +354,7 @@ mod tests {
             repo.create(TEST_USER_ID, format!("卡{i}")).await.unwrap();
         }
 
-        let (items, total) = repo.find_all_paginated(TEST_USER_ID, 3, 2).await.unwrap();
+        let (items, total) = repo.find_all_paginated(&actor(), 3, 2).await.unwrap();
         assert_eq!(total, 10);
         assert_eq!(items.len(), 3);
         // offset=2 → 跳过最新的2条，limit=3 → 取3条
@@ -369,7 +372,7 @@ mod tests {
             .unwrap();
 
         let updated = repo
-            .update(TEST_USER_ID, card.id, Some("新内容".to_string()))
+            .update(&actor(), card.id, Some("新内容".to_string()))
             .await
             .unwrap();
         assert_eq!(updated.content, "新内容");
@@ -379,7 +382,7 @@ mod tests {
 
         // 再查一次确认持久化
         let found = repo
-            .find_by_id(TEST_USER_ID, card.id)
+            .find_by_id(&actor(), card.id)
             .await
             .unwrap()
             .unwrap();
@@ -395,7 +398,7 @@ mod tests {
             .unwrap();
 
         // content=None → 只更新时间，不修改内容
-        let updated = repo.update(TEST_USER_ID, card.id, None).await.unwrap();
+        let updated = repo.update(&actor(), card.id, None).await.unwrap();
         assert_eq!(updated.content, "原内容");
         assert!(updated.updated_at > card.updated_at);
     }
@@ -404,7 +407,7 @@ mod tests {
     async fn update_nonexistent_card_fails() {
         let repo = setup_db().await;
         let result = repo
-            .update(TEST_USER_ID, 999, Some("内容".to_string()))
+            .update(&actor(), 999, Some("内容".to_string()))
             .await;
         assert!(result.is_err());
     }
@@ -417,12 +420,12 @@ mod tests {
             .await
             .unwrap();
 
-        let affected = repo.delete(TEST_USER_ID, card.id).await.unwrap();
+        let affected = repo.delete(&actor(), card.id).await.unwrap();
         assert_eq!(affected, 1);
 
         // 验证已删除
         assert!(
-            repo.find_by_id(TEST_USER_ID, card.id)
+            repo.find_by_id(&actor(), card.id)
                 .await
                 .unwrap()
                 .is_none()
@@ -432,7 +435,7 @@ mod tests {
     #[tokio::test]
     async fn delete_nonexistent_card_returns_zero() {
         let repo = setup_db().await;
-        let affected = repo.delete(TEST_USER_ID, 999).await.unwrap();
+        let affected = repo.delete(&actor(), 999).await.unwrap();
         assert_eq!(affected, 0);
     }
 
@@ -444,7 +447,7 @@ mod tests {
 
         // 空关键词 → 等价于 find_all_paginated
         let (items, total) = repo
-            .search_by_content_paginated(TEST_USER_ID, "", 10, 0)
+            .search_by_content_paginated(&actor(), "", 10, 0)
             .await
             .unwrap();
         assert_eq!(total, 2);
@@ -465,7 +468,7 @@ mod tests {
             .unwrap();
 
         let (items, total) = repo
-            .search_by_content_paginated(TEST_USER_ID, "rust", 10, 0)
+            .search_by_content_paginated(&actor(), "rust", 10, 0)
             .await
             .unwrap();
         assert_eq!(total, 2);
@@ -490,7 +493,7 @@ mod tests {
         // "教程" 仅匹配 卡0 → 得分1；"rust" 匹配 卡0 和 卡2 → 得分各1
         // 所以搜索 "rust 教程" 时：卡0 得分2，卡2 得分1（按得分 DESC）
         let (items, total) = repo
-            .search_by_content_paginated(TEST_USER_ID, "rust 教程", 10, 0)
+            .search_by_content_paginated(&actor(), "rust 教程", 10, 0)
             .await
             .unwrap();
         assert_eq!(total, 2);
@@ -504,7 +507,7 @@ mod tests {
         repo.create(TEST_USER_ID, "rust".to_string()).await.unwrap();
 
         let (items, total) = repo
-            .search_by_content_paginated(TEST_USER_ID, "nonexistent", 10, 0)
+            .search_by_content_paginated(&actor(), "nonexistent", 10, 0)
             .await
             .unwrap();
         assert_eq!(total, 0);
@@ -522,7 +525,7 @@ mod tests {
         }
 
         let (items, total) = repo
-            .search_by_content_paginated(TEST_USER_ID, "rust", 3, 5)
+            .search_by_content_paginated(&actor(), "rust", 3, 5)
             .await
             .unwrap();
         assert_eq!(total, 10);

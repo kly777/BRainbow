@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT content FROM mem_mnemonic\n               WHERE mem_id = ?1\n                 AND EXISTS (SELECT 1 FROM mem m WHERE m.id = mem_mnemonic.mem_id AND (?2 IS NULL OR m.user_id = ?2))",
+  "describe": {
+    "columns": [
+      {
+        "name": "content",
+        "ordinal": 0,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "mem_mnemonic",
+            "name": "content"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "1e390080b415336d031f1bc4e3eaccc150c368b4d28d81ffbbb18304e1922a63"
+}

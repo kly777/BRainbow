@@ -3,6 +3,8 @@
 use std::sync::{Arc, RwLock};
 
 use async_trait::async_trait;
+
+use crate::shared::actor::Actor;
 use serde::Serialize;
 
 use crate::shared::db_query::like_contains;
@@ -130,9 +132,10 @@ impl SearchResponse {
 /// 各模块向全局搜索暴露的端口。
 #[async_trait]
 pub trait SearchPort: Send + Sync {
+    /// `actor` 决定能搜到谁的行：admin 全量、普通用户自己的
     async fn search(
         &self,
-        user_id: i32,
+        actor: &Actor,
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError>;

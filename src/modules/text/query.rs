@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
+use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{
     SearchHit, SearchPort, SearchTarget, fts_query, normalize_search, snippet,
@@ -24,8 +25,11 @@ impl TextQueryService {
         }
     }
 
-    pub async fn load_tabs(&self) -> Result<Vec<(i64, String, String)>, ServiceError> {
-        self.repo.load_tabs().await.map_err(ServiceError::Db)
+    pub async fn load_tabs(
+        &self,
+        actor: &Actor,
+    ) -> Result<Vec<(i64, String, String)>, ServiceError> {
+        self.repo.load_tabs(actor).await.map_err(ServiceError::Db)
     }
 }
 
@@ -33,7 +37,7 @@ impl TextQueryService {
 impl SearchPort for TextQueryService {
     async fn search(
         &self,
-        user_id: i32,
+        actor: &Actor,
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
@@ -43,7 +47,7 @@ impl SearchPort for TextQueryService {
         let (rows, use_fts) = if let Some(fts) = fts_query(q) {
             (
                 self.repo
-                    .search_hits_fts(user_id, &fts, cap)
+                    .search_hits_fts(actor, &fts, cap)
                     .await
                     .map_err(ServiceError::Db)?,
                 true,
@@ -51,7 +55,7 @@ impl SearchPort for TextQueryService {
         } else {
             (
                 self.repo
-                    .search_hits(user_id, &like, cap)
+                    .search_hits(actor, &like, cap)
                     .await
                     .map_err(ServiceError::Db)?,
                 false,

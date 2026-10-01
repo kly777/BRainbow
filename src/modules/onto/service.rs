@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use super::model::Onto;
 use super::repository::OntoRepository;
+use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 
 /// 命令侧服务——只暴露写操作。
@@ -21,7 +22,7 @@ impl OntoService {
 
     pub async fn create(
         &self,
-        user_id: i32,
+        actor: &Actor,
         name: String,
         description: Option<String>,
     ) -> Result<Onto, ServiceError> {
@@ -29,20 +30,20 @@ impl OntoService {
             return Err(ServiceError::InvalidInput("本体名称不能为空".into()));
         }
         self.repo
-            .create(user_id, name, description)
+            .create(actor.user_id, name, description)
             .await
             .map_err(ServiceError::Db)
     }
 
     pub async fn update(
         &self,
-        user_id: i32,
+        actor: &Actor,
         id: i32,
         name: Option<String>,
         description: Option<String>,
     ) -> Result<Onto, ServiceError> {
         self.repo
-            .update(user_id, id, name, description)
+            .update(actor, id, name, description)
             .await
             .map_err(|e| match e {
                 sqlx::Error::RowNotFound => ServiceError::NotFound("本体不存在".into()),
@@ -50,9 +51,9 @@ impl OntoService {
             })
     }
 
-    pub async fn delete(&self, user_id: i32, id: i32) -> Result<u64, ServiceError> {
+    pub async fn delete(&self, actor: &Actor, id: i32) -> Result<u64, ServiceError> {
         self.repo
-            .delete(user_id, id)
+            .delete(actor, id)
             .await
             .map_err(ServiceError::Db)
     }
@@ -79,7 +80,7 @@ mod tests {
     async fn create_valid() {
         let (svc, _qsvc) = real_service().await;
         let onto = svc
-            .create(1, "onto-a".into(), Some("desc".into()))
+            .create(&Actor::user(1), "onto-a".into(), Some("desc".into()))
             .await
             .unwrap();
         assert_eq!(onto.name, "onto-a");
@@ -88,31 +89,31 @@ mod tests {
     #[tokio::test]
     async fn create_empty_name_rejected() {
         let (svc, _qsvc) = real_service().await;
-        let err = svc.create(1, "  ".into(), None).await.unwrap_err();
+        let err = svc.create(&Actor::user(1), "  ".into(), None).await.unwrap_err();
         assert!(matches!(err, ServiceError::InvalidInput(_)));
     }
 
     #[tokio::test]
     async fn list_and_by_id() {
         let (svc, qsvc) = real_service().await;
-        svc.create(1, "a".into(), None).await.unwrap();
-        let (items, total) = qsvc.list(1, 10, 0).await.unwrap();
+        svc.create(&Actor::user(1), "a".into(), None).await.unwrap();
+        let (items, total) = qsvc.list(&Actor::user(1), 10, 0).await.unwrap();
         assert_eq!(total, 1);
         assert_eq!(items[0].name, "a");
-        assert!(qsvc.by_id(1, items[0].id).await.unwrap().is_some());
-        assert!(qsvc.by_id(1, 999).await.unwrap().is_none());
+        assert!(qsvc.by_id(&Actor::user(1), items[0].id).await.unwrap().is_some());
+        assert!(qsvc.by_id(&Actor::user(1), 999).await.unwrap().is_none());
     }
 
     #[tokio::test]
     async fn update_and_delete() {
         let (svc, qsvc) = real_service().await;
-        let onto = svc.create(1, "x".into(), None).await.unwrap();
-        svc.update(1, onto.id, Some("y".into()), None)
+        let onto = svc.create(&Actor::user(1), "x".into(), None).await.unwrap();
+        svc.update(&Actor::user(1), onto.id, Some("y".into()), None)
             .await
             .unwrap();
-        let u = qsvc.by_id(1, onto.id).await.unwrap().unwrap();
+        let u = qsvc.by_id(&Actor::user(1), onto.id).await.unwrap().unwrap();
         assert_eq!(u.name, "y");
-        svc.delete(1, onto.id).await.unwrap();
-        assert!(qsvc.by_id(1, onto.id).await.unwrap().is_none());
+        svc.delete(&Actor::user(1), onto.id).await.unwrap();
+        assert!(qsvc.by_id(&Actor::user(1), onto.id).await.unwrap().is_none());
     }
 }

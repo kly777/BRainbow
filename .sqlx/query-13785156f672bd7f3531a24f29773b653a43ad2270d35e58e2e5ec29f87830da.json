@@ -1,0 +1,33 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, COALESCE(content, '') AS \"content!: String\" FROM card\n               WHERE (?1 IS NULL OR user_id = ?1) AND content LIKE ?2 ESCAPE '\\'\n               ORDER BY id DESC LIMIT ?3",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "card",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "content!: String",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "13785156f672bd7f3531a24f29773b653a43ad2270d35e58e2e5ec29f87830da"
+}

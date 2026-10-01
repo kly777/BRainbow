@@ -1,6 +1,8 @@
 use sqlx::{FromRow, SqlitePool};
 use std::sync::Arc;
 
+use crate::shared::actor::Actor;
+
 use super::model::{Article, ArticleSummary, ArticleWordStatus, UnknownWord};
 
 // ── 行类型：命名 FromRow（列名与 SELECT 别名一一对应，避免元组列序错误） ──
@@ -124,16 +126,16 @@ impl ReadingRepo {
         Ok(())
     }
 
-    pub async fn get_article(&self, user_id: i32, id: i64) -> Result<Option<Article>, sqlx::Error> {
+    pub async fn get_article(&self, actor: &Actor, id: i64) -> Result<Option<Article>, sqlx::Error> {
         sqlx::query_as!(
             ArticleRow,
             r#"SELECT id, title, content,
                       COALESCE(word_count, 0) AS "word_count!: i64",
                       notes,
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: String"
-               FROM reading_article WHERE id = ?1 AND (user_id = ?2 OR user_id IS NULL)"#,
+               FROM reading_article WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)"#,
             id,
-            user_id
+            actor.owner_scope()
         )
         .fetch_optional(&*self.pool)
         .await
@@ -141,15 +143,15 @@ impl ReadingRepo {
     }
 
     #[cfg_attr(not(test), allow(dead_code))] // 测试保留的整表读取
-    pub async fn get_all_articles(&self, user_id: i32) -> Result<Vec<Article>, sqlx::Error> {
+    pub async fn get_all_articles(&self, actor: &Actor) -> Result<Vec<Article>, sqlx::Error> {
         sqlx::query_as!(
             ArticleRow,
             r#"SELECT id, title, content,
                       COALESCE(word_count, 0) AS "word_count!: i64",
                       notes,
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: String"
-               FROM reading_article WHERE (user_id = ?1 OR user_id IS NULL) ORDER BY id DESC"#,
-            user_id
+               FROM reading_article WHERE (?1 IS NULL OR user_id = ?1) ORDER BY id DESC"#,
+            actor.owner_scope()
         )
         .fetch_all(&*self.pool)
         .await
@@ -226,7 +228,7 @@ impl ReadingRepo {
     /// 获取所有文章的认识率摘要（单条聚合 SQL，避免每篇文章两次查询）
     pub async fn get_all_article_summaries(
         &self,
-        user_id: i32,
+        actor: &Actor,
     ) -> Result<Vec<ArticleSummary>, sqlx::Error> {
         let rows = sqlx::query_as!(
             SummaryAggRow,
@@ -241,10 +243,10 @@ impl ReadingRepo {
             FROM reading_article a
             LEFT JOIN reading_article_word w ON w.article_id = a.id
             LEFT JOIN reading_user_word uw ON uw.word = w.word
-            WHERE (a.user_id = ?1 OR a.user_id IS NULL)
+            WHERE (?1 IS NULL OR a.user_id = ?1)
             GROUP BY a.id, a.title, a.word_count, a.created_at
             "#,
-            user_id
+            actor.owner_scope()
         )
         .fetch_all(&*self.pool)
         .await?;
@@ -270,15 +272,15 @@ impl ReadingRepo {
 
     pub async fn update_article_notes(
         &self,
-        user_id: i32,
+        actor: &Actor,
         id: i64,
         notes: &str,
     ) -> Result<(), sqlx::Error> {
         sqlx::query!(
-            "UPDATE reading_article SET notes = ? WHERE id = ? AND (user_id = ? OR user_id IS NULL)",
+            "UPDATE reading_article SET notes = ?1 WHERE id = ?2 AND (?3 IS NULL OR user_id = ?3)",
             notes,
             id,
-            user_id
+            actor.owner_scope()
         )
         .execute(&*self.pool)
         .await?;
@@ -345,17 +347,17 @@ impl ReadingRepo {
         Ok(())
     }
 
-    pub async fn get_unknown_words(&self, user_id: i32) -> Result<Vec<UnknownWord>, sqlx::Error> {
+    pub async fn get_unknown_words(&self, actor: &Actor) -> Result<Vec<UnknownWord>, sqlx::Error> {
         sqlx::query_as!(
             UnknownWordRow,
             r#"
             SELECT word, unknown_count, known_count,
                    COALESCE(first_seen_at, CURRENT_TIMESTAMP) AS "first_seen_at!: String"
             FROM reading_user_word
-            WHERE status = 'unknown' AND (user_id = ?1 OR user_id IS NULL)
+            WHERE status = 'unknown' AND (?1 IS NULL OR user_id = ?1)
             ORDER BY unknown_count DESC, word ASC
             "#,
-            user_id
+            actor.owner_scope()
         )
         .fetch_all(&*self.pool)
         .await
@@ -376,11 +378,11 @@ impl ReadingRepo {
     /// 推荐认识率最接近 target_ratio 的文章（排除指定 ID）
     pub async fn recommend_article(
         &self,
-        user_id: i32,
+        actor: &Actor,
         exclude_id: i64,
         target_ratio: f64,
     ) -> Result<Option<ArticleSummary>, sqlx::Error> {
-        let all = self.get_all_article_summaries(user_id).await?;
+        let all = self.get_all_article_summaries(actor).await?;
         let best = all
             .into_iter()
             .filter(|a| a.id != exclude_id)
@@ -395,7 +397,7 @@ impl ReadingRepo {
     /// 全局搜索命中：返回 (id, title, content)
     pub async fn search_hits(
         &self,
-        user_id: i32,
+        actor: &Actor,
         like: &str,
         cap: i64,
     ) -> Result<Vec<(i64, String, String)>, sqlx::Error> {
@@ -404,10 +406,10 @@ impl ReadingRepo {
             r#"SELECT id, title, content,
                       title LIKE ?2 ESCAPE '\' AS "title_hit!: i64"
                FROM reading_article
-               WHERE (user_id = ?1 OR user_id IS NULL)
+               WHERE (?1 IS NULL OR user_id = ?1)
                  AND (title LIKE ?2 ESCAPE '\' OR content LIKE ?2 ESCAPE '\')
                ORDER BY (title LIKE ?2 ESCAPE '\') DESC, id DESC LIMIT ?3"#,
-            user_id,
+            actor.owner_scope(),
             like,
             cap
         )
@@ -421,7 +423,7 @@ impl ReadingRepo {
 
     pub async fn search_hits_fts(
         &self,
-        user_id: i32,
+        actor: &Actor,
         fts_query: &str,
         cap: i64,
     ) -> Result<Vec<(i64, String, String)>, sqlx::Error> {
@@ -432,10 +434,10 @@ impl ReadingRepo {
                FROM reading_article_fts fts
                JOIN reading_article r ON r.id = fts.rowid
                WHERE reading_article_fts MATCH ?2
-                 AND (r.user_id = ?1 OR r.user_id IS NULL)
+                 AND (?1 IS NULL OR r.user_id = ?1)
                ORDER BY rank
                LIMIT ?3"#,
-            user_id,
+            actor.owner_scope(),
             fts_query,
             cap
         )
@@ -461,6 +463,11 @@ mod tests {
     }
 
     const TEST_USER_ID: i32 = 1;
+
+    /// 测试调用者：普通用户（owner 就是 TEST_USER_ID）
+    fn actor() -> Actor {
+        Actor::user(TEST_USER_ID)
+    }
 
     async fn setup_db() -> ReadingRepo {
         let pool = SqlitePool::connect("sqlite::memory:")
@@ -510,7 +517,7 @@ mod tests {
         let id = insert_article(&repo, "Test Title", "hello world").await;
 
         let article = repo
-            .get_article(TEST_USER_ID, id)
+            .get_article(&actor(), id)
             .await
             .unwrap()
             .expect("article should exist");
@@ -522,13 +529,13 @@ mod tests {
     #[tokio::test]
     async fn test_get_nonexistent_article() {
         let repo = setup_db().await;
-        assert!(repo.get_article(TEST_USER_ID, 999).await.unwrap().is_none());
+        assert!(repo.get_article(&actor(), 999).await.unwrap().is_none());
     }
 
     #[tokio::test]
     async fn test_get_all_articles_empty() {
         let repo = setup_db().await;
-        let articles = repo.get_all_articles(TEST_USER_ID).await.unwrap();
+        let articles = repo.get_all_articles(&actor()).await.unwrap();
         assert!(articles.is_empty());
     }
 
@@ -538,7 +545,7 @@ mod tests {
         let id1 = insert_article(&repo, "A", "alpha bravo").await;
         let id2 = insert_article(&repo, "B", "charlie delta").await;
 
-        let articles = repo.get_all_articles(TEST_USER_ID).await.unwrap();
+        let articles = repo.get_all_articles(&actor()).await.unwrap();
         assert_eq!(articles.len(), 2);
         assert_eq!(articles[0].id, id2, "newest first");
         assert_eq!(articles[1].id, id1);
@@ -617,7 +624,7 @@ mod tests {
             .await
             .unwrap();
 
-        let words = repo.get_unknown_words(TEST_USER_ID).await.unwrap();
+        let words = repo.get_unknown_words(&actor()).await.unwrap();
         assert_eq!(words.len(), 1);
         assert_eq!(words[0].word, "hello");
         assert_eq!(words[0].unknown_count, 1);
@@ -634,7 +641,7 @@ mod tests {
             .await
             .unwrap();
 
-        let words = repo.get_unknown_words(TEST_USER_ID).await.unwrap();
+        let words = repo.get_unknown_words(&actor()).await.unwrap();
         assert_eq!(words.len(), 1);
         assert_eq!(words[0].unknown_count, 2);
     }
@@ -649,7 +656,7 @@ mod tests {
             .await
             .unwrap();
 
-        let words = repo.get_unknown_words(TEST_USER_ID).await.unwrap();
+        let words = repo.get_unknown_words(&actor()).await.unwrap();
         assert!(
             words.is_empty(),
             "switched to known, should not appear in unknown"
@@ -683,7 +690,7 @@ mod tests {
             .await
             .unwrap();
 
-        let words = repo.get_unknown_words(TEST_USER_ID).await.unwrap();
+        let words = repo.get_unknown_words(&actor()).await.unwrap();
         assert_eq!(words[0].word, "common");
         assert_eq!(words[0].unknown_count, 3);
         assert_eq!(words[1].word, "rare");
@@ -719,7 +726,7 @@ mod tests {
         assert_eq!(alice.status, "ignored");
 
         // unknown_count should not include alice
-        let summaries = repo.get_all_article_summaries(TEST_USER_ID).await.unwrap();
+        let summaries = repo.get_all_article_summaries(&actor()).await.unwrap();
         assert_eq!(summaries.len(), 1);
         assert_eq!(summaries[0].unknown_word_count, 2, "charlie + dave");
     }
@@ -735,7 +742,7 @@ mod tests {
             .await
             .unwrap();
 
-        let summaries = repo.get_all_article_summaries(TEST_USER_ID).await.unwrap();
+        let summaries = repo.get_all_article_summaries(&actor()).await.unwrap();
         assert_eq!(summaries.len(), 1);
         let s = &summaries[0];
         assert!((s.known_ratio - 1.0 / 3.0).abs() < 0.001);
@@ -747,7 +754,7 @@ mod tests {
     #[tokio::test]
     async fn test_recommend_no_articles() {
         let repo = setup_db().await;
-        let result = repo.recommend_article(TEST_USER_ID, 0, 0.9).await.unwrap();
+        let result = repo.recommend_article(&actor(), 0, 0.9).await.unwrap();
         assert!(result.is_none());
     }
 
@@ -784,7 +791,7 @@ mod tests {
             .unwrap();
 
         let rec = repo
-            .recommend_article(TEST_USER_ID, id1, 0.9)
+            .recommend_article(&actor(), id1, 0.9)
             .await
             .unwrap()
             .unwrap();

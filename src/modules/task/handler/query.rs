@@ -9,6 +9,7 @@ use super::super::model::Task;
 use super::super::query::TaskQueryService;
 use super::super::response::{CalendarEvent, StatsResponse, TaskResponse, TreeNode};
 use super::dependency::{CalendarQuery, DagQuery, TreeQuery};
+use crate::shared::actor::Actor;
 use crate::shared::claims::Claims;
 use crate::shared::error_types as error;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
@@ -19,9 +20,9 @@ pub async fn get_tree_handler(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &query_service;
-    let user_id = claims.sub;
+    let actor = Actor::from(&claims);
 
-    let root_tasks = match svc.tree(user_id, None).await {
+    let root_tasks = match svc.tree(&actor, None).await {
         Ok(tasks) => tasks,
         Err(e) => return e.into_response(),
     };
@@ -37,7 +38,7 @@ pub async fn get_tree_handler(
 
     let mut nodes = Vec::new();
     for task in filtered {
-        if let Some(node) = build_tree_node(svc, user_id, task).await {
+        if let Some(node) = build_tree_node(svc, &actor, task).await {
             nodes.push(node);
         }
     }
@@ -47,16 +48,16 @@ pub async fn get_tree_handler(
 
 fn build_tree_node<'a>(
     svc: &'a TaskQueryService,
-    user_id: i32,
+    actor: &'a Actor,
     task: Task,
 ) -> Pin<Box<dyn std::future::Future<Output = Option<TreeNode>> + Send + 'a>> {
     Box::pin(async move {
-        let Ok(children) = svc.tree(user_id, Some(task.id)).await else {
+        let Ok(children) = svc.tree(actor, Some(task.id)).await else {
             return None;
         };
         let mut child_nodes = Vec::new();
         for child in children {
-            if let Some(node) = build_tree_node(svc, user_id, child).await {
+            if let Some(node) = build_tree_node(svc, actor, child).await {
                 child_nodes.push(node);
             }
         }
@@ -75,7 +76,7 @@ pub async fn get_calendar_handler(
     let svc = &query_service;
 
     match svc
-        .calendar(claims.sub, query.start, query.end, query.status)
+        .calendar(&Actor::from(&claims), query.start, query.end, query.status)
         .await
     {
         Ok(entries) => {
@@ -104,7 +105,11 @@ pub async fn get_dag_handler(
     let svc = &query_service;
 
     match svc
-        .dag(claims.sub, query.task_id, query.depth.unwrap_or(3))
+        .dag(
+            &Actor::from(&claims),
+            query.task_id,
+            query.depth.unwrap_or(3),
+        )
         .await
     {
         Ok(view) => Json(view).into_response(),
@@ -117,7 +122,7 @@ pub async fn get_stats_handler(
     Extension(claims): Extension<Claims>,
 ) -> impl IntoResponse {
     let svc = &query_service;
-    match svc.stats(claims.sub).await {
+    match svc.stats(&Actor::from(&claims)).await {
         Ok((backlog, active, completed, archived)) => Json(StatsResponse {
             backlog,
             active,
@@ -148,7 +153,12 @@ pub async fn search_tasks_handler(
 
     let svc = &query_service;
     match svc
-        .search(claims.sub, &query, pagination.limit(), pagination.offset())
+        .search(
+            &Actor::from(&claims),
+            &query,
+            pagination.limit(),
+            pagination.offset(),
+        )
         .await
     {
         Ok((tasks, total)) => {

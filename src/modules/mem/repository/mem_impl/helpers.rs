@@ -2,7 +2,8 @@
 //!
 //! 每个子文件实现 `impl super::super::MemRepo` 的一个方法组。
 
-use crate::shared::db_query::push_user_visible;
+use crate::shared::actor::Actor;
+use crate::shared::db_query::push_owner_scope;
 
 impl super::super::MemRepo {
     pub(super) fn tag_filter_sql(qb: &mut sqlx::QueryBuilder<sqlx::Sqlite>, tag_ids: &[i32]) {
@@ -32,17 +33,17 @@ impl super::super::MemRepo {
         qb.push("))");
     }
 
-    /// 会话计数通用骨架：用户可见范围 + 标签过滤 + 指定 where 条件。
+    /// 会话计数通用骨架：调用者可见的 mem + 标签过滤 + 指定 where 条件。
     pub(super) async fn count_session_sql(
         &self,
-        user_id: i32,
+        actor: &Actor,
         where_clause: &str,
         tag_ids: &[i32],
         exclude_tag_ids: &[i32],
     ) -> Result<i64, sqlx::Error> {
         let mut qb = sqlx::QueryBuilder::<sqlx::Sqlite>::new("SELECT COUNT(*) FROM mem m WHERE ");
-        push_user_visible(&mut qb, "m.user_id", user_id);
-        qb.push(format!(" AND {where_clause}"));
+        qb.push(where_clause);
+        push_owner_scope(&mut qb, actor, "m.user_id");
         Self::tag_filter_sql(&mut qb, tag_ids);
         Self::exclude_tag_filter_sql(&mut qb, exclude_tag_ids);
         qb.build_query_scalar().fetch_one(&*self.pool).await

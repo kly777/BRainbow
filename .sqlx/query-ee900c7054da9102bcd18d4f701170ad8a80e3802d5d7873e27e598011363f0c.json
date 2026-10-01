@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT DISTINCT m.id, c1.content AS cue, c2.content AS target\n               FROM mem m\n               JOIN chunk c1 ON c1.id = m.cue_chunk_id\n               JOIN chunk c2 ON c2.id = m.target_chunk_id\n               WHERE (?1 IS NULL OR m.user_id = ?1)\n                 AND (c1.id IN (SELECT rowid FROM chunk_fts WHERE chunk_fts MATCH ?2)\n                      OR c2.id IN (SELECT rowid FROM chunk_fts WHERE chunk_fts MATCH ?2))\n               ORDER BY m.id DESC LIMIT ?3",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "mem",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "cue",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chunk",
+            "name": "content"
+          }
+        }
+      },
+      {
+        "name": "target",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "chunk",
+            "name": "content"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "ee900c7054da9102bcd18d4f701170ad8a80e3802d5d7873e27e598011363f0c"
+}

@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT cue_chunk_id AS \"cue_chunk_id: i32\",\n                      target_chunk_id AS \"target_chunk_id: i32\"\n               FROM mem WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)",
+  "describe": {
+    "columns": [
+      {
+        "name": "cue_chunk_id: i32",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "mem",
+            "name": "cue_chunk_id"
+          }
+        }
+      },
+      {
+        "name": "target_chunk_id: i32",
+        "ordinal": 1,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "mem",
+            "name": "target_chunk_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "3f72682061ea26771c8bad154fcf5b6a3cf64cddfe96f55afdf05b24dcb4b451"
+}

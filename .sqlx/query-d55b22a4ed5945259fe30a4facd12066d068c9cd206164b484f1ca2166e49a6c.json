@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM tag WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "d55b22a4ed5945259fe30a4facd12066d068c9cd206164b484f1ca2166e49a6c"
+}

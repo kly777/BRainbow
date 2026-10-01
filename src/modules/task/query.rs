@@ -6,6 +6,7 @@ use async_trait::async_trait;
 use super::model::{Task, TaskStatus};
 use super::repository::TaskRepository;
 use crate::modules::time_window::TimeWindow;
+use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{
     SearchHit, SearchPort, SearchTarget, fts_query, normalize_search, snippet,
@@ -29,79 +30,79 @@ impl TaskQueryService {
 
     pub async fn list(
         &self,
-        user_id: i32,
+        actor: &Actor,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Task>, i64), ServiceError> {
         self.repo
-            .find_all_excluding_archived_paginated(user_id, limit, offset)
+            .find_all_excluding_archived_paginated(actor, limit, offset)
             .await
             .map_err(ServiceError::Db)
     }
 
     pub async fn list_all(
         &self,
-        user_id: i32,
+        actor: &Actor,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Task>, i64), ServiceError> {
         self.repo
-            .find_all_paginated(user_id, limit, offset)
+            .find_all_paginated(actor, limit, offset)
             .await
             .map_err(ServiceError::Db)
     }
 
-    pub async fn by_id(&self, user_id: i32, id: i32) -> Result<Option<Task>, ServiceError> {
+    pub async fn by_id(&self, actor: &Actor, id: i32) -> Result<Option<Task>, ServiceError> {
         self.repo
-            .find_by_id(user_id, id)
+            .find_by_id(actor, id)
             .await
             .map_err(ServiceError::Db)
     }
 
     pub async fn detail(
         &self,
-        user_id: i32,
+        actor: &Actor,
         id: i32,
     ) -> Result<Option<super::dto::TaskDetailResponse>, ServiceError> {
         self.repo
-            .find_detail(user_id, id)
+            .find_detail(actor, id)
             .await
             .map_err(ServiceError::Db)
     }
 
-    pub async fn tree(&self, user_id: i32, root: Option<i32>) -> Result<Vec<Task>, ServiceError> {
+    pub async fn tree(&self, actor: &Actor, root: Option<i32>) -> Result<Vec<Task>, ServiceError> {
         self.repo
-            .find_tree(user_id, root)
+            .find_tree(actor, root)
             .await
             .map_err(ServiceError::Db)
     }
 
-    pub async fn stats(&self, user_id: i32) -> Result<(i64, i64, i64, i64), ServiceError> {
-        self.repo.get_stats(user_id).await.map_err(ServiceError::Db)
+    pub async fn stats(&self, actor: &Actor) -> Result<(i64, i64, i64, i64), ServiceError> {
+        self.repo.get_stats(actor).await.map_err(ServiceError::Db)
     }
 
     pub async fn by_status(
         &self,
-        user_id: i32,
+        actor: &Actor,
         status: TaskStatus,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Task>, i64), ServiceError> {
         self.repo
-            .find_by_status_paginated(user_id, status, limit, offset)
+            .find_by_status_paginated(actor, status, limit, offset)
             .await
             .map_err(ServiceError::Db)
     }
 
     pub async fn search(
         &self,
-        user_id: i32,
+        actor: &Actor,
         query: &str,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Task>, i64), ServiceError> {
         self.repo
-            .search_by_title_paginated(user_id, query, limit, offset)
+            .search_by_title_paginated(actor, query, limit, offset)
             .await
             .map_err(ServiceError::Db)
     }
@@ -109,13 +110,13 @@ impl TaskQueryService {
     /// 获取日历事件 - 查询指定时间范围内的所有非归档任务的时间窗口
     pub async fn calendar(
         &self,
-        user_id: i32,
+        actor: &Actor,
         start: Option<DateTime<Utc>>,
         end: Option<DateTime<Utc>>,
         status: Option<TaskStatus>,
     ) -> Result<Vec<(Task, TimeWindow)>, ServiceError> {
         self.repo
-            .find_calendar_events(user_id, start, end, status)
+            .find_calendar_events(actor, start, end, status)
             .await
             .map_err(ServiceError::Db)
     }
@@ -123,7 +124,7 @@ impl TaskQueryService {
     /// 构建依赖图（DAG）— 批量查询，避免 N+1
     pub async fn dag(
         &self,
-        user_id: i32,
+        actor: &Actor,
         root_task_id: Option<i32>,
         depth: i32,
     ) -> Result<super::response::DagView, ServiceError> {
@@ -132,7 +133,7 @@ impl TaskQueryService {
 
         let (all_tasks, _) = self
             .repo
-            .find_all_paginated(user_id, 10000, 0)
+            .find_all_paginated(actor, 10000, 0)
             .await
             .map_err(ServiceError::Db)?;
         let task_map: HashMap<i32, &Task> = all_tasks.iter().map(|t| (t.id, t)).collect();
@@ -140,7 +141,7 @@ impl TaskQueryService {
         // 批量取全部依赖
         let all_deps = self
             .repo
-            .get_all_dependencies(user_id)
+            .get_all_dependencies(actor)
             .await
             .map_err(ServiceError::Db)?;
 
@@ -201,7 +202,7 @@ impl TaskQueryService {
 impl SearchPort for TaskQueryService {
     async fn search(
         &self,
-        user_id: i32,
+        actor: &Actor,
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
@@ -212,7 +213,7 @@ impl SearchPort for TaskQueryService {
         let (rows, is_fts) = if let Some(fts) = fts_query(q) {
             (
                 self.repo
-                    .search_hits_fts(user_id, &fts, cap)
+                    .search_hits_fts(actor, &fts, cap)
                     .await
                     .map_err(ServiceError::Db)?,
                 true,
@@ -220,7 +221,7 @@ impl SearchPort for TaskQueryService {
         } else {
             (
                 self.repo
-                    .search_hits(user_id, &like, cap)
+                    .search_hits(actor, &like, cap)
                     .await
                     .map_err(ServiceError::Db)?,
                 false,

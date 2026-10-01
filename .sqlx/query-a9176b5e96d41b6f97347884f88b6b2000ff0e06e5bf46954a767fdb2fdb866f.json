@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM signifier_signified WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "a9176b5e96d41b6f97347884f88b6b2000ff0e06e5bf46954a767fdb2fdb866f"
+}

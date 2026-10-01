@@ -3,6 +3,7 @@ use std::sync::Arc;
 
 use super::model::Article;
 use super::repository::ReadingRepo;
+use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 
 fn extract_words(text: &str) -> Vec<String> {
@@ -37,7 +38,7 @@ impl ReadingService {
 
     pub async fn upload_article(
         &self,
-        user_id: i32,
+        actor: &Actor,
         title: &str,
         content: &str,
     ) -> Result<Article, ServiceError> {
@@ -58,7 +59,7 @@ impl ReadingService {
 
         // 插入文章
         let article_id = repo
-            .insert_article(user_id, title, content, word_count)
+            .insert_article(actor.user_id, title, content, word_count)
             .await
             .map_err(ServiceError::Db)?;
 
@@ -68,7 +69,7 @@ impl ReadingService {
             .map_err(ServiceError::Db)?;
 
         // 返回（刚插入必须存在；缺失视为数据异常，走 RowNotFound 错误）
-        repo.get_article(user_id, article_id)
+        repo.get_article(actor, article_id)
             .await
             .map_err(ServiceError::Db)?
             .ok_or_else(|| ServiceError::Internal("文章写入后读取失败".into()))
@@ -77,7 +78,7 @@ impl ReadingService {
     /// 标记单词
     pub async fn mark_word(
         &self,
-        user_id: i32,
+        actor: &Actor,
         word: &str,
         status: &str,
     ) -> Result<(), ServiceError> {
@@ -89,7 +90,7 @@ impl ReadingService {
         }
         let word = word.trim();
         let repo = &self.repo;
-        repo.upsert_user_word(user_id, word, status)
+        repo.upsert_user_word(actor.user_id, word, status)
             .await
             .map_err(ServiceError::Db)
     }
@@ -97,12 +98,12 @@ impl ReadingService {
     /// 更新文章笔记
     pub async fn update_notes(
         &self,
-        user_id: i32,
+        actor: &Actor,
         id: i64,
         notes: &str,
     ) -> Result<(), ServiceError> {
         let repo = &self.repo;
-        repo.update_article_notes(user_id, id, notes)
+        repo.update_article_notes(actor, id, notes)
             .await
             .map_err(ServiceError::Db)
     }

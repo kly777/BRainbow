@@ -1,0 +1,57 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT conv_id, title, conv_type,\n                              COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: String\"\n                       FROM conv_titles WHERE (?1 IS NULL OR user_id = ?1) AND title LIKE ?2 ESCAPE '\\' LIMIT 200",
+  "describe": {
+    "columns": [
+      {
+        "name": "conv_id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "conv_titles",
+            "name": "conv_id"
+          }
+        }
+      },
+      {
+        "name": "title",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "conv_titles",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "name": "conv_type",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "conv_titles",
+            "name": "conv_type"
+          }
+        }
+      },
+      {
+        "name": "created_at!: String",
+        "ordinal": 3,
+        "type_info": "Datetime",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "4ec05b1ca4dc23c38f548d9c74ef9dc4a016e8a36957bd644599be877704de7c"
+}

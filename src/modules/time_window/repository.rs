@@ -4,6 +4,8 @@ use std::sync::Arc;
 
 use crate::shared::db_query::QueryBuilderExt;
 
+use crate::shared::actor::Actor;
+
 use super::model::{CreateTimeWindowRequest, TimeWindow, TimeWindowType, UpdateTimeWindowRequest};
 
 #[derive(sqlx::FromRow)]
@@ -84,8 +86,12 @@ impl TimeWindowRepository {
         Ok(row)
     }
 
-    /// 根据ID获取时间窗口
-    pub async fn find_by_id(&self, id: i32) -> Result<Option<TimeWindow>, sqlx::Error> {
+    /// 根据ID获取时间窗口（归属随父任务，见 doc/design/authorization.md §3.1）
+    pub async fn find_by_id(
+        &self,
+        actor: &Actor,
+        id: i32,
+    ) -> Result<Option<TimeWindow>, sqlx::Error> {
         sqlx::query_as!(
             TimeWindow,
             r#"SELECT id AS "id: i32",
@@ -98,23 +104,54 @@ impl TimeWindowRepository {
                       recurrence_interval AS "recurrence_interval?: i32",
                       recurrence_until AS "recurrence_until?: chrono::DateTime<chrono::Utc>",
                       recurrence_by_weekdays
-               FROM time_window WHERE id = ?"#,
+               FROM time_window
+               WHERE id = ?1
+                 AND (?2 IS NULL OR EXISTS (
+                       SELECT 1 FROM task t WHERE t.id = time_window.task_id AND t.user_id = ?2))"#,
+            id,
+            actor.owner_scope()
+        )
+        .fetch_optional(&*self.db)
+        .await
+    }
+
+    /// 只看行、不看归属：**给 service 的写路径用**（先拿到 `task_id` 才能问"这任务是他的吗"）。
+    ///
+    /// 不要把它当读接口用 —— 对外读一律走带 `actor` 的 [`Self::find_by_id`]。
+    pub(crate) async fn find_by_id_unscoped(&self, id: i32) -> Result<Option<TimeWindow>, sqlx::Error> {
+        sqlx::query_as!(
+            TimeWindow,
+            r#"SELECT id AS "id: i32",
+                      start_time AS "start_time!: chrono::DateTime<chrono::Utc>",
+                      end_time AS "end_time!: chrono::DateTime<chrono::Utc>",
+                      type AS "window_type!: crate::modules::time_window::TimeWindowType",
+                      task_id AS "task_id: i32",
+                      user_id AS "user_id?: i32",
+                      recurrence_freq AS "recurrence_freq?: crate::modules::time_window::RecurrenceFrequency",
+                      recurrence_interval AS "recurrence_interval?: i32",
+                      recurrence_until AS "recurrence_until?: chrono::DateTime<chrono::Utc>",
+                      recurrence_by_weekdays
+               FROM time_window WHERE id = ?1"#,
             id
         )
         .fetch_optional(&*self.db)
         .await
     }
 
-    /// 根据任务ID获取时间窗口（分页）
+    /// 根据任务ID获取时间窗口（分页；归属随父任务）
     pub async fn find_by_task_id_paginated(
         &self,
+        actor: &Actor,
         task_id: i32,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<TimeWindow>, i64), sqlx::Error> {
         let total: i64 = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM time_window WHERE task_id = ?",
-            task_id
+            "SELECT COUNT(*) FROM time_window tw WHERE tw.task_id = ?1
+               AND (?2 IS NULL OR EXISTS (
+                     SELECT 1 FROM task t WHERE t.id = tw.task_id AND t.user_id = ?2))",
+            task_id,
+            actor.owner_scope()
         )
         .fetch_one(&*self.db)
         .await?;
@@ -130,8 +167,12 @@ impl TimeWindowRepository {
                       recurrence_interval AS "recurrence_interval?: i32",
                       recurrence_until AS "recurrence_until?: chrono::DateTime<chrono::Utc>",
                       recurrence_by_weekdays
-               FROM time_window WHERE task_id = ? ORDER BY start_time LIMIT ? OFFSET ?"#,
+               FROM time_window tw WHERE tw.task_id = ?1
+                 AND (?2 IS NULL OR EXISTS (
+                       SELECT 1 FROM task t WHERE t.id = tw.task_id AND t.user_id = ?2))
+               ORDER BY start_time LIMIT ?3 OFFSET ?4"#,
             task_id,
+            actor.owner_scope(),
             limit,
             offset
         )
@@ -140,9 +181,10 @@ impl TimeWindowRepository {
         Ok((results, total))
     }
 
-    /// 根据任务ID和时间类型获取时间窗口（分页）
+    /// 根据任务ID和时间类型获取时间窗口（分页；归属随父任务）
     pub async fn find_by_task_id_and_type_paginated(
         &self,
+        actor: &Actor,
         task_id: i32,
         window_type: TimeWindowType,
         limit: i64,
@@ -150,9 +192,12 @@ impl TimeWindowRepository {
     ) -> Result<(Vec<TimeWindow>, i64), sqlx::Error> {
         let tp = window_type.as_str();
         let total: i64 = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM time_window WHERE task_id = ? AND type = ?",
+            "SELECT COUNT(*) FROM time_window tw WHERE tw.task_id = ?1 AND tw.type = ?2
+               AND (?3 IS NULL OR EXISTS (
+                     SELECT 1 FROM task t WHERE t.id = tw.task_id AND t.user_id = ?3))",
             task_id,
-            tp
+            tp,
+            actor.owner_scope()
         )
         .fetch_one(&*self.db)
         .await?;
@@ -168,9 +213,14 @@ impl TimeWindowRepository {
                       recurrence_interval AS "recurrence_interval?: i32",
                       recurrence_until AS "recurrence_until?: chrono::DateTime<chrono::Utc>",
                       recurrence_by_weekdays
-               FROM time_window WHERE task_id = ? AND type = ? ORDER BY start_time LIMIT ? OFFSET ?"#,
+               FROM time_window tw
+               WHERE tw.task_id = ?1 AND tw.type = ?2
+                 AND (?3 IS NULL OR EXISTS (
+                       SELECT 1 FROM task t WHERE t.id = tw.task_id AND t.user_id = ?3))
+               ORDER BY start_time LIMIT ?4 OFFSET ?5"#,
             task_id,
             tp,
+            actor.owner_scope(),
             limit,
             offset
         )
@@ -268,9 +318,9 @@ impl TimeWindowRepository {
         id: i32,
         request: UpdateTimeWindowRequest,
     ) -> Result<TimeWindow, sqlx::Error> {
-        // 首先获取当前时间窗口
+        // 首先获取当前时间窗口（不看归属：归属已由 service 层的子表随父检查过）
         let current = self
-            .find_by_id(id)
+            .find_by_id_unscoped(id)
             .await?
             .ok_or_else(|| sqlx::Error::RowNotFound)?;
 
@@ -351,6 +401,7 @@ impl TimeWindowRepository {
     /// 获取任务的时间窗口统计
     pub async fn get_task_time_stats(
         &self,
+        actor: &Actor,
         task_id: i32,
     ) -> Result<(Option<DateTime<Utc>>, Option<DateTime<Utc>>, i64), sqlx::Error> {
         let row = sqlx::query_as!(
@@ -358,8 +409,12 @@ impl TimeWindowRepository {
             r#"SELECT MIN(start_time) AS "earliest?: chrono::DateTime<chrono::Utc>",
                       MAX(end_time) AS "latest?: chrono::DateTime<chrono::Utc>",
                       COUNT(*) AS "count!: i64"
-               FROM time_window WHERE task_id = ?"#,
-            task_id
+               FROM time_window tw
+               WHERE tw.task_id = ?1
+                 AND (?2 IS NULL OR EXISTS (
+                       SELECT 1 FROM task t WHERE t.id = tw.task_id AND t.user_id = ?2))"#,
+            task_id,
+            actor.owner_scope()
         )
         .fetch_one(&*self.db)
         .await?;
@@ -370,13 +425,15 @@ impl TimeWindowRepository {
     /// 检查时间窗口是否冲突
     pub async fn check_time_conflict(
         &self,
+        actor: &Actor,
         task_id: i32,
         start_time: DateTime<Utc>,
         end_time: DateTime<Utc>,
         exclude_id: Option<i32>,
     ) -> Result<bool, sqlx::Error> {
-        let mut builder =
-            QueryBuilder::new("SELECT COUNT(*) as count FROM time_window WHERE task_id = ");
+        let mut builder = QueryBuilder::new(
+            "SELECT COUNT(*) as count FROM time_window tw WHERE tw.task_id = ",
+        );
         builder.push_bind(task_id);
         builder.push(" AND (start_time < ");
         builder.push_bind(end_time);
@@ -385,6 +442,13 @@ impl TimeWindowRepository {
         builder.push(")");
 
         builder.push_opt(" AND id != ", &exclude_id);
+
+        // 归属随父任务（见 doc/design/authorization.md §3.1）
+        builder.push(" AND (");
+        builder.push_bind(actor.owner_scope());
+        builder.push(" IS NULL OR EXISTS (SELECT 1 FROM task t WHERE t.id = tw.task_id AND t.user_id = ");
+        builder.push_bind(actor.owner_scope());
+        builder.push("))");
 
         let result = builder.build().fetch_one(&*self.db).await?;
         let count: i64 = result.try_get("count")?;
@@ -396,13 +460,19 @@ impl TimeWindowRepository {
     #[allow(dead_code)]
     pub async fn get_task_time_type_stats(
         &self,
+        actor: &Actor,
         task_id: i32,
     ) -> Result<Vec<(String, i64)>, sqlx::Error> {
         let results = sqlx::query_as!(
             TypeCountRow,
             r#"SELECT type AS "time_type!: String", COUNT(*) AS "count!: i64"
-               FROM time_window WHERE task_id = ? GROUP BY type ORDER BY type"#,
-            task_id
+               FROM time_window tw
+               WHERE tw.task_id = ?1
+                 AND (?2 IS NULL OR EXISTS (
+                       SELECT 1 FROM task t WHERE t.id = tw.task_id AND t.user_id = ?2))
+               GROUP BY type ORDER BY type"#,
+            task_id,
+            actor.owner_scope()
         )
         .fetch_all(&*self.db)
         .await?;
@@ -445,9 +515,14 @@ mod tests {
     async fn setup() -> TimeWindowRepository {
         let pool = SqlitePool::connect("sqlite::memory:").await.expect("db");
         crate::db::migrate(&pool).await.expect("schema");
-        // 生产 schema 中 time_window.task_id 有外键约束，先建占位任务（测试用到 1、2）
+        // 生产 schema 中 time_window.task_id 有外键约束，先建占位任务（测试用到 1、2）；
+        // 任务归用户 1 —— 时间窗口的归属随父任务（见 doc/design/authorization.md §3.1）
+        sqlx::query("INSERT INTO user (id, name, password_hash) VALUES (1, 'u1', 'x')")
+            .execute(&pool)
+            .await
+            .expect("seed user");
         for (id, title) in [(1, "test-task-1"), (2, "test-task-2")] {
-            sqlx::query("INSERT INTO task (id, title) VALUES (?, ?)")
+            sqlx::query("INSERT INTO task (id, title, user_id) VALUES (?, ?, 1)")
                 .bind(id)
                 .bind(title)
                 .execute(&pool)
@@ -455,6 +530,11 @@ mod tests {
                 .expect("seed task");
         }
         TimeWindowRepository::new(Arc::new(pool))
+    }
+
+    /// 测试调用者：任务 1 / 2 的属主
+    fn actor() -> Actor {
+        Actor::user(1)
     }
 
     fn req(start: DateTime<Utc>, end: DateTime<Utc>) -> CreateTimeWindowRequest {
@@ -498,7 +578,7 @@ mod tests {
         assert_eq!(w.window_type, TimeWindowType::Feasible);
         assert_eq!(w.task_id, 1);
 
-        let found = repo.find_by_id(w.id).await.unwrap().unwrap();
+        let found = repo.find_by_id_unscoped(w.id).await.unwrap().unwrap();
         assert_eq!(found.id, w.id);
         assert_eq!(found.start_time, now);
         assert_eq!(found.end_time, now + Duration::hours(2));
@@ -507,7 +587,7 @@ mod tests {
     #[tokio::test]
     async fn find_by_id_missing_returns_none() {
         let repo = setup().await;
-        assert!(repo.find_by_id(999).await.unwrap().is_none());
+        assert!(repo.find_by_id(&actor(), 999).await.unwrap().is_none());
     }
 
     #[tokio::test]
@@ -551,7 +631,7 @@ mod tests {
             .unwrap();
         assert_eq!(repo.delete(w.id).await.unwrap(), 1);
         assert_eq!(repo.delete(w.id).await.unwrap(), 0);
-        assert!(repo.find_by_id(w.id).await.unwrap().is_none());
+        assert!(repo.find_by_id(&actor(), w.id).await.unwrap().is_none());
     }
 
     #[tokio::test]
@@ -587,7 +667,7 @@ mod tests {
 
         // 完全包含、部分重叠、边界相接
         assert!(
-            repo.check_time_conflict(
+            repo.check_time_conflict(&actor(), 
                 1,
                 now + Duration::minutes(30),
                 now + Duration::hours(1),
@@ -597,19 +677,19 @@ mod tests {
             .unwrap()
         );
         assert!(
-            repo.check_time_conflict(1, now - Duration::hours(1), now + Duration::hours(1), None)
+            repo.check_time_conflict(&actor(), 1, now - Duration::hours(1), now + Duration::hours(1), None)
                 .await
                 .unwrap()
         );
         assert!(
             !repo
-                .check_time_conflict(1, now + Duration::hours(2), now + Duration::hours(3), None)
+                .check_time_conflict(&actor(), 1, now + Duration::hours(2), now + Duration::hours(3), None)
                 .await
                 .unwrap()
         );
         assert!(
             !repo
-                .check_time_conflict(1, now - Duration::hours(2), now - Duration::hours(1), None)
+                .check_time_conflict(&actor(), 1, now - Duration::hours(2), now - Duration::hours(1), None)
                 .await
                 .unwrap()
         );
@@ -626,14 +706,14 @@ mod tests {
 
         assert!(
             !repo
-                .check_time_conflict(2, now, now + Duration::hours(1), None)
+                .check_time_conflict(&actor(), 2, now, now + Duration::hours(1), None)
                 .await
                 .unwrap()
         );
         // 编辑自身窗口时排除自身，不应报冲突
         assert!(
             !repo
-                .check_time_conflict(1, now, now + Duration::hours(1), Some(w.id))
+                .check_time_conflict(&actor(), 1, now, now + Duration::hours(1), Some(w.id))
                 .await
                 .unwrap()
         );
@@ -650,12 +730,12 @@ mod tests {
             .await
             .unwrap();
 
-        let (earliest, latest, count) = repo.get_task_time_stats(1).await.unwrap();
+        let (earliest, latest, count) = repo.get_task_time_stats(&actor(), 1).await.unwrap();
         assert_eq!(earliest, Some(now));
         assert_eq!(latest, Some(now + Duration::hours(6)));
         assert_eq!(count, 2);
 
-        let (e2, l2, c2) = repo.get_task_time_stats(2).await.unwrap();
+        let (e2, l2, c2) = repo.get_task_time_stats(&actor(), 2).await.unwrap();
         assert_eq!(e2, None);
         assert_eq!(l2, None);
         assert_eq!(c2, 0);
@@ -697,11 +777,11 @@ mod tests {
             .unwrap();
         }
 
-        let (rows, total) = repo.find_by_task_id_paginated(1, 2, 0).await.unwrap();
+        let (rows, total) = repo.find_by_task_id_paginated(&actor(), 1, 2, 0).await.unwrap();
         assert_eq!(total, 5);
         assert_eq!(rows.len(), 2);
 
-        let (rows2, _) = repo.find_by_task_id_paginated(1, 2, 4).await.unwrap();
+        let (rows2, _) = repo.find_by_task_id_paginated(&actor(), 1, 2, 4).await.unwrap();
         assert_eq!(rows2.len(), 1);
     }
 }

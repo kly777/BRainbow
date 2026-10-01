@@ -2,7 +2,8 @@ use chrono::{DateTime, Utc};
 use sqlx::{FromRow, QueryBuilder};
 
 use crate::modules::time_window::{TimeWindow, TimeWindowType};
-use crate::shared::db_query::like_contains;
+use crate::shared::actor::Actor;
+use crate::shared::db_query::{like_contains, push_owner_scope};
 
 use super::super::dto::TaskDetailResponse;
 use super::super::model::{Task, TaskStatus};
@@ -46,9 +47,14 @@ struct CalendarRow {
 }
 
 impl TaskRepository {
+    /// 任务树（递归 CTE）：锚点与递归段都过归属过滤。
+    ///
+    /// 递归段也要过滤 —— 否则别人挂在我任务下的子任务会顺着树泄出来
+    /// （`parent_task_id` 是自由的，`create`/`update` 只为"自己的父任务"放行，
+    /// 历史数据里可能留有跨界挂载）。
     pub async fn find_tree(
         &self,
-        user_id: i32,
+        actor: &Actor,
         root_task_id: Option<i32>,
     ) -> Result<Vec<Task>, sqlx::Error> {
         let mut builder = QueryBuilder::new(
@@ -56,10 +62,10 @@ impl TaskRepository {
                 SELECT id, title, description, parent_task_id, status, completed_at,
                        effort_estimate_minutes, created_at, updated_at
                 FROM task
-                WHERE (user_id = ",
+                WHERE 1 = 1",
         );
-        builder.push_bind(user_id);
-        builder.push(" OR user_id IS NULL) AND (");
+        push_owner_scope(&mut builder, actor, "user_id");
+        builder.push(" AND (");
 
         if let Some(root_id) = root_task_id {
             builder.push("id = ");
@@ -77,7 +83,11 @@ impl TaskRepository {
                    t.effort_estimate_minutes, t.created_at, t.updated_at
             FROM task t
             INNER JOIN task_tree tt ON t.parent_task_id = tt.id
-        )
+            WHERE 1 = 1",
+        );
+        push_owner_scope(&mut builder, actor, "t.user_id");
+        builder.push(
+            ")
         SELECT * FROM task_tree ORDER BY created_at",
         );
 
@@ -86,18 +96,24 @@ impl TaskRepository {
 
     pub async fn find_detail(
         &self,
-        user_id: i32,
+        actor: &Actor,
         id: i32,
     ) -> Result<Option<TaskDetailResponse>, sqlx::Error> {
-        let Some(task) = self.find_by_id(user_id, id).await? else {
+        let Some(task) = self.find_by_id(actor, id).await? else {
             return Ok(None);
         };
 
+        // 子表随父：依赖行的归属回到 `task_dependency.task_id` 的父任务上判
         let dependencies = sqlx::query_as!(
             TaskDepRow,
             r#"SELECT depends_on_task_id AS "depends_on_task_id: i32"
-               FROM task_dependency WHERE task_id = ?"#,
-            id
+               FROM task_dependency
+               WHERE task_id = ?1
+                 AND (?2 IS NULL OR EXISTS (
+                       SELECT 1 FROM task p
+                       WHERE p.id = task_dependency.task_id AND p.user_id = ?2))"#,
+            id,
+            actor.owner_scope()
         )
         .fetch_all(&*self.db)
         .await?
@@ -105,6 +121,7 @@ impl TaskRepository {
         .map(|r| r.depends_on_task_id)
         .collect::<Vec<_>>();
 
+        // 子任务是独立的行：按自己的归属过滤（父任务是别人的不等于子任务是你的）
         let children = sqlx::query_as!(
             Task,
             r#"SELECT id AS "id: i32", title, description,
@@ -114,8 +131,10 @@ impl TaskRepository {
                       effort_estimate_minutes AS "effort_estimate_minutes?: i32",
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
-               FROM task WHERE parent_task_id = ? ORDER BY created_at"#,
-            id
+               FROM task WHERE parent_task_id = ?1 AND (?2 IS NULL OR user_id = ?2)
+               ORDER BY created_at"#,
+            id,
+            actor.owner_scope()
         )
         .fetch_all(&*self.db)
         .await?;
@@ -163,7 +182,7 @@ impl TaskRepository {
     /// 全局搜索命中：标题命中优先于描述命中（LIKE 查询，用于短关键词）
     pub async fn search_hits(
         &self,
-        user_id: i32,
+        actor: &Actor,
         like: &str,
         cap: i64,
     ) -> Result<Vec<TaskHitRow>, sqlx::Error> {
@@ -172,10 +191,10 @@ impl TaskRepository {
             r#"SELECT id, title, description,
                       title LIKE ?2 ESCAPE '\' AS "title_hit!: i64"
                FROM task
-               WHERE (user_id = ?1 OR user_id IS NULL)
+               WHERE (?1 IS NULL OR user_id = ?1)
                  AND (title LIKE ?2 ESCAPE '\' OR description LIKE ?2 ESCAPE '\')
                ORDER BY (title LIKE ?2 ESCAPE '\') DESC, id DESC LIMIT ?3"#,
-            user_id,
+            actor.owner_scope(),
             like,
             cap
         )
@@ -187,7 +206,7 @@ impl TaskRepository {
     /// 全局搜索命中：FTS5 全文索引查询（3+字符）
     pub async fn search_hits_fts(
         &self,
-        user_id: i32,
+        actor: &Actor,
         fts_query: &str,
         cap: i64,
     ) -> Result<Vec<TaskHitRow>, sqlx::Error> {
@@ -198,10 +217,10 @@ impl TaskRepository {
                FROM task_fts fts
                JOIN task t ON t.id = fts.rowid
                WHERE task_fts MATCH ?2
-                 AND (t.user_id = ?1 OR t.user_id IS NULL)
+                 AND (?1 IS NULL OR t.user_id = ?1)
                ORDER BY rank
                LIMIT ?3"#,
-            user_id,
+            actor.owner_scope(),
             fts_query,
             cap
         )
@@ -212,16 +231,16 @@ impl TaskRepository {
 
     pub async fn search_by_title_paginated(
         &self,
-        user_id: i32,
+        actor: &Actor,
         query: &str,
         limit: i64,
         offset: i64,
     ) -> Result<(Vec<Task>, i64), sqlx::Error> {
         let pattern = like_contains(query);
         let total: i64 = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM task WHERE title LIKE ? ESCAPE '\\' AND (user_id = ? OR user_id IS NULL)",
+            "SELECT COUNT(*) FROM task WHERE title LIKE ?1 ESCAPE '\\' AND (?2 IS NULL OR user_id = ?2)",
             pattern,
-            user_id
+            actor.owner_scope()
         )
         .fetch_one(&*self.db)
         .await?;
@@ -234,10 +253,10 @@ impl TaskRepository {
                       effort_estimate_minutes AS "effort_estimate_minutes?: i32",
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
-               FROM task WHERE title LIKE ?1 ESCAPE '\' AND (user_id = ?2 OR user_id IS NULL)
+               FROM task WHERE title LIKE ?1 ESCAPE '\' AND (?2 IS NULL OR user_id = ?2)
                ORDER BY created_at DESC LIMIT ?3 OFFSET ?4"#,
             pattern,
-            user_id,
+            actor.owner_scope(),
             limit,
             offset
         )
@@ -248,7 +267,7 @@ impl TaskRepository {
 
     pub async fn find_calendar_events(
         &self,
-        user_id: i32,
+        actor: &Actor,
         start: Option<DateTime<Utc>>,
         end: Option<DateTime<Utc>>,
         status_filter: Option<TaskStatus>,
@@ -282,12 +301,12 @@ impl TaskRepository {
                    FROM task t
                    INNER JOIN time_window tw ON t.id = tw.task_id
                    WHERE t.status = ?1
-                     AND (t.user_id = ?2 OR t.user_id IS NULL)
+                     AND (?2 IS NULL OR t.user_id = ?2)
                      AND tw.start_time < ?3
                      AND tw.end_time > ?4
                    ORDER BY tw.start_time"#,
                 s.as_str(),
-                user_id,
+                actor.owner_scope(),
                 range_end,
                 range_start
             )
@@ -316,11 +335,11 @@ impl TaskRepository {
                    FROM task t
                    INNER JOIN time_window tw ON t.id = tw.task_id
                    WHERE t.status != 'archived'
-                     AND (t.user_id = ?1 OR t.user_id IS NULL)
+                     AND (?1 IS NULL OR t.user_id = ?1)
                      AND tw.start_time < ?2
                      AND tw.end_time > ?3
                    ORDER BY tw.start_time"#,
-                user_id,
+                actor.owner_scope(),
                 range_end,
                 range_start
             )
@@ -361,24 +380,33 @@ impl TaskRepository {
         Ok(events)
     }
 
+    /// 某个任务的时间窗口 —— 归属随父任务（`time_window` 没有自己的归属判据）。
+    ///
+    /// `time_window` 的写路径（`validate_time_windows`）靠这条读拿"已有窗口"：
+    /// 少一层归属过滤就等于把别人任务的窗口也算进来（或不给别人算）。
     pub async fn find_time_windows_by_task(
         &self,
-        _user_id: i32,
+        actor: &Actor,
         task_id: i32,
     ) -> Result<Vec<TimeWindow>, sqlx::Error> {
         let rows = sqlx::query_as!(
             TimeWindow,
-            r#"SELECT id AS "id: i32",
-                      start_time AS "start_time!: chrono::DateTime<chrono::Utc>",
-                      end_time AS "end_time!: chrono::DateTime<chrono::Utc>",
-                      type AS "window_type!: crate::modules::time_window::TimeWindowType",
-                      task_id AS "task_id: i32",
-                      user_id AS "user_id?: i32",
-                      recurrence_freq AS "recurrence_freq?: crate::modules::time_window::RecurrenceFrequency",
-                      recurrence_interval AS "recurrence_interval?: i32",
-                      recurrence_until AS "recurrence_until?: chrono::DateTime<chrono::Utc>",
-                      recurrence_by_weekdays
-               FROM time_window WHERE task_id = ? ORDER BY start_time"#,
+            r#"SELECT tw.id AS "id: i32",
+                      tw.start_time AS "start_time!: chrono::DateTime<chrono::Utc>",
+                      tw.end_time AS "end_time!: chrono::DateTime<chrono::Utc>",
+                      tw.type AS "window_type!: crate::modules::time_window::TimeWindowType",
+                      tw.task_id AS "task_id: i32",
+                      tw.user_id AS "user_id?: i32",
+                      tw.recurrence_freq AS "recurrence_freq?: crate::modules::time_window::RecurrenceFrequency",
+                      tw.recurrence_interval AS "recurrence_interval?: i32",
+                      tw.recurrence_until AS "recurrence_until?: chrono::DateTime<chrono::Utc>",
+                      tw.recurrence_by_weekdays
+               FROM time_window tw
+               WHERE tw.task_id = ?2
+                 AND (?1 IS NULL OR EXISTS (
+                       SELECT 1 FROM task t WHERE t.id = tw.task_id AND t.user_id = ?1))
+               ORDER BY tw.start_time"#,
+            actor.owner_scope(),
             task_id
         )
         .fetch_all(&*self.db)
@@ -387,31 +415,31 @@ impl TaskRepository {
         Ok(rows)
     }
 
-    pub async fn get_stats(&self, user_id: i32) -> Result<(i64, i64, i64, i64), sqlx::Error> {
+    pub async fn get_stats(&self, actor: &Actor) -> Result<(i64, i64, i64, i64), sqlx::Error> {
         let backlog: i64 = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM task WHERE status = 'backlog' AND (user_id = ? OR user_id IS NULL)",
-            user_id
+            "SELECT COUNT(*) FROM task WHERE status = 'backlog' AND (?1 IS NULL OR user_id = ?1)",
+            actor.owner_scope()
         )
         .fetch_one(&*self.db)
         .await?;
 
         let active: i64 = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM task WHERE status = 'active' AND (user_id = ? OR user_id IS NULL)",
-            user_id
+            "SELECT COUNT(*) FROM task WHERE status = 'active' AND (?1 IS NULL OR user_id = ?1)",
+            actor.owner_scope()
         )
         .fetch_one(&*self.db)
         .await?;
 
         let completed: i64 = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM task WHERE status = 'completed' AND (user_id = ? OR user_id IS NULL)",
-            user_id
+            "SELECT COUNT(*) FROM task WHERE status = 'completed' AND (?1 IS NULL OR user_id = ?1)",
+            actor.owner_scope()
         )
         .fetch_one(&*self.db)
         .await?;
 
         let archived: i64 = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM task WHERE status = 'archived' AND (user_id = ? OR user_id IS NULL)",
-            user_id
+            "SELECT COUNT(*) FROM task WHERE status = 'archived' AND (?1 IS NULL OR user_id = ?1)",
+            actor.owner_scope()
         )
         .fetch_one(&*self.db)
         .await?;
@@ -429,6 +457,11 @@ mod tests {
 
     const TEST_USER_ID: i32 = 1;
 
+    /// 测试调用者：普通用户（`owner` 就是 TEST_USER_ID）
+    fn actor() -> Actor {
+        Actor::user(TEST_USER_ID)
+    }
+
     async fn setup() -> TaskRepository {
         let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
         crate::db::migrate(&pool).await.unwrap();
@@ -439,12 +472,14 @@ mod tests {
         TaskRepository::new(Arc::new(pool))
     }
 
+    /// 任务都必须带 `user_id` —— 两档判据下"无主行"只对 admin 可见
     async fn insert_task(repo: &TaskRepository, title: &str, parent: Option<i32>) -> i32 {
         sqlx::query_scalar::<_, i32>(
-            "INSERT INTO task (title, parent_task_id) VALUES (?, ?) RETURNING id",
+            "INSERT INTO task (title, parent_task_id, user_id) VALUES (?, ?, ?) RETURNING id",
         )
         .bind(title)
         .bind(parent)
+        .bind(TEST_USER_ID)
         .fetch_one(&*repo.db)
         .await
         .unwrap()
@@ -458,7 +493,7 @@ mod tests {
         let other = insert_task(&repo, "other", None).await;
 
         let ids: Vec<i32> = repo
-            .find_tree(TEST_USER_ID, None)
+            .find_tree(&actor(), None)
             .await
             .unwrap()
             .into_iter()
@@ -477,7 +512,7 @@ mod tests {
         let other = insert_task(&repo, "other", None).await;
 
         let ids: Vec<i32> = repo
-            .find_tree(TEST_USER_ID, Some(root))
+            .find_tree(&actor(), Some(root))
             .await
             .unwrap()
             .into_iter()
@@ -497,14 +532,14 @@ mod tests {
         insert_task(&repo, "aXb", None).await;
 
         let (hits, total) = repo
-            .search_by_title_paginated(TEST_USER_ID, "50%", 10, 0)
+            .search_by_title_paginated(&actor(), "50%", 10, 0)
             .await
             .unwrap();
         assert_eq!(total, 1);
         assert_eq!(hits[0].title, "50% complete");
 
         let (hits, total) = repo
-            .search_by_title_paginated(TEST_USER_ID, "a_b", 10, 0)
+            .search_by_title_paginated(&actor(), "a_b", 10, 0)
             .await
             .unwrap();
         assert_eq!(total, 1);
@@ -530,7 +565,7 @@ mod tests {
         .await
         .unwrap();
 
-        let detail = repo.find_detail(TEST_USER_ID, root).await.unwrap().unwrap();
+        let detail = repo.find_detail(&actor(), root).await.unwrap().unwrap();
         assert_eq!(detail.task.id, root);
         assert_eq!(detail.depends_on, vec![child]);
         assert_eq!(detail.children.len(), 1);
@@ -574,7 +609,7 @@ mod tests {
 
         // 默认排除 archived
         let events = repo
-            .find_calendar_events(TEST_USER_ID, Some(start), Some(end), None)
+            .find_calendar_events(&actor(), Some(start), Some(end), None)
             .await
             .unwrap();
         assert_eq!(events.len(), 1);
@@ -582,12 +617,7 @@ mod tests {
 
         // 显式按 archived 过滤
         let events = repo
-            .find_calendar_events(
-                TEST_USER_ID,
-                Some(start),
-                Some(end),
-                Some(TaskStatus::Archived),
-            )
+            .find_calendar_events(&actor(), Some(start), Some(end), Some(TaskStatus::Archived))
             .await
             .unwrap();
         assert_eq!(events.len(), 1);
@@ -613,6 +643,6 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(repo.get_stats(TEST_USER_ID).await.unwrap(), (1, 1, 1, 1));
+        assert_eq!(repo.get_stats(&actor()).await.unwrap(), (1, 1, 1, 1));
     }
 }

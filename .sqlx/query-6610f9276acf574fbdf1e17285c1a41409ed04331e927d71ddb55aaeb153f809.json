@@ -1,0 +1,47 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id AS \"id: i32\",\n                      COALESCE(content, '') AS \"content!: String\",\n                      COALESCE(created_at, CURRENT_TIMESTAMP) AS \"created_at!: chrono::DateTime<chrono::Utc>\",\n                      COALESCE(updated_at, CURRENT_TIMESTAMP) AS \"updated_at!: chrono::DateTime<chrono::Utc>\"\n               FROM card WHERE (?1 IS NULL OR user_id = ?1)\n               ORDER BY updated_at DESC LIMIT ?2 OFFSET ?3",
+  "describe": {
+    "columns": [
+      {
+        "name": "id: i32",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "card",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "content!: String",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "name": "created_at!: chrono::DateTime<chrono::Utc>",
+        "ordinal": 2,
+        "type_info": "Datetime",
+        "origin": "Expression"
+      },
+      {
+        "name": "updated_at!: chrono::DateTime<chrono::Utc>",
+        "ordinal": 3,
+        "type_info": "Datetime",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "6610f9276acf574fbdf1e17285c1a41409ed04331e927d71ddb55aaeb153f809"
+}

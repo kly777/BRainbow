@@ -1,0 +1,50 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT o.id, o.name, o.description\n               FROM onto_fts fts\n               JOIN onto o ON o.id = fts.rowid\n               WHERE onto_fts MATCH ?2\n                 AND (?1 IS NULL OR o.user_id = ?1)\n               ORDER BY rank\n               LIMIT ?3",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer",
+        "origin": {
+          "Table": {
+            "table": "onto",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "onto",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "name": "description",
+        "ordinal": 2,
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "onto",
+            "name": "description"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "d2c037b598cf331c47ae2ab7642cdaf00f8940aefeefdae56354e0ffd6324653"
+}

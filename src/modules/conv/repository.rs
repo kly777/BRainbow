@@ -1,5 +1,6 @@
 use sqlx::{FromRow, SqlitePool};
 
+use crate::shared::actor::Actor;
 use crate::shared::db_query::like_contains;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{SearchHit, SearchTarget};
@@ -71,7 +72,7 @@ impl ConvRepo {
 
     pub async fn search(
         &self,
-        user_id: i32,
+        actor: &Actor,
         q: &str,
         limit: i64,
         _offset: i64,
@@ -98,8 +99,8 @@ impl ConvRepo {
                     ConvTitleRow,
                     r#"SELECT conv_id, title, conv_type,
                               COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: String"
-                       FROM conv_titles WHERE (user_id = ?1 OR user_id IS NULL) AND title LIKE ?2 ESCAPE '\' LIMIT 200"#,
-                    user_id,
+                       FROM conv_titles WHERE (?1 IS NULL OR user_id = ?1) AND title LIKE ?2 ESCAPE '\' LIMIT 200"#,
+                    actor.owner_scope(),
                     pattern
                 )
                 .fetch_all(pool)
@@ -132,8 +133,8 @@ impl ConvRepo {
                               COALESCE(content, '') AS "content!: String",
                               COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: String"
                        FROM articles
-                       WHERE (user_id = ?1 OR user_id IS NULL) AND (title LIKE ?2 ESCAPE '\' OR content LIKE ?2 ESCAPE '\') LIMIT 200"#,
-                    user_id,
+                       WHERE (?1 IS NULL OR user_id = ?1) AND (title LIKE ?2 ESCAPE '\' OR content LIKE ?2 ESCAPE '\') LIMIT 200"#,
+                    actor.owner_scope(),
                     pattern
                 )
                 .fetch_all(pool)
@@ -170,15 +171,15 @@ impl ConvRepo {
         Ok(SearchResponse { hits, total })
     }
 
-    pub async fn detail(&self, user_id: i32, id: i64) -> Result<Option<ConvDetail>, ServiceError> {
+    pub async fn detail(&self, actor: &Actor, id: i64) -> Result<Option<ConvDetail>, ServiceError> {
         let pool = &self.pool;
 
         let title_info: Option<ConvInfoRow> = sqlx::query_as!(
             ConvInfoRow,
             r#"SELECT title, conv_type, COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: String"
-               FROM conv_titles WHERE conv_id = ?1 AND (user_id = ?2 OR user_id IS NULL) ORDER BY id LIMIT 1"#,
+               FROM conv_titles WHERE conv_id = ?1 AND (?2 IS NULL OR user_id = ?2) ORDER BY id LIMIT 1"#,
             id,
-            user_id
+            actor.owner_scope()
         )
         .fetch_optional(pool)
         .await?;
@@ -195,9 +196,9 @@ impl ConvRepo {
         let articles = sqlx::query_as!(
             ArticleRow,
             r#"SELECT article_type, title, COALESCE(content, '') AS "content!: String"
-               FROM articles WHERE conv_id = ?1 AND (user_id = ?2 OR user_id IS NULL)"#,
+               FROM articles WHERE conv_id = ?1 AND (?2 IS NULL OR user_id = ?2)"#,
             id,
-            user_id
+            actor.owner_scope()
         )
         .fetch_all(pool)
         .await?;
@@ -220,7 +221,7 @@ impl ConvRepo {
 
     pub async fn concept(
         &self,
-        user_id: i32,
+        actor: &Actor,
         id: i64,
         article_title: &str,
     ) -> Result<Option<serde_json::Value>, ServiceError> {
@@ -229,9 +230,9 @@ impl ConvRepo {
         let article: Option<ArticleRow> = sqlx::query_as!(
             ArticleRow,
             r#"SELECT article_type, title, COALESCE(content, '') AS "content!: String"
-               FROM articles WHERE conv_id = ?1 AND (user_id = ?2 OR user_id IS NULL) AND title = ?3 LIMIT 1"#,
+               FROM articles WHERE conv_id = ?1 AND (?2 IS NULL OR user_id = ?2) AND title = ?3 LIMIT 1"#,
             id,
-            user_id,
+            actor.owner_scope(),
             article_title
         )
         .fetch_optional(pool)
@@ -250,16 +251,16 @@ impl ConvRepo {
     /// 全局搜索命中
     pub async fn search_hits(
         &self,
-        user_id: i32,
+        actor: &Actor,
         like: &str,
         cap: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
         let rows = sqlx::query_as!(
             ConvHitRow,
             r#"SELECT conv_id, title FROM conv_titles
-               WHERE (user_id = ?1 OR user_id IS NULL) AND title LIKE ?2 ESCAPE '\'
+               WHERE (?1 IS NULL OR user_id = ?1) AND title LIKE ?2 ESCAPE '\'
                ORDER BY conv_id DESC LIMIT ?3"#,
-            user_id,
+            actor.owner_scope(),
             like,
             cap
         )
@@ -280,7 +281,7 @@ impl ConvRepo {
 
     pub async fn search_hits_fts(
         &self,
-        user_id: i32,
+        actor: &Actor,
         fts_query: &str,
         cap: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
@@ -290,10 +291,10 @@ impl ConvRepo {
                FROM conv_titles_fts fts
                JOIN conv_titles c ON c.id = fts.rowid
                WHERE conv_titles_fts MATCH ?2
-                 AND (c.user_id = ?1 OR c.user_id IS NULL)
+                 AND (?1 IS NULL OR c.user_id = ?1)
                ORDER BY rank
                LIMIT ?3"#,
-            user_id,
+            actor.owner_scope(),
             fts_query,
             cap
         )

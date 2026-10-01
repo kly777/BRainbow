@@ -1,5 +1,6 @@
 use futures_util::future::join_all;
 
+use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{SearchRegistry, SearchResponse, clamp_search_limit, trim_query};
 
@@ -18,7 +19,7 @@ impl SearchQueryService {
     /// `limit` 为每类数据源的结果上限。
     pub async fn search(
         &self,
-        user_id: i32,
+        actor: &Actor,
         q: &str,
         limit: i64,
     ) -> Result<SearchResponse, ServiceError> {
@@ -28,7 +29,8 @@ impl SearchQueryService {
         let cap = clamp_search_limit(limit);
 
         let ports = self.registry.providers();
-        let results = join_all(ports.iter().map(|port| port.search(user_id, kw, cap))).await;
+        // admin 的全量搜索在这里成立：`Actor` 一路传到各模块的 SQL 判据
+        let results = join_all(ports.iter().map(|port| port.search(actor, kw, cap))).await;
 
         let mut hits = Vec::new();
         for res in results {
@@ -110,20 +112,20 @@ mod tests {
     #[tokio::test]
     async fn search_across_modules_and_user_filter() {
         let ctx = setup().await;
-        // mem（单用户表，无 user 过滤）
+        // mem（归属 user 1：普通用户只搜到自己的）
         let c1: i64 = sqlx::query_scalar(
-            "INSERT INTO chunk (content) VALUES ('费曼学习法：以教促学') RETURNING id",
+            "INSERT INTO chunk (content, user_id) VALUES ('费曼学习法：以教促学', 1) RETURNING id",
         )
         .fetch_one(&ctx.pool)
         .await
         .unwrap();
         let c2: i64 = sqlx::query_scalar(
-            "INSERT INTO chunk (content) VALUES ('用自己的话教别人，暴露知识缺口') RETURNING id",
+            "INSERT INTO chunk (content, user_id) VALUES ('用自己的话教别人，暴露知识缺口', 1) RETURNING id",
         )
         .fetch_one(&ctx.pool)
         .await
         .unwrap();
-        sqlx::query("INSERT INTO mem (cue_chunk_id, target_chunk_id) VALUES (?1, ?2)")
+        sqlx::query("INSERT INTO mem (cue_chunk_id, target_chunk_id, user_id) VALUES (?1, ?2, 1)")
             .bind(c1)
             .bind(c2)
             .execute(&ctx.pool)
@@ -141,23 +143,23 @@ mod tests {
             .execute(&ctx.pool)
             .await
             .unwrap();
-        // task（无 user_id 的旧数据也应命中）
-        sqlx::query("INSERT INTO task (title, user_id) VALUES ('复习费曼笔记', NULL)")
+        // task（user 1 命中；两档判据下只有自己的行会命中）
+        sqlx::query("INSERT INTO task (title, user_id) VALUES ('复习费曼笔记', 1)")
             .execute(&ctx.pool)
             .await
             .unwrap();
-        // bookmark（单用户表）
-        sqlx::query("INSERT INTO bookmark (title, url) VALUES ('费曼技巧详解', 'https://example.com/feynman')")
+        // bookmark（user 1 的收藏）
+        sqlx::query("INSERT INTO bookmark (title, url, user_id) VALUES ('费曼技巧详解', 'https://example.com/feynman', 1)")
             .execute(&ctx.pool).await.unwrap();
         // reading（reading_article 表）
         sqlx::query(
-            "INSERT INTO reading_article (title, content) VALUES ('费曼自传', '别闹了费曼先生')",
+            "INSERT INTO reading_article (title, content, user_id) VALUES ('费曼自传', '别闹了费曼先生', 1)",
         )
         .execute(&ctx.pool)
         .await
         .unwrap();
         // conv
-        sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type) VALUES (9, '费曼学习法讨论', 'conv')")
+        sqlx::query("INSERT INTO conv_titles (conv_id, title, conv_type, user_id) VALUES (9, '费曼学习法讨论', 'conv', 1)")
             .execute(&ctx.pool).await.unwrap();
         // chat（user 1 树，user 2 树）
         let t1: i64 = sqlx::query_scalar(
@@ -177,7 +179,7 @@ mod tests {
         sqlx::query("INSERT INTO chat_node (tree_id, role, content) VALUES (?1, 'user', '费曼学习法是什么？')")
             .bind(t2).execute(&ctx.pool).await.unwrap();
 
-        let res = ctx.svc.search(1, "费曼", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "费曼", 5).await.unwrap();
         let kinds: Vec<&str> = res.hits.iter().map(|h| h.kind.as_str()).collect();
         assert!(kinds.contains(&"mem"));
         assert!(kinds.contains(&"card"));
@@ -223,7 +225,7 @@ mod tests {
     #[tokio::test]
     async fn empty_query_returns_empty() {
         let ctx = setup().await;
-        let res = ctx.svc.search(1, "  ", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "  ", 5).await.unwrap();
         assert!(res.hits.is_empty());
     }
 
@@ -306,16 +308,18 @@ mod tests {
     #[tokio::test]
     async fn onto_and_text_module_hits() {
         let ctx = setup().await;
+        // 各模块已按归属过滤（admin 全量、普通用户只看自己的），所以夹具都带上 user_id ——
+        // 无主行是 admin 专属，普通用户搜不到（见 doc/design/authorization.md）
         sqlx::query(
-            "INSERT INTO onto (name, description) VALUES ('费曼学习法', '以教促学，检验理解')",
+            "INSERT INTO onto (name, description, user_id) VALUES ('费曼学习法', '以教促学，检验理解', 1)",
         )
         .execute(&ctx.pool)
         .await
         .unwrap();
-        sqlx::query("INSERT INTO text_note (name, content) VALUES ('读书笔记', '今天读了费曼物理学讲义第一章')")
+        sqlx::query("INSERT INTO text_note (name, content, user_id) VALUES ('读书笔记', '今天读了费曼物理学讲义第一章', 1)")
             .execute(&ctx.pool).await.unwrap();
 
-        let res = ctx.svc.search(1, "费曼", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "费曼", 5).await.unwrap();
         let onto_hit = res.hits.iter().find(|h| h.kind == "onto").unwrap();
         assert_eq!(onto_hit.title, "费曼学习法");
         assert!(matches!(
@@ -334,29 +338,35 @@ mod tests {
     async fn bookmark_matches_url_and_description() {
         let ctx = setup().await;
         sqlx::query(
-            "INSERT INTO bookmark (title, url, description) VALUES
-             ('无关标题', 'https://feynman-technique.com/', ''),
-             ('普通书签', 'https://other.com/', '费曼技巧的详细说明')",
+            "INSERT INTO bookmark (title, url, description, user_id) VALUES
+             ('无关标题', 'https://feynman-technique.com/', '', 1),
+             ('普通书签', 'https://other.com/', '费曼技巧的详细说明', 1)",
         )
         .execute(&ctx.pool)
         .await
         .unwrap();
 
-        let res = ctx.svc.search(1, "feynman-technique", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "feynman-technique", 5).await.unwrap();
         let hit = res.hits.iter().find(|h| h.kind == "bookmark").unwrap();
         assert_eq!(hit.id, 1);
         assert_eq!(hit.snippet, "https://feynman-technique.com/");
 
-        let res = ctx.svc.search(1, "费曼技巧", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "费曼技巧", 5).await.unwrap();
         let hit = res.hits.iter().find(|h| h.kind == "bookmark").unwrap();
         assert_eq!(hit.id, 2);
         assert!(hit.snippet.contains("详细说明"));
     }
 
+    /// task 搜索的归属口径：只出调用者自己的行。
+    ///
+    /// 过渡记一笔：`SearchPort` 仍只传 `user_id`，task 侧实现按普通用户口径取行
+    /// （`Actor::user(user_id)`，见 `modules/task/query.rs`），所以 `user_id IS NULL`
+    /// 的老数据（v20 已认领给 admin）在全局搜索里谁都搜不到 —— 等搜索层收 `&Actor`
+    /// 之后 admin 才搜得到。这里钉住现状，别让它悄悄回退成"无主行对所有人可见"。
     #[tokio::test]
-    async fn task_user_scoping_null_visible_to_all() {
+    async fn task_user_scoping_hides_null_owner_rows() {
         let ctx = setup().await;
-        sqlx::query("INSERT INTO task (title, user_id) VALUES ('共享任务', NULL)")
+        sqlx::query("INSERT INTO task (title, user_id) VALUES ('无主任务', NULL)")
             .execute(&ctx.pool)
             .await
             .unwrap();
@@ -369,55 +379,59 @@ mod tests {
             .await
             .unwrap();
 
-        let res = ctx.svc.search(1, "任务", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "任务", 5).await.unwrap();
         let titles: Vec<&str> = res
             .hits
             .iter()
             .filter(|h| h.kind == "task")
             .map(|h| h.title.as_str())
             .collect();
-        assert!(titles.contains(&"共享任务"));
         assert!(titles.contains(&"用户一的任务"));
         assert!(!titles.contains(&"用户二的任务"));
+        assert!(
+            !titles.contains(&"无主任务"),
+            "NULL 行只有 admin 看得到，而搜索层还没接 Actor"
+        );
 
-        let res = ctx.svc.search(2, "任务", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(2), "任务", 5).await.unwrap();
         let titles: Vec<&str> = res
             .hits
             .iter()
             .filter(|h| h.kind == "task")
             .map(|h| h.title.as_str())
             .collect();
-        assert!(titles.contains(&"共享任务"));
         assert!(titles.contains(&"用户二的任务"));
         assert!(!titles.contains(&"用户一的任务"));
+        assert!(!titles.contains(&"无主任务"));
     }
 
     #[tokio::test]
     async fn mem_hits_both_cue_and_target_sides() {
         let ctx = setup().await;
-        let c1: i64 =
-            sqlx::query_scalar("INSERT INTO chunk (content) VALUES ('什么是熵') RETURNING id")
-                .fetch_one(&ctx.pool)
-                .await
-                .unwrap();
+        let c1: i64 = sqlx::query_scalar(
+            "INSERT INTO chunk (content, user_id) VALUES ('什么是熵', 1) RETURNING id",
+        )
+        .fetch_one(&ctx.pool)
+        .await
+        .unwrap();
         let c2: i64 = sqlx::query_scalar(
-            "INSERT INTO chunk (content) VALUES ('系统无序程度的度量，热力学第二定律的核心概念') RETURNING id",
+            "INSERT INTO chunk (content, user_id) VALUES ('系统无序程度的度量，热力学第二定律的核心概念', 1) RETURNING id",
         )
         .fetch_one(&ctx.pool).await.unwrap();
-        sqlx::query("INSERT INTO mem (cue_chunk_id, target_chunk_id) VALUES (?1, ?2)")
+        sqlx::query("INSERT INTO mem (cue_chunk_id, target_chunk_id, user_id) VALUES (?1, ?2, 1)")
             .bind(c1)
             .bind(c2)
             .execute(&ctx.pool)
             .await
             .unwrap();
 
-        let res = ctx.svc.search(1, "熵", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "熵", 5).await.unwrap();
         let hit = res.hits.iter().find(|h| h.kind == "mem").unwrap();
         assert_eq!(hit.id, 1);
         assert!(matches!(hit.target, SearchTarget::Memory { id: 1 }));
         assert!(hit.title.contains("什么是熵"));
 
-        let res = ctx.svc.search(1, "热力学", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "热力学", 5).await.unwrap();
         let hit = res.hits.iter().find(|h| h.kind == "mem").unwrap();
         assert_eq!(hit.id, 1);
         assert!(hit.snippet.contains("热力学"));
@@ -442,7 +456,7 @@ mod tests {
         sqlx::query("INSERT INTO chat_node (tree_id, role, content) VALUES (?1, 'assistant', '熵是热力学中的核心概念')")
             .bind(t).execute(&ctx.pool).await.unwrap();
 
-        let res = ctx.svc.search(1, "熵", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "熵", 5).await.unwrap();
         let hits: Vec<_> = res.hits.iter().filter(|h| h.kind == "chat").collect();
         assert_eq!(hits.len(), 2);
         assert!(matches!(
@@ -465,12 +479,12 @@ mod tests {
     #[tokio::test]
     async fn reading_title_hits_rank_before_content_hits() {
         let ctx = setup().await;
-        sqlx::query("INSERT INTO reading_article (title, content) VALUES ('无关文章', '这段文字提到了关键词XYZ的用法')")
+        sqlx::query("INSERT INTO reading_article (title, content, user_id) VALUES ('无关文章', '这段文字提到了关键词XYZ的用法', 1)")
             .execute(&ctx.pool).await.unwrap();
-        sqlx::query("INSERT INTO reading_article (title, content) VALUES ('关键词XYZ完全指南', '正文没有命中词')")
+        sqlx::query("INSERT INTO reading_article (title, content, user_id) VALUES ('关键词XYZ完全指南', '正文没有命中词', 1)")
             .execute(&ctx.pool).await.unwrap();
 
-        let res = ctx.svc.search(1, "关键词XYZ", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "关键词XYZ", 5).await.unwrap();
         let hits: Vec<_> = res.hits.iter().filter(|h| h.kind == "reading").collect();
         assert_eq!(hits.len(), 2);
         assert_eq!(hits[0].title, "关键词XYZ完全指南");
@@ -480,7 +494,7 @@ mod tests {
     #[tokio::test]
     async fn limit_caps_each_module_and_empty_db() {
         let ctx = setup().await;
-        let res = ctx.svc.search(1, "任意", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "任意", 5).await.unwrap();
         assert!(res.hits.is_empty());
 
         for i in 0..3 {
@@ -490,7 +504,7 @@ mod tests {
                 .await
                 .unwrap();
         }
-        let res = ctx.svc.search(1, "共享关键词", 1).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "共享关键词", 1).await.unwrap();
         let card_hits: Vec<_> = res.hits.iter().filter(|h| h.kind == "card").collect();
         assert_eq!(card_hits.len(), 1);
     }
@@ -532,7 +546,7 @@ mod tests {
             .await
             .unwrap();
 
-        let res = ctx.svc.search(1, "财报", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "财报", 5).await.unwrap();
         let file_hits: Vec<_> = res.hits.iter().filter(|h| h.kind == "file").collect();
         // 自己的两条（文件名命中 + 标签命中）+ 别人的公开文件一条
         assert_eq!(file_hits.len(), 3);
@@ -556,7 +570,7 @@ mod tests {
             .execute(&ctx.pool)
             .await
             .unwrap();
-        let res = ctx.svc.search(1, "财报", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "财报", 5).await.unwrap();
         let mine: Vec<&str> = res
             .hits
             .iter()
@@ -574,7 +588,7 @@ mod tests {
             .unwrap();
 
         // 公开共享：用户 2 也能搜到用户 1 的公开文件
-        let res = ctx.svc.search(2, "财报", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(2), "财报", 5).await.unwrap();
         let titles: Vec<&str> = res
             .hits
             .iter()
@@ -588,7 +602,7 @@ mod tests {
             .execute(&ctx.pool)
             .await
             .unwrap();
-        let res = ctx.svc.search(2, "财报", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(2), "财报", 5).await.unwrap();
         let titles: Vec<&str> = res
             .hits
             .iter()
@@ -598,7 +612,7 @@ mod tests {
         assert_eq!(titles, vec!["别人的财报.pdf"]);
 
         // 上传者本人仍能搜到自己的私密文件
-        let res = ctx.svc.search(1, "财报", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "财报", 5).await.unwrap();
         assert_eq!(
             res.hits.iter().filter(|h| h.kind == "file").count(),
             3,
@@ -619,7 +633,7 @@ mod tests {
         .unwrap();
 
         // "%" 只作为字面字符匹配含它的文件名，而不是通配全部
-        let res = ctx.svc.search(1, "%", 5).await.unwrap();
+        let res = ctx.svc.search(&Actor::user(1), "%", 5).await.unwrap();
         let titles: Vec<&str> = res
             .hits
             .iter()
@@ -627,5 +641,41 @@ mod tests {
             .map(|h| h.title.as_str())
             .collect();
         assert_eq!(titles, vec!["占比100%的图.png"]);
+    }
+
+    /// admin 的全局搜索跨用户：`SearchPort` 收 `&Actor` 之后，admin 与普通用户看到的是
+    /// 不同的结果集（这是"admin 全管"在搜索面成立的前提，见 doc/design/authorization.md）。
+    #[tokio::test]
+    async fn admin_search_spans_users_while_regular_user_does_not() {
+        let ctx = setup().await;
+        sqlx::query("INSERT INTO card (content, user_id) VALUES ('A 的卡片：费曼学习法', 1)")
+            .execute(&ctx.pool)
+            .await
+            .unwrap();
+        sqlx::query("INSERT INTO card (content, user_id) VALUES ('B 的卡片：费曼学习法', 2)")
+            .execute(&ctx.pool)
+            .await
+            .unwrap();
+
+        // 普通用户 1：只搜到自己的那张卡
+        let mine = ctx
+            .svc
+            .search(&Actor::user(1), "费曼学习法", 10)
+            .await
+            .unwrap();
+        let cards: Vec<&crate::shared::search::SearchHit> =
+            mine.hits.iter().filter(|h| h.kind == "card").collect();
+        assert_eq!(cards.len(), 1, "普通用户只该搜到自己的卡片");
+        assert!(cards[0].title.contains("A 的卡片"));
+
+        // admin：两张都搜到
+        let all = ctx
+            .svc
+            .search(&Actor::admin(3), "费曼学习法", 10)
+            .await
+            .unwrap();
+        let cards: Vec<&crate::shared::search::SearchHit> =
+            all.hits.iter().filter(|h| h.kind == "card").collect();
+        assert_eq!(cards.len(), 2, "admin 的全局搜索应跨用户");
     }
 }

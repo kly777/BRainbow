@@ -335,15 +335,16 @@ impl FileService {
         };
         let mut filled = 0usize;
         for (id, stored_id, mime) in rows {
-            if !extract::supports(&mime) {
+            // 闸门按类型分档（PDF 一档、其余一档），判据只在 `extract::parse_budget`
+            let Some(budget) = extract::parse_budget(&mime) else {
                 continue;
-            }
+            };
             let path = format!("{}/{}", self.upload_dir, stored_id);
             // 先看体积再决定读不读：几百 MB 的文件不该为了抽正文整个进内存
             let Ok(meta) = tokio::fs::metadata(&path).await else {
                 continue; // 文件缺失/不可读
             };
-            if meta.len() > extract::MAX_PARSE_BYTES as u64 {
+            if meta.len() > budget as u64 {
                 continue;
             }
             let Ok(bytes) = tokio::fs::read(&path).await else {
@@ -753,17 +754,21 @@ mod tests {
             .await
             .unwrap()
             .file;
+        // 上传后的抽取在后台跑：**先等它落库**，再动磁盘上的文件 ——
+        // 否则后台任务可能读到改动后的内容，这条测试就成了竞态
+        assert_eq!(
+            wait_for_text_content(&ctx, f.id).await.as_deref(),
+            Some("第一次的内容")
+        );
         // 把磁盘上的内容换掉：回填若再抽一次会把新内容写进去 —— 那说明它在白干活
         std::fs::write(format!("{}/{}", ctx.dir.0, f.stored_id), "改过的内容").unwrap();
 
         ctx.svc.backfill_text_content().await;
 
-        let text: Option<String> = sqlx::query_scalar("SELECT text_content FROM file WHERE id = ?")
-            .bind(f.id)
-            .fetch_one(&*ctx.pool)
-            .await
-            .unwrap();
-        assert_eq!(text.as_deref(), Some("第一次的内容"));
+        assert_eq!(
+            text_content_of(&ctx, f.id).await.as_deref(),
+            Some("第一次的内容")
+        );
     }
 
     // ── 一致性扫描 ──

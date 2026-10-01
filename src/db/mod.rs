@@ -826,6 +826,54 @@ mod tests {
         assert_eq!(null_user_id_count(&pool, "api_key").await, 1);
     }
 
+    /// v23：PDF 行的正文被置空（换抽取器后交给启动回填重抽），别的类型不动
+    #[tokio::test]
+    async fn v23_resets_pdf_text_for_reextraction() {
+        let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        create_tables(&pool).await.unwrap();
+        for (stored_id, name, mime, text) in [
+            (
+                "pdf000000001",
+                "书.pdf",
+                "application/pdf",
+                "旧抽取器的正文",
+            ),
+            ("txt000000001", "笔记.md", "text/markdown", "笔记正文"),
+        ] {
+            sqlx::query(
+                "INSERT INTO file (stored_id, original_name, mime_type, size_bytes, text_content)
+                 VALUES (?, ?, ?, 10, ?)",
+            )
+            .bind(stored_id)
+            .bind(name)
+            .bind(mime)
+            .bind(text)
+            .execute(&pool)
+            .await
+            .unwrap();
+        }
+        // 版本退回 22（v23 之前）再迁移一次，触发这条修复
+        sqlx::query("PRAGMA user_version = 22")
+            .execute(&pool)
+            .await
+            .unwrap();
+        migrate(&pool).await.unwrap();
+
+        let rows: Vec<(String, Option<String>)> =
+            sqlx::query_as("SELECT stored_id, text_content FROM file ORDER BY stored_id")
+                .fetch_all(&pool)
+                .await
+                .unwrap();
+        assert_eq!(
+            rows,
+            vec![
+                ("pdf000000001".to_string(), None),
+                ("txt000000001".to_string(), Some("笔记正文".to_string())),
+            ],
+            "只该把 PDF 的正文置空（等回填重抽），别的类型原样"
+        );
+    }
+
     /// 幂等：再跑一次（重新出现无主行、版本退回 19）依然只认领无主行
     #[tokio::test]
     async fn v20_is_idempotent() {

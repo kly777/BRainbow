@@ -5,9 +5,8 @@
 //! 两边共用这里的判据，免得出现"新传的能搜到、老文件搜不到"。
 //!
 //! **抽哪些**由 `kind.rs` 的 `text` 列声明（能力表的第五列，别在这里另写 `matches!`）：
-//! 文本族（`text/*`，HTML 只留可见文字）+ docx / xlsx / xls / pptx / epub。
-//! PDF 抽不了（服务端没有解析器，首屏缩略图那套 pdf.js 在前端进程里），
-//! 图片 / 音视频 / 压缩包没有正文 —— 这些列上留 NULL。
+//! 文本族（`text/*`，HTML 只留可见文字）+ docx / xlsx / xls / pptx / epub / pdf。
+//! 图片 / 音视频 / 压缩包没有正文，老 `.doc` 没有解析器 —— 这些列上留 NULL。
 //!
 //! 抽出的文本**只用于搜索**：不进任何响应 DTO、不参与预览渲染，所以截断到
 //! [`MAX_TEXT_BYTES`] 是安全的（这个上限同时压在"这一列能把库撑多大"上）。
@@ -23,20 +22,33 @@ pub const MAX_TEXT_BYTES: usize = 1024 * 1024;
 /// 别把几百 MB 读进内存再指望这里挡下来。
 pub const MAX_PARSE_BYTES: usize = preview::MAX_PREVIEW_BYTES as usize;
 
-/// 这种类型有没有正文可抽（判据是 `kind.rs` 的 `text` 列）。
-/// 调用方先用它筛掉绝大多数文件，连读盘的工夫都省了。
-pub fn supports(mime: &str) -> bool {
-    kind::kind_of(mime).text != TextStrategy::None
+/// PDF 单独一档、更小（见 [`parse_budget`]）：扫描件页页是图片、本来就抽不出文字，
+/// 而几十 MB 的 PDF 绝大多数是扫描件 —— 与其把整份图片层读进内存解析半天，不如早些放手。
+pub const MAX_PDF_BYTES: usize = 16 * 1024 * 1024;
+
+/// 这种类型值不值得抽正文、最多读多大。`None` = 抽不出（连读盘的工夫都省了）。
+///
+/// 调用方拿它当**读盘前的闸门**：`None` 不读，超过预算的不读。
+/// 判据是 `kind.rs` 的 `text` 列；这里只补"哪一档预算"（PDF 一档、其余一档）。
+pub fn parse_budget(mime: &str) -> Option<usize> {
+    match kind::kind_of(mime).text {
+        TextStrategy::None => None,
+        TextStrategy::Pdf => Some(MAX_PDF_BYTES),
+        _ => Some(MAX_PARSE_BYTES),
+    }
 }
 
 /// 抽取可搜索文本。
 ///
-/// - `Ok(Some(text))`：抽到了（可能是空串 —— 抽过但没文字）
-/// - `Ok(None)`：没有正文可抽，或超过 [`MAX_PARSE_BYTES`]
-/// - `Err(原因)`：有正文可抽、这次却没抽出来（文件损坏等）。调用方**别写库**
+/// - `Ok(Some(text))`：抽到了（可能是空串 —— 抽过但没文字：空文件、扫描件）
+/// - `Ok(None)`：没有正文可抽，或超过该类型的 [`parse_budget`]
+/// - `Err(原因)`：有正文可抽、这次却没抽出来（文件损坏、加密等）。调用方**别写库**
 ///   （列上留 NULL，下次启动的回填会再试），记一条日志即可
 pub fn extract(mime: &str, bytes: &[u8]) -> Result<Option<String>, String> {
-    if bytes.len() > MAX_PARSE_BYTES {
+    let Some(budget) = parse_budget(mime) else {
+        return Ok(None);
+    };
+    if bytes.len() > budget {
         return Ok(None);
     }
     let text = match kind::kind_of(mime).text {
@@ -46,8 +58,76 @@ pub fn extract(mime: &str, bytes: &[u8]) -> Result<Option<String>, String> {
         TextStrategy::Sheet => preview::sheet_text(bytes, MAX_TEXT_BYTES)?,
         TextStrategy::Slides => preview::pptx_text(bytes, MAX_TEXT_BYTES)?,
         TextStrategy::Book => preview::epub_text(bytes, MAX_TEXT_BYTES)?,
+        TextStrategy::Pdf => pdf_text(bytes, MAX_TEXT_BYTES)?,
     };
     Ok(Some(clip_to_budget(text)))
+}
+
+/// 抽 `.pdf` 的**文字层**（搜索用，`budget` 是字节上限）。
+///
+/// 用第三方库（`pdf_oxide`，纯 Rust、MIT/Apache-2.0）。选它而不是 `pdf-extract`/lopdf：
+/// 后者读不了 xref 链不规范的文件（**线性化 + 被增量更新过几十次的书**很常见，
+/// 实测一份 12MB 的教材直接 "invalid file trailer" 整份放弃），而它自带 xref 重建。
+///
+/// 仍然按页调用、每页各包一层 `catch_unwind`：解析器不是我们写的，坏页只该丢自己。
+///
+/// 两条边界：
+/// - **扫描件抽不出东西**（页页是图片，没有文字层）—— `Ok` 的空串，落库成 `''`
+///   （"抽过但没文字"，不再重试）；
+/// - 打不开 / 有页读失败、且**一个字都没抽到** —— `Err`，列上留 `NULL`，
+///   下次启动回填会再试（换抽取器或库修好了都能自动跟上）
+fn pdf_text(bytes: &[u8], budget: usize) -> Result<String, String> {
+    // 库要缓冲区的所有权（解析期间自己持有），PDF 这一档单独拷一份
+    let doc = pdf_oxide::PdfDocument::from_bytes(bytes.to_vec())
+        .map_err(|e| format!("打不开这个 PDF：{e}"))?;
+    let pages = doc
+        .page_count()
+        .map_err(|e| format!("读不出这个 PDF 的页数：{e}"))?;
+    let mut out = String::new();
+    let mut failed_pages = 0usize;
+    let mut first_reason: Option<String> = None;
+    for page in 0..pages {
+        if out.len() >= budget {
+            break;
+        }
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| doc.extract_text(page))) {
+            Ok(Ok(text)) => {
+                out.push_str(&text);
+                out.push('\n');
+            }
+            Ok(Err(e)) => {
+                failed_pages += 1;
+                first_reason.get_or_insert_with(|| e.to_string());
+            }
+            Err(payload) => {
+                failed_pages += 1;
+                first_reason.get_or_insert_with(|| panic_reason(&*payload));
+            }
+        }
+    }
+    if failed_pages > 0 {
+        tracing::debug!(
+            "PDF 正文抽取：抽到 {} 字节，跳过 {failed_pages} 页（{}）",
+            out.len(),
+            first_reason.as_deref().unwrap_or("未知原因")
+        );
+    }
+    if out.trim().is_empty() && failed_pages > 0 {
+        return Err(format!(
+            "{failed_pages} 页都没抽出来（{}）",
+            first_reason.unwrap_or_else(|| "未知原因".to_string())
+        ));
+    }
+    Ok(out)
+}
+
+/// panic 载荷 → 人能读的原因（库 panic 的消息；取不出来就说"抽取器 panic"）
+fn panic_reason(payload: &(dyn std::any::Any + Send)) -> String {
+    payload
+        .downcast_ref::<&str>()
+        .map(|s| (*s).to_string())
+        .or_else(|| payload.downcast_ref::<String>().cloned())
+        .unwrap_or_else(|| "抽取器 panic".to_string())
 }
 
 /// 文本族：原文即正文；HTML 只留可见文字（标签、script/style 都丢掉）
@@ -115,7 +195,10 @@ fn clip_to_budget(mut text: String) -> String {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
-    use crate::modules::file::test_support::{docx_bytes, epub_bytes, pptx_bytes, xlsx_bytes};
+    use crate::modules::file::test_support::{
+        docx_bytes, epub_bytes, pdf_bytes, pdf_bytes_broken_cid, pdf_bytes_chinese, pptx_bytes,
+        xlsx_bytes,
+    };
 
     #[test]
     fn text_family_is_kept_as_is() {
@@ -147,14 +230,64 @@ mod tests {
     fn unsupported_types_have_no_text() {
         for mime in [
             "image/png",
-            "application/pdf",
+            "image/svg+xml",
             "application/zip",
             "application/octet-stream",
             "video/mp4",
+            "application/msword",
         ] {
-            assert!(!supports(mime), "{mime}");
+            assert_eq!(parse_budget(mime), None, "{mime}");
             assert!(extract(mime, b"whatever").unwrap().is_none(), "{mime}");
         }
+    }
+
+    #[test]
+    fn pdf_extracts_its_text_layer() {
+        let bytes = pdf_bytes("Quarterly report: revenue and costs");
+        let text = extract("application/pdf", &bytes).unwrap().unwrap();
+        assert!(text.contains("Quarterly report"), "{text}");
+    }
+
+    /// 中文 PDF：正文是 2 字节 CID，能不能变回汉字全靠 `/ToUnicode` ——
+    /// 真实中文 PDF（WPS / Word 导出）就是这条链路
+    #[test]
+    fn pdf_with_cid_font_uses_the_to_unicode_map() {
+        let bytes = pdf_bytes_chinese("类型论笔记");
+        let text = extract("application/pdf", &bytes).unwrap().unwrap();
+        assert!(text.contains("类型论笔记"), "{text}");
+    }
+
+    /// 畸形但能读的件（CID 字体缺 `/FontDescriptor`）：正文照抽 ——
+    /// 换 pdf_oxide 之前这种件会让 `pdf-extract` panic、整份白抽
+    #[test]
+    fn malformed_but_readable_pdf_still_yields_text() {
+        let text = extract("application/pdf", &pdf_bytes_broken_cid())
+            .unwrap()
+            .unwrap();
+        assert!(text.contains("坏件"), "{text}");
+    }
+
+    /// 坏 PDF（根本没有可解析对象）：`Err`（列上留 NULL，下次回填再试），不是空串
+    #[test]
+    fn broken_pdf_reports_error() {
+        let err = extract(
+            "application/pdf",
+            b"%PDF-1.4\nthis is not a real pdf at all",
+        )
+        .unwrap_err();
+        assert!(err.contains("PDF"), "{err}");
+    }
+
+    /// PDF 单独一档：超过 [`MAX_PDF_BYTES`] 不解析（扫描件抽不出文字，
+    /// 几十 MB 的 PDF 绝大多数是扫描件）
+    #[test]
+    fn oversized_pdf_is_skipped_earlier_than_other_types() {
+        assert_eq!(parse_budget("application/pdf"), Some(MAX_PDF_BYTES));
+        const { assert!(MAX_PDF_BYTES < MAX_PARSE_BYTES) };
+        assert_eq!(parse_budget("text/plain"), Some(MAX_PARSE_BYTES));
+        assert_eq!(parse_budget("application/epub+zip"), Some(MAX_PARSE_BYTES));
+        let big = vec![b'x'; MAX_PDF_BYTES + 1];
+        assert!(extract("application/pdf", &big).unwrap().is_none());
     }
 
     #[test]
@@ -238,10 +371,42 @@ mod tests {
         assert!(extract(docx, b"not a zip at all").is_err());
     }
 
+    /// 真样本演练（与 `migrate_fixture_db` 同一路数）：合成夹具证明不了真实 PDF
+    /// 的字体千奇百怪，拿手上的真文件跑一遍，把"抽了多少、坏在哪"打出来。
+    ///
+    /// `BRAINBOW_PDF_SAMPLE=<pdf 路径> cargo test pdf_sample -- --ignored --nocapture`
+    #[test]
+    #[ignore = "only run by hand with BRAINBOW_PDF_SAMPLE=<path>"]
+    fn pdf_sample_rehearsal() {
+        let path = std::env::var("BRAINBOW_PDF_SAMPLE").expect(
+            "用法：BRAINBOW_PDF_SAMPLE=<pdf> cargo test pdf_sample -- --ignored --nocapture",
+        );
+        let bytes = std::fs::read(&path).expect("读不到这个文件");
+        let pages = pdf_oxide::PdfDocument::from_bytes(bytes.clone())
+            .and_then(|doc| doc.page_count())
+            .unwrap_or(0);
+        // 抽取本身也可能 panic（`from_bytes` 在 catch_unwind 之外），
+        // 演练要把这种情况也报出来，而不是让测试自己炸掉
+        match std::panic::catch_unwind(|| extract("application/pdf", &bytes)) {
+            Ok(Ok(Some(text))) => {
+                let sample: String = text.chars().take(120).collect();
+                println!(
+                    "{path}\n  {pages} 页，抽出 {} 字节 / {} 字\n  开头：{}",
+                    text.len(),
+                    text.chars().count(),
+                    sample.replace('\n', "⏎")
+                );
+            }
+            Ok(Ok(None)) => println!("{path}\n  {pages} 页：没有正文可抽（跳过）"),
+            Ok(Err(reason)) => println!("{path}\n  {pages} 页：失败 —— {reason}"),
+            Err(_) => println!("{path}\n  {pages} 页：抽取器 panic（连 load 都没过）"),
+        }
+    }
+
     #[test]
     fn oversized_input_is_skipped() {
         let mime = "text/plain";
-        assert!(supports(mime));
+        assert!(parse_budget(mime).is_some());
         let big = vec![b'x'; MAX_PARSE_BYTES + 1];
         assert!(extract(mime, &big).unwrap().is_none());
     }

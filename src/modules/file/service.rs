@@ -247,10 +247,15 @@ impl FileService {
                 .await;
         }
 
-        // 正文抽取（搜索用）：刚落盘的文件读回来解一遍。
-        // 失败不影响上传 —— 与图片尺寸解析同一尺度；列上留 NULL，下次启动的回填会再试
-        self.capture_text_content(file_row.id, &stored_id, final_mime, data_size)
-            .await;
+        // 正文抽取（搜索用）丢到**后台**：大部头 PDF 很贵（1312 页的教材抽 1 MiB 要 94 秒，
+        // 见 extract.rs 的实测），放在响应链里会把上传请求卡住。抽完落库，几秒后搜得到；
+        // 失败/进程退出都没关系 —— 列上留 NULL，下次启动的回填会再试
+        self.spawn_text_capture(
+            file_row.id,
+            stored_id.clone(),
+            final_mime.to_string(),
+            data_size,
+        );
 
         // 标签（匿名老路径没有归属人，无法归属标签，静默忽略 —— 直接跳过，
         // 别拿 0 兜底：那会写出一条 user_id=0 的标签并撞外键）
@@ -439,6 +444,19 @@ impl FileService {
         })
     }
 
+    /// 上传后的正文抽取：**不进响应链**，交给后台任务跑（见 [`Self::capture_text_content`]）。
+    ///
+    /// 独立任务而不是 `spawn_blocking` 里的内联等待：上传响应不该等它。进程若在抽取中途
+    /// 退出，那一行就只是没正文 —— 下次启动的回填会补（自带自愈）。
+    fn spawn_text_capture(&self, id: i64, stored_id: String, mime: String, size: u64) {
+        let service = self.clone();
+        tokio::spawn(async move {
+            service
+                .capture_text_content(id, &stored_id, &mime, size)
+                .await;
+        });
+    }
+
     /// 抽正文入库（搜索用，见 [`extract`]）。
     ///
     /// 读回刚落盘的文件而不是用内存里的字节：流式上传路径手里只有文件头，
@@ -446,7 +464,11 @@ impl FileService {
     /// 抽不出来（这类没有正文 / 超过解析闸门 / 文件损坏）都**不是错误**：
     /// 留 NULL，下次启动的回填会再试。
     async fn capture_text_content(&self, id: i64, stored_id: &str, mime: &str, size: u64) {
-        if !extract::supports(mime) || size > extract::MAX_PARSE_BYTES as u64 {
+        // 闸门按类型分档（PDF 一档、其余一档），判据只在 `extract::parse_budget`
+        let Some(budget) = extract::parse_budget(mime) else {
+            return;
+        };
+        if size > budget as u64 {
             return;
         }
         let path = format!("{}/{}", self.upload_dir, stored_id);
@@ -1030,16 +1052,7 @@ mod tests {
         assert!(err.to_string().contains("无法识别"));
     }
 
-    // ── 正文抽取（搜索用，file.text_content） ──
-
-    /// 读回文件行上的 text_content（NULL 与 '' 在这里能区分开）
-    async fn text_content_of(ctx: &Ctx, id: i64) -> Option<String> {
-        sqlx::query_scalar("SELECT text_content FROM file WHERE id = ?")
-            .bind(id)
-            .fetch_one(&*ctx.pool)
-            .await
-            .unwrap()
-    }
+    // ── 正文抽取（搜索用，file.text_content；助手在 test_support） ──
 
     #[tokio::test]
     async fn upload_captures_body_text_for_search() {
@@ -1058,7 +1071,7 @@ mod tests {
             .unwrap()
             .file;
         assert_eq!(
-            text_content_of(&ctx, f.id).await.as_deref(),
+            wait_for_text_content(&ctx, f.id).await.as_deref(),
             Some("退货政策：七天内可退，运费自理")
         );
         // 服务端派生的搜索数据，不动 updated_at（否则会把文件顶到"最近更新"最前）
@@ -1096,12 +1109,83 @@ mod tests {
             .await
             .unwrap()
             .file;
-        let text = text_content_of(&ctx, f.id).await.expect("docx 应有正文");
+        let text = wait_for_text_content(&ctx, f.id)
+            .await
+            .expect("docx 应有正文");
         assert!(text.contains("季度总结"), "{text}");
         assert!(text.contains("营收\t一百万"), "{text}");
         assert!(
             !text.contains("<w:p"),
             "存的必须是抽出来的文字，不是 XML：{text}"
+        );
+    }
+
+    /// PDF：抽的是文字层（含走 ToUnicode 的中文 CID 字体）
+    #[tokio::test]
+    async fn upload_captures_pdf_text_layer() {
+        let ctx = setup_service().await;
+        let f = ctx
+            .svc
+            .upload(
+                &pdf_bytes_chinese("类型论笔记"),
+                "笔记.pdf",
+                "application/pdf",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
+            .await
+            .unwrap()
+            .file;
+        let text = wait_for_text_content(&ctx, f.id)
+            .await
+            .expect("PDF 应有正文");
+        assert!(text.contains("类型论笔记"), "{text}");
+    }
+
+    /// 打不开的 PDF（没有可解析对象）**不能**让上传失败：抽取是尽力而为，
+    /// 列上留 NULL（下次启动回填会再试），文件本身照存、照能下载
+    #[tokio::test]
+    async fn upload_survives_an_unreadable_pdf() {
+        let ctx = setup_service().await;
+        let f = ctx
+            .svc
+            .upload(
+                PDF_MIN,
+                "坏件.pdf",
+                "application/pdf",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
+            .await
+            .expect("抽取失败不该让上传失败")
+            .file;
+        assert_eq!(text_content_of(&ctx, f.id).await, None);
+    }
+
+    /// 畸形但能读的 PDF（CID 字体缺 FontDescriptor）照常抽出正文 ——
+    /// pdf-extract 时代这种件会 panic 整份丢，换 pdf_oxide 后能读（见夹具注释）
+    #[tokio::test]
+    async fn upload_captures_text_from_a_malformed_but_readable_pdf() {
+        let ctx = setup_service().await;
+        let f = ctx
+            .svc
+            .upload(
+                &pdf_bytes_broken_cid(),
+                "畸形件.pdf",
+                "application/pdf",
+                Some(&Actor::user(7)),
+                None,
+                false,
+            )
+            .await
+            .unwrap()
+            .file;
+        assert_eq!(
+            wait_for_text_content(&ctx, f.id).await.as_deref(),
+            Some("坏件\n"),
+            "畸形件能读就抽（别整份丢）"
         );
     }
 

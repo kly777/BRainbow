@@ -44,6 +44,7 @@ repairs! {
     17 => dedupe_content_hash, "content_hash 去重（保留最早一条）";
     18 => merge_duplicate_tags, "同名标签合并到最早一条";
     20 => claim_orphan_rows, "无主行认领给 admin";
+    23 => reset_pdf_text_content, "PDF 正文置空待重抽（换了抽取器）";
 }
 
 /// v8 引入、v21 扩展到 `file`：把存量时间列统一成 `+00:00` 规范形态。
@@ -124,6 +125,28 @@ async fn merge_duplicate_tags(conn: &mut SqliteConnection) -> Result<(), sqlx::E
 
     sqlx::query(
         "DELETE FROM file_tag WHERE id NOT IN (SELECT MIN(id) FROM file_tag GROUP BY name)",
+    )
+    .execute(&mut *conn)
+    .await?;
+    Ok(())
+}
+
+/// v23：把 PDF 行的正文置空，交给启动回填**用新抽取器重抽**。
+///
+/// 背景：正文抽取器从 `pdf-extract` 换成了 `pdf_oxide`（选型见
+/// `modules/file/extract.rs`）。旧库里的 PDF 正文是上一个库留下的 —— 它映射不到的字形
+/// 整段丢（实测同一份论文只抽到新库的一半文字），而"`text_content` 非 NULL 就不再抽"
+/// 的回填策略不会自己更新它们。
+///
+/// 为什么放在这里而不是应用层：这是"换了一次抽取器"的历史动作，只该发生一次；
+/// 数据修复正是这套版本化修复机制的用途（与 v20 认领无主行同类）。
+///
+/// 代价是重抽一遍（后台、一次性）：一行 1312 页的教材约 94 秒。幂等：再跑一遍只会
+/// 把已经重抽好的又置空一次，回填再补回来（收敛，不丢数据）。
+async fn reset_pdf_text_content(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
+    sqlx::query(
+        "UPDATE file SET text_content = NULL
+          WHERE mime_type = 'application/pdf' AND text_content IS NOT NULL",
     )
     .execute(&mut *conn)
     .await?;

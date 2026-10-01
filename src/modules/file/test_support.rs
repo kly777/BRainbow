@@ -23,8 +23,133 @@ pub const PNG_1X1: &[u8] = &[
     0x42, 0x60, 0x82,
 ];
 
-/// 最小 PDF 头（infer 识别 application/pdf）
+/// 最小 PDF 头（infer 识别 application/pdf；**没有可解析的对象**，
+/// 想抽文字用 [`pdf_bytes`] / [`pdf_bytes_chinese`]）
 pub const PDF_MIN: &[u8] = b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF";
+
+/// 把一组对象拼成一份**合法** PDF（xref 偏移按实际字节算 —— 解析器不认错的偏移表）
+fn pdf_from_objects(objects: &[String]) -> Vec<u8> {
+    let mut pdf = String::from("%PDF-1.4\n");
+    let mut offsets = Vec::new();
+    for (index, object) in objects.iter().enumerate() {
+        offsets.push(pdf.len());
+        pdf.push_str(&format!("{} 0 obj\n{object}\nendobj\n", index + 1));
+    }
+    let xref_at = pdf.len();
+    pdf.push_str(&format!(
+        "xref\n0 {}\n0000000000 65535 f \n",
+        objects.len() + 1
+    ));
+    for offset in &offsets {
+        pdf.push_str(&format!("{offset:010} 00000 n \n"));
+    }
+    pdf.push_str(&format!(
+        "trailer\n<< /Size {} /Root 1 0 R >>\nstartxref\n{xref_at}\n%%EOF\n",
+        objects.len() + 1
+    ));
+    pdf.into_bytes()
+}
+
+/// 造一份最小单页 PDF：ASCII 正文，Helvetica（WinAnsi 编码）。
+///
+/// `text` 别带 `(` `)` `\` —— 那三个在 PDF 字符串里要转义，这里不做转义
+pub fn pdf_bytes(text: &str) -> Vec<u8> {
+    let content = format!("BT /F1 24 Tf 72 700 Td ({text}) Tj ET\n");
+    pdf_from_objects(&[
+        "<< /Type /Catalog /Pages 2 0 R >>".to_string(),
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_string(),
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources \
+         << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>"
+            .to_string(),
+        "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>".to_string(),
+        format!(
+            "<< /Length {} >>\nstream\n{content}endstream",
+            content.len()
+        ),
+    ])
+}
+
+/// 造一份**中文**单页 PDF：Type0 / Identity-H 的 CID 字体 + `/ToUnicode` 映射。
+///
+/// 中文 PDF 的文字抽取全靠 ToUnicode：正文里是 2 字节的 CID，能不能变回汉字
+/// 就看这张表。真实的中文 PDF（WPS / Word 导出）都是这个形状 —— 这份造件
+/// 钉的就是"抽取器认得出我们关心的这条链路"
+pub fn pdf_bytes_chinese(text: &str) -> Vec<u8> {
+    pdf_chinese_objects(text, true)
+}
+
+/// 中文 PDF 的**畸形版**：CID 字体少了 `/FontDescriptor`（真实世界里 Adobe Expert
+/// 编码的 PDF 有同类缺件）。留它钉"畸形件不整份丢"：
+/// - `pdf-extract` 时代这种件直接 panic（`.expect("required")`），整份白抽；
+/// - 现在的 `pdf_oxide` 读得动、正文照抽 —— 断言在 extract 与 service 两处
+pub fn pdf_bytes_broken_cid() -> Vec<u8> {
+    pdf_chinese_objects("坏件", false)
+}
+
+fn pdf_chinese_objects(text: &str, with_font_descriptor: bool) -> Vec<u8> {
+    // CID 从 1 开始编号，ToUnicode 把它映回字符
+    let cids: Vec<u16> = (1..).take(text.chars().count()).collect();
+    let hex: String = cids.iter().map(|cid| format!("{cid:04X}")).collect();
+    let bfchars: String = text
+        .chars()
+        .zip(&cids)
+        .map(|(ch, cid)| {
+            let mut units = [0u16; 2];
+            let encoded = ch.encode_utf16(&mut units);
+            let code: String = encoded.iter().map(|u| format!("{u:04X}")).collect();
+            format!("<{cid:04X}> <{code}>\n")
+        })
+        .collect();
+    let to_unicode = format!(
+        "/CIDInit /ProcSet findresource begin\n12 dict begin\nbegincmap\n\
+         /CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def\n\
+         /CMapName /Adobe-Identity-UCS def\n/CMapType 2 def\n\
+         1 begincodespacerange\n<0000> <FFFF>\nendcodespacerange\n\
+         {} beginbfchar\n{bfchars}endbfchar\nendcmap\n\
+         CMapName currentdict /CMap defineresource pop\nend\nend\n",
+        cids.len()
+    );
+    let content = format!("BT /F1 24 Tf 72 700 Td <{hex}> Tj ET\n");
+    // CID 字体要不要挂 FontDescriptor（见 pdf_bytes_broken_cid 的注释）：
+    // 挂上就是对象 8，编号随位置走，所以条件追加在最后
+    let descriptor_ref = if with_font_descriptor {
+        " /FontDescriptor 8 0 R"
+    } else {
+        ""
+    };
+    let mut objects = vec![
+        "<< /Type /Catalog /Pages 2 0 R >>".to_string(),
+        "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_string(),
+        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources \
+         << /Font << /F1 4 0 R >> >> /Contents 7 0 R >>"
+            .to_string(),
+        "<< /Type /Font /Subtype /Type0 /BaseFont /STSong-Light /Encoding /Identity-H \
+         /DescendantFonts [6 0 R] /ToUnicode 5 0 R >>"
+            .to_string(),
+        format!(
+            "<< /Length {} >>\nstream\n{to_unicode}endstream",
+            to_unicode.len()
+        ),
+        format!(
+            "<< /Type /Font /Subtype /CIDFontType0 /BaseFont /STSong-Light \
+             /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> \
+             /DW 1000{descriptor_ref} >>"
+        ),
+        format!(
+            "<< /Length {} >>\nstream\n{content}endstream",
+            content.len()
+        ),
+    ];
+    if with_font_descriptor {
+        objects.push(
+            "<< /Type /FontDescriptor /FontName /STSong-Light /Flags 4 \
+             /FontBBox [0 -200 1000 900] /ItalicAngle 0 /Ascent 880 /Descent -120 \
+             /CapHeight 880 /StemV 93 >>"
+                .to_string(),
+        );
+    }
+    pdf_from_objects(&objects)
+}
 
 /// 最小 ZIP 头（infer 识别 application/zip，但不在白名单）
 pub const ZIP_MIN: &[u8] = b"PK\x03\x04\x14\x00\x00\x00\x00\x00";
@@ -65,6 +190,29 @@ pub struct Ctx {
     pub svc: FileService,
     pub dir: TempDir,
     pub pool: Arc<SqlitePool>,
+}
+
+/// 读回文件行上的 `text_content`（NULL 与 `''` 在这里能区分开）
+pub async fn text_content_of(ctx: &Ctx, id: i64) -> Option<String> {
+    sqlx::query_scalar("SELECT text_content FROM file WHERE id = ?")
+        .bind(id)
+        .fetch_one(&*ctx.pool)
+        .await
+        .unwrap()
+}
+
+/// 上传后的正文抽取在**后台**跑（`service::spawn_text_capture`）—— 等它落库再断言。
+///
+/// 等不到就返回 `None`："这类没有正文"，断言方自己决定那是不是预期。
+/// 上限 10 秒：夹具都很小，正常在毫秒级落库；跑满说明后台任务卡住了
+pub async fn wait_for_text_content(ctx: &Ctx, id: i64) -> Option<String> {
+    for _ in 0..200 {
+        if let Some(text) = text_content_of(ctx, id).await {
+            return Some(text);
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+    }
+    None
 }
 
 pub async fn setup_service() -> Ctx {

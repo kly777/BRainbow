@@ -20,7 +20,7 @@
 use InlinePolicy::{Attachment, Inline};
 use PreviewStrategy::{Book, Docx, None as NoPreview, Sheet, Slides};
 use TextStrategy::{
-    Book as BookText, Docx as DocxText, None as NoText, Plain, Sheet as SheetText,
+    Book as BookText, Docx as DocxText, None as NoText, Pdf as PdfText, Plain, Sheet as SheetText,
     Slides as SlidesText,
 };
 use ThumbStrategy::{Bitmap, None as NoThumb, Video};
@@ -69,8 +69,7 @@ pub enum PreviewStrategy {
 /// 能不能从这种类型里抽出正文（搜索用的 `file.text_content` 列，见 `extract.rs`）
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TextStrategy {
-    /// 抽不出：没有正文（图片 / 音视频 / 压缩包），或服务端没有解析器
-    /// （PDF 的首屏缩略图在前端 pdf.js 那边，不在这个进程里；老 `.doc` 同理）
+    /// 抽不出：没有正文（图片 / 音视频 / 压缩包），或服务端没有解析器（老 `.doc`）
     None,
     /// 就是文本本身；`text/html` 只留可见文字（标签与 script/style 丢掉）
     Plain,
@@ -79,6 +78,9 @@ pub enum TextStrategy {
     Sheet,
     Slides,
     Book,
+    /// `.pdf`：第三方库（`pdf_oxide`）抽**文字层**。
+    /// 扫描件页页是图片、没有文字层，什么也抽不出 —— 那是"抽过但没文字"
+    Pdf,
 }
 
 /// 内容路由的处置：能不能作为子资源 / 同源 iframe 内联
@@ -173,14 +175,15 @@ const KINDS: &[Kind] = &[
     kind("audio/flac", Audio, NoThumb, NoPreview, Inline, NoText),
     kind("audio/aac", Audio, NoThumb, NoPreview, Inline, NoText),
     // ── 文档 ──
-    // PDF 没有服务端解析器（首屏缩略图在前端 pdf.js），抽不出正文
+    // PDF 的**渲染**预览仍在前端 pdf.js（这里不给服务端预览、也不出缩略图），
+    // 但正文抽取走第三方库（文字层，扫描件抽不出）
     kind(
         "application/pdf",
         Document,
         NoThumb,
         NoPreview,
         Inline,
-        NoText,
+        PdfText,
     ),
     kind(
         "text/plain",
@@ -464,14 +467,14 @@ mod tests {
             SlidesText
         );
         assert_eq!(kind_of("application/epub+zip").text, BookText);
-        // 抽不出的：没有正文的、以及服务端没有解析器的（PDF / 老 doc / SVG 标记）
+        assert_eq!(kind_of("application/pdf").text, PdfText);
+        // 抽不出的：没有正文的、以及服务端没有解析器的（老 doc / SVG 标记）
         for mime in [
             "image/png",
             "image/svg+xml",
             "video/mp4",
             "audio/mpeg",
             "application/zip",
-            "application/pdf",
             "application/msword",
             "model/gltf+json",
         ] {

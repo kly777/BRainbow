@@ -34,8 +34,22 @@ export default defineConfig(({ command, mode }) => {
 	}
 	const apiTarget = env.VITE_API_TARGET ?? "http://localhost:3000";
 
+	// vitest 以 `mode: "test"` 运行（package.json 的 `vitest run` 不带 --mode）。
+	//
+	// 测试里必须关掉 HMR（`hot: false`），否则**每个组件测试都在收集阶段就死**：
+	// solid-refresh 运行时用自己的模块 id 作根相对路径 `/@solid-refresh`，
+	// 而 vitest 的模块运行器会把它当文件解析成 `file:///@solid-refresh` ——
+	// Linux 上 `/@solid-refresh` 本身就是绝对路径，Windows 上 `file:` URL 的路径
+	// 必须带盘符才算绝对，于是 `fileURLToPath` 抛 `File URL path must be absolute`，
+	// 报错长这样（看不出跟 HMR 有关）：
+	//   TypeError: The argument 'filename' must be a file URL object, file URL string,
+	//   or absolute path string. Received 'file:///@solid-refresh'
+	// 关掉之后 `needHmr` 为假，vite-plugin-solid 根本不注入刷新插件（其 dist 第 228 行）。
+	// 测试不是 dev server，本来也不需要 HMR。
+	const isTest = mode === "test";
+
 	return {
-		plugins: [solid(), seoPlugin(siteUrl)],
+		plugins: [solid({ hot: !isTest }), seoPlugin(siteUrl)],
 		envDir,
 
 		css: {

@@ -19,14 +19,29 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 // vitest 从 web/ 启动（pnpm run test），与 scripts/generate-seo.ts 的相对路径假设一致
-const SRC_ROOT = join(process.cwd(), "src");
+const SRC_ROOT = toPosix(join(process.cwd(), "src"));
+
+/**
+ * 统一成正斜杠。
+ *
+ * 下面到处都是按 `/` 切目录、比目录的写法（`split("/").pop()` 取 basename、
+ * `slice(0, lastIndexOf("/"))` 取 dirname），而 `path.join` 在 Windows 上给的是
+ * 反斜杠 —— 于是 basename 会返回**整条路径**、dirname 会拿到 -1，所有 CSS 都
+ * "扫描器没找到"，在 Windows 上直接变成 179 处误报（Linux 上一切正常，
+ * 所以作者那边看不见）。路径在进入扫描器时统一成 `/`，两种平台就只有一条逻辑。
+ * 注意：Node 的 fs 在 Windows 上也接受正斜杠，所以后面 readFileSync 照常用。
+ */
+function toPosix(p: string): string {
+	return p.replace(/\\/g, "/");
+}
 
 function walk(dir: string, out: string[] = []): string[] {
 	for (const name of readdirSync(dir)) {
 		const p = join(dir, name);
 		const st = statSync(p);
+		// 递归用原样的 p（fs 要本机分隔符），进 out 的才统一成 `/`
 		if (st.isDirectory()) walk(p, out);
-		else out.push(p);
+		else out.push(toPosix(p));
 	}
 	return out;
 }

@@ -43,10 +43,7 @@ impl CardService {
     }
 
     pub async fn delete(&self, actor: &Actor, id: i32) -> Result<u64, ServiceError> {
-        self.repo
-            .delete(actor, id)
-            .await
-            .map_err(ServiceError::Db)
+        self.repo.delete(actor, id).await.map_err(ServiceError::Db)
     }
 }
 
@@ -83,7 +80,12 @@ mod tests {
     async fn by_id() {
         let (svc, qsvc) = setup().await;
         let card = svc.create(&Actor::user(1), "test".into()).await.unwrap();
-        assert!(qsvc.by_id(&Actor::user(1), card.id).await.unwrap().is_some());
+        assert!(
+            qsvc.by_id(&Actor::user(1), card.id)
+                .await
+                .unwrap()
+                .is_some()
+        );
         assert!(qsvc.by_id(&Actor::user(1), 999).await.unwrap().is_none());
     }
 
@@ -91,7 +93,10 @@ mod tests {
     async fn update_content() {
         let (svc, _qsvc) = setup().await;
         let card = svc.create(&Actor::user(1), "old".into()).await.unwrap();
-        let updated = svc.update(&Actor::user(1), card.id, Some("new".into())).await.unwrap();
+        let updated = svc
+            .update(&Actor::user(1), card.id, Some("new".into()))
+            .await
+            .unwrap();
         assert_eq!(updated.content, "new");
     }
 
@@ -100,14 +105,23 @@ mod tests {
         let (svc, qsvc) = setup().await;
         let card = svc.create(&Actor::user(1), "x".into()).await.unwrap();
         assert_eq!(svc.delete(&Actor::user(1), card.id).await.unwrap(), 1);
-        assert!(qsvc.by_id(&Actor::user(1), card.id).await.unwrap().is_none());
+        assert!(
+            qsvc.by_id(&Actor::user(1), card.id)
+                .await
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[tokio::test]
     async fn search_by_keyword() {
         let (svc, qsvc) = setup().await;
-        svc.create(&Actor::user(1), "rust language".into()).await.unwrap();
-        svc.create(&Actor::user(1), "go language".into()).await.unwrap();
+        svc.create(&Actor::user(1), "rust language".into())
+            .await
+            .unwrap();
+        svc.create(&Actor::user(1), "go language".into())
+            .await
+            .unwrap();
         let (items, total) = qsvc.search(&Actor::user(1), "rust", 10, 0).await.unwrap();
         assert_eq!(total, 1);
         assert_eq!(items[0].content, "rust language");

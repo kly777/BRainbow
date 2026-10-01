@@ -54,9 +54,7 @@ pub async fn list_trees_handler(
     Query(params): Query<ListTreesParams>,
 ) -> impl IntoResponse {
     let result = match params.kind.as_deref() {
-        Some(k) if k == "mem" || k == "chat" => {
-            chat.list_trees_by_kind(&actor, k).await
-        }
+        Some(k) if k == "mem" || k == "chat" => chat.list_trees_by_kind(&actor, k).await,
         _ => chat.list_trees(&actor).await,
     };
     match result {
@@ -185,10 +183,7 @@ pub async fn search_handler(
     if q.is_empty() {
         return Json(serde_json::json!({ "hits": [] })).into_response();
     }
-    match query
-        .search(&actor, q, params.limit.unwrap_or(20))
-        .await
-    {
+    match query.search(&actor, q, params.limit.unwrap_or(20)).await {
         Ok(resp) => Json(resp).into_response(),
         Err(e) => e.into_response(),
     }
@@ -211,10 +206,7 @@ pub async fn create_preset_handler(
     Extension(actor): Extension<Actor>,
     Json(req): Json<PresetRequest>,
 ) -> impl IntoResponse {
-    match chat
-        .create_preset(&actor, &req.name, &req.content)
-        .await
-    {
+    match chat.create_preset(&actor, &req.name, &req.content).await {
         Ok(preset) => (axum::http::StatusCode::CREATED, Json(preset)).into_response(),
         Err(e) => e.into_response(),
     }

@@ -100,18 +100,14 @@ impl BookmarkService {
         )
         .map_err(|e| ServiceError::Internal(format!("创建 HTTP 客户端失败: {e}")))?;
 
-        let resp = client
-            .get(target.clone())
-            .send()
-            .await
-            .map_err(|e| {
-                // 被 SSRF 防线拦下（域名解析到内网）≠ 对面连不上：分开报，别让人去查对面的服务
-                if crate::shared::outbound::is_blocked(&e) {
-                    ServiceError::InvalidInput("URL 不可访问：目标是内网/保留地址".into())
-                } else {
-                    ServiceError::Internal(format!("抓取页面失败: {e}"))
-                }
-            })?;
+        let resp = client.get(target.clone()).send().await.map_err(|e| {
+            // 被 SSRF 防线拦下（域名解析到内网）≠ 对面连不上：分开报，别让人去查对面的服务
+            if crate::shared::outbound::is_blocked(&e) {
+                ServiceError::InvalidInput("URL 不可访问：目标是内网/保留地址".into())
+            } else {
+                ServiceError::Internal(format!("抓取页面失败: {e}"))
+            }
+        })?;
 
         if !resp.status().is_success() {
             return Err(ServiceError::Internal(format!(
@@ -245,10 +241,7 @@ impl BookmarkService {
     }
 
     pub async fn delete(&self, actor: &Actor, id: i32) -> Result<u64, ServiceError> {
-        self.repo
-            .delete(actor, id)
-            .await
-            .map_err(ServiceError::Db)
+        self.repo.delete(actor, id).await.map_err(ServiceError::Db)
     }
 
     pub async fn batch_delete(&self, actor: &Actor, ids: &[i32]) -> Result<u64, ServiceError> {
@@ -494,7 +487,10 @@ mod tests {
         assert!(bm.id > 0);
         assert_eq!(bm.tags, str_vec(&["编程"]));
 
-        let (items, total) = qsvc.list(&Actor::user(1), 10, 0, None, "created_at").await.unwrap();
+        let (items, total) = qsvc
+            .list(&Actor::user(1), 10, 0, None, "created_at")
+            .await
+            .unwrap();
         assert_eq!(total, 1);
         assert_eq!(items[0].url, "https://example.com");
         assert_eq!(items[0].tags, str_vec(&["编程"]));
@@ -503,10 +499,18 @@ mod tests {
     #[tokio::test]
     async fn list_filtered_by_tag() {
         let (svc, qsvc) = setup().await;
-        svc.create(&Actor::user(1), "A", "https://a.com", "", &str_vec(&["编程"]))
+        svc.create(
+            &Actor::user(1),
+            "A",
+            "https://a.com",
+            "",
+            &str_vec(&["编程"]),
+        )
+        .await
+        .unwrap();
+        svc.create(&Actor::user(1), "B", "https://b.com", "", &[])
             .await
             .unwrap();
-        svc.create(&Actor::user(1), "B", "https://b.com", "", &[]).await.unwrap();
 
         let (items, total) = qsvc
             .list(&Actor::user(1), 10, 0, Some("编程"), "created_at")
@@ -519,7 +523,10 @@ mod tests {
     #[tokio::test]
     async fn by_id() {
         let (svc, qsvc) = setup().await;
-        let bm = svc.create(&Actor::user(1), "t", "https://e.com", "", &[]).await.unwrap();
+        let bm = svc
+            .create(&Actor::user(1), "t", "https://e.com", "", &[])
+            .await
+            .unwrap();
         assert!(qsvc.by_id(&Actor::user(1), bm.id).await.unwrap().is_some());
         assert!(qsvc.by_id(&Actor::user(1), 999).await.unwrap().is_none());
     }
@@ -545,20 +552,32 @@ mod tests {
     #[tokio::test]
     async fn update_not_found_returns_notfound() {
         let (svc, _qsvc) = setup().await;
-        let err = svc.update(&Actor::user(1), 999, Some("x"), None, None).await.unwrap_err();
+        let err = svc
+            .update(&Actor::user(1), 999, Some("x"), None, None)
+            .await
+            .unwrap_err();
         assert!(matches!(err, ServiceError::NotFound(_)));
     }
 
     #[tokio::test]
     async fn search_by_keyword() {
         let (svc, qsvc) = setup().await;
-        svc.create(&Actor::user(1), "Rust 官网", "https://rust-lang.org", "", &[])
-            .await
-            .unwrap();
+        svc.create(
+            &Actor::user(1),
+            "Rust 官网",
+            "https://rust-lang.org",
+            "",
+            &[],
+        )
+        .await
+        .unwrap();
         svc.create(&Actor::user(1), "Go 官网", "https://go.dev", "", &[])
             .await
             .unwrap();
-        let (items, total) = qsvc.search(&Actor::user(1), "rust", None, 10, 0).await.unwrap();
+        let (items, total) = qsvc
+            .search(&Actor::user(1), "rust", None, 10, 0)
+            .await
+            .unwrap();
         assert_eq!(total, 1);
         assert_eq!(items[0].url, "https://rust-lang.org");
     }
@@ -578,11 +597,17 @@ mod tests {
         svc.create(&Actor::user(1), "Go 官网", "https://go.dev", "", &[])
             .await
             .unwrap();
-        let (items, total) = qsvc.search(&Actor::user(1), "rust", Some("编程"), 10, 0).await.unwrap();
+        let (items, total) = qsvc
+            .search(&Actor::user(1), "rust", Some("编程"), 10, 0)
+            .await
+            .unwrap();
         assert_eq!(total, 1);
         assert_eq!(items[0].url, "https://rust-lang.org");
 
-        let (items, total) = qsvc.search(&Actor::user(1), "rust", Some("不存在"), 10, 0).await.unwrap();
+        let (items, total) = qsvc
+            .search(&Actor::user(1), "rust", Some("不存在"), 10, 0)
+            .await
+            .unwrap();
         assert_eq!(total, 0);
         assert!(items.is_empty());
     }
@@ -595,11 +620,17 @@ mod tests {
 <DT><A HREF="https://example.com/a">good</A>
 </DL><p>"#;
 
-        let result = svc.import_netscape_html(&Actor::user(1), html).await.unwrap();
+        let result = svc
+            .import_netscape_html(&Actor::user(1), html)
+            .await
+            .unwrap();
         assert_eq!(result.created, 1);
 
         // 危险 scheme 不入库
-        let (items, total) = qsvc.list(&Actor::user(1), 10, 0, None, "created_at").await.unwrap();
+        let (items, total) = qsvc
+            .list(&Actor::user(1), 10, 0, None, "created_at")
+            .await
+            .unwrap();
         assert_eq!(total, 1);
         assert_eq!(items[0].url, "https://example.com/a");
     }
@@ -607,7 +638,10 @@ mod tests {
     #[tokio::test]
     async fn tags_roundtrip() {
         let (svc, qsvc) = setup().await;
-        let bm = svc.create(&Actor::user(1), "t", "https://e.com", "", &[]).await.unwrap();
+        let bm = svc
+            .create(&Actor::user(1), "t", "https://e.com", "", &[])
+            .await
+            .unwrap();
 
         let tags = svc
             .set_bookmark_tags(&Actor::user(1), bm.id, &str_vec(&["编程", "rust"]))
@@ -615,13 +649,19 @@ mod tests {
             .unwrap();
         assert_eq!(tags.len(), 2);
 
-        let got = qsvc.get_bookmark_tags(&Actor::user(1), bm.id).await.unwrap();
+        let got = qsvc
+            .get_bookmark_tags(&Actor::user(1), bm.id)
+            .await
+            .unwrap();
         assert_eq!(got.len(), 2);
 
         let all = qsvc.search_tags(&Actor::user(1), None).await.unwrap();
         assert_eq!(all.len(), 2);
 
-        let matched = qsvc.search_tags(&Actor::user(1), Some("rus")).await.unwrap();
+        let matched = qsvc
+            .search_tags(&Actor::user(1), Some("rus"))
+            .await
+            .unwrap();
         assert_eq!(matched.len(), 1);
         assert_eq!(matched[0].name, "rust");
 
@@ -717,12 +757,21 @@ mod tests {
         );
         assert!(qsvc.by_id(&b, bm.id).await.unwrap().is_none());
         assert_eq!(
-            qsvc.list(&b, 10, 0, Some("编程"), "created_at").await.unwrap().1,
+            qsvc.list(&b, 10, 0, Some("编程"), "created_at")
+                .await
+                .unwrap()
+                .1,
             0,
             "按标签过滤也看不到"
         );
         assert_eq!(qsvc.search(&b, "A 的书签", None, 10, 0).await.unwrap().1, 0);
-        assert_eq!(qsvc.search(&b, "a.example.com", None, 10, 0).await.unwrap().1, 0);
+        assert_eq!(
+            qsvc.search(&b, "a.example.com", None, 10, 0)
+                .await
+                .unwrap()
+                .1,
+            0
+        );
         let grouped = qsvc.grouped_by_tag(&b).await.unwrap();
         assert!(grouped.groups.is_empty() && grouped.untagged.is_empty());
         // 全局搜索（SearchPort 仍只传 user_id，内部按普通用户口径取行）；
@@ -743,7 +792,9 @@ mod tests {
 
         // ── 他人（B）：动不了（改 / 删 / 批量删 / 记访问 / AI 建议 / 标签）──
         assert!(matches!(
-            svc.update(&b, bm.id, Some("B 改的"), None, None).await.unwrap_err(),
+            svc.update(&b, bm.id, Some("B 改的"), None, None)
+                .await
+                .unwrap_err(),
             ServiceError::NotFound(_)
         ));
         assert_eq!(svc.delete(&b, bm.id).await.unwrap(), 0);
@@ -778,7 +829,10 @@ mod tests {
         assert_eq!(qsvc.list(&a, 10, 0, None, "created_at").await.unwrap().1, 1);
         assert_eq!(qsvc.search(&a, "A 的书签", None, 10, 0).await.unwrap().1, 1);
         assert_eq!(qsvc.grouped_by_tag(&a).await.unwrap().groups.len(), 1);
-        let edited = svc.update(&a, bm.id, Some("A 改的"), None, None).await.unwrap();
+        let edited = svc
+            .update(&a, bm.id, Some("A 改的"), None, None)
+            .await
+            .unwrap();
         assert_eq!(edited.title, "A 改的");
         svc.increment_visit(&a, bm.id).await.unwrap();
         assert_eq!(qsvc.by_id(&a, bm.id).await.unwrap().unwrap().visit_count, 1);
@@ -791,7 +845,13 @@ mod tests {
         );
 
         // ── admin：全都能 ──
-        assert_eq!(qsvc.list(&admin, 10, 0, None, "created_at").await.unwrap().1, 1);
+        assert_eq!(
+            qsvc.list(&admin, 10, 0, None, "created_at")
+                .await
+                .unwrap()
+                .1,
+            1
+        );
         assert!(qsvc.by_id(&admin, bm.id).await.unwrap().is_some());
         let (items, total) = qsvc.search(&admin, "A 改的", None, 10, 0).await.unwrap();
         assert_eq!(total, 1);
@@ -828,7 +888,13 @@ mod tests {
         let admin = Actor::admin(3);
 
         let bm = svc
-            .create(&a, "A 的书签", "https://a.example.com", "", &str_vec(&["编程"]))
+            .create(
+                &a,
+                "A 的书签",
+                "https://a.example.com",
+                "",
+                &str_vec(&["编程"]),
+            )
             .await
             .unwrap();
 
@@ -851,7 +917,14 @@ mod tests {
         );
         assert_eq!(svc.delete_tag(&admin, tags_a[0].id).await.unwrap(), 1);
         // 删标签级联清掉关系，书签本身还在
-        assert!(qsvc.by_id(&a, bm.id).await.unwrap().unwrap().tags.is_empty());
+        assert!(
+            qsvc.by_id(&a, bm.id)
+                .await
+                .unwrap()
+                .unwrap()
+                .tags
+                .is_empty()
+        );
 
         // 子表随父：B 给 A 的书签改标签 → 404；A 自己可以（新建的标签归 A）
         assert!(matches!(
@@ -913,10 +986,12 @@ mod tests {
     #[tokio::test]
     async fn ownerless_bookmark_is_admin_only() {
         let (svc, qsvc, pool) = setup_roles().await;
-        sqlx::query("INSERT INTO bookmark (title, url) VALUES ('老书签', 'https://old.example.com')")
-            .execute(&*pool)
-            .await
-            .unwrap();
+        sqlx::query(
+            "INSERT INTO bookmark (title, url) VALUES ('老书签', 'https://old.example.com')",
+        )
+        .execute(&*pool)
+        .await
+        .unwrap();
 
         let a = Actor::user(1);
         let admin = Actor::admin(3);
@@ -927,7 +1002,13 @@ mod tests {
         );
         assert_eq!(qsvc.search(&a, "老书签", None, 10, 0).await.unwrap().1, 0);
         assert_eq!(svc.delete(&a, 1).await.unwrap(), 0, "普通用户删不掉无主行");
-        assert_eq!(qsvc.list(&admin, 10, 0, None, "created_at").await.unwrap().1, 1);
+        assert_eq!(
+            qsvc.list(&admin, 10, 0, None, "created_at")
+                .await
+                .unwrap()
+                .1,
+            1
+        );
         assert_eq!(svc.delete(&admin, 1).await.unwrap(), 1);
     }
 }

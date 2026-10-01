@@ -202,7 +202,9 @@ fn build_json(data: &TableData) -> Result<String, serde_json::Error> {
 fn download_response(filename: &str, content_type: HeaderValue, body: String) -> Response {
     let disposition = match HeaderValue::from_str(&format!("attachment; filename=\"{filename}\"")) {
         Ok(v) => v,
-        Err(e) => return ServiceError::Internal(format!("构造导出响应头失败: {e}")).into_response(),
+        Err(e) => {
+            return ServiceError::Internal(format!("构造导出响应头失败: {e}")).into_response();
+        }
     };
     let mut response = ([(header::CONTENT_TYPE, content_type)], body).into_response();
     response
@@ -237,7 +239,10 @@ pub async fn export_table_data(
         "json" => {
             let body = match build_json(&data) {
                 Ok(body) => body,
-                Err(e) => return ServiceError::Internal(format!("序列化导出数据失败: {e}")).into_response(),
+                Err(e) => {
+                    return ServiceError::Internal(format!("序列化导出数据失败: {e}"))
+                        .into_response();
+                }
             };
             let filename = format!("{safe_name}.json");
             download_response(

@@ -126,7 +126,11 @@ impl ReadingRepo {
         Ok(())
     }
 
-    pub async fn get_article(&self, actor: &Actor, id: i64) -> Result<Option<Article>, sqlx::Error> {
+    pub async fn get_article(
+        &self,
+        actor: &Actor,
+        id: i64,
+    ) -> Result<Option<Article>, sqlx::Error> {
         sqlx::query_as!(
             ArticleRow,
             r#"SELECT id, title, content,

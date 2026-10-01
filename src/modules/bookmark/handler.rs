@@ -121,13 +121,7 @@ pub async fn get_bookmarks_handler(
         .filter(|s| !s.is_empty());
     let sort = params.sort.as_deref().unwrap_or("created_at");
     let result = query
-        .list(
-            &actor,
-            pagination.limit(),
-            pagination.offset(),
-            tag,
-            sort,
-        )
+        .list(&actor, pagination.limit(), pagination.offset(), tag, sort)
         .await
         .map(|(items, total)| {
             let items: Vec<BookmarkResponse> =
@@ -270,10 +264,7 @@ pub async fn import_bookmarks_handler(
         ));
     }
 
-    match service
-        .import_netscape_html(&actor, &html)
-        .await
-    {
+    match service.import_netscape_html(&actor, &html).await {
         Ok(result) => Json(result).into_response(),
         Err(e) => e.into_response(),
     }
@@ -354,10 +345,7 @@ pub async fn set_bookmark_tags_handler(
     Path(id): Path<i32>,
     Json(payload): Json<SetBookmarkTagsRequest>,
 ) -> impl IntoResponse {
-    match service
-        .set_bookmark_tags(&actor, id, &payload.tags)
-        .await
-    {
+    match service.set_bookmark_tags(&actor, id, &payload.tags).await {
         Ok(tags) => {
             let tags: Vec<BookmarkTagResponse> =
                 tags.into_iter().map(BookmarkTagResponse::from).collect();
@@ -453,10 +441,7 @@ pub async fn increment_visit_handler(
     Extension(actor): Extension<Actor>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    error::ok_or(
-        service.increment_visit(&actor, id).await,
-        "记录访问",
-    )
+    error::ok_or(service.increment_visit(&actor, id).await, "记录访问")
 }
 
 /// `GET /bookmarks/grouped-by-tag` 按标签分组获取书签
@@ -464,8 +449,5 @@ pub async fn grouped_by_tag_handler(
     State(query): State<BookmarkQueryService>,
     Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
-    error::ok_or(
-        query.grouped_by_tag(&actor).await,
-        "获取分组书签",
-    )
+    error::ok_or(query.grouped_by_tag(&actor).await, "获取分组书签")
 }

@@ -503,12 +503,21 @@ mod tests {
         assert_eq!(detail.tree.title, "t");
         assert_eq!(detail.tree.node_count, 0);
 
-        let got = svc.get_tree(&Actor::user(1), detail.tree.id).await.unwrap().unwrap();
+        let got = svc
+            .get_tree(&Actor::user(1), detail.tree.id)
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(got.tree.id, detail.tree.id);
         assert_eq!(got.nodes.len(), 0);
 
         // 其他用户不可见
-        assert!(svc.get_tree(&Actor::user(2), detail.tree.id).await.unwrap().is_none());
+        assert!(
+            svc.get_tree(&Actor::user(2), detail.tree.id)
+                .await
+                .unwrap()
+                .is_none()
+        );
     }
 
     #[tokio::test]
@@ -557,10 +566,16 @@ mod tests {
         assert_eq!(bad.tree.kind, "chat");
 
         // kind 过滤
-        let mems = svc.list_trees_by_kind(&Actor::user(1), "mem").await.unwrap();
+        let mems = svc
+            .list_trees_by_kind(&Actor::user(1), "mem")
+            .await
+            .unwrap();
         assert_eq!(mems.len(), 1);
         assert_eq!(mems[0].title, "记忆生成");
-        let chats = svc.list_trees_by_kind(&Actor::user(1), "chat").await.unwrap();
+        let chats = svc
+            .list_trees_by_kind(&Actor::user(1), "chat")
+            .await
+            .unwrap();
         assert_eq!(chats.len(), 2);
     }
 
@@ -728,7 +743,10 @@ mod tests {
             .insert_node(tid, None, "user", "q", None, None)
             .await
             .unwrap();
-        let ctx = svc.prepare_chat(&Actor::user(1), tid, Some(user.id), None).await.unwrap();
+        let ctx = svc
+            .prepare_chat(&Actor::user(1), tid, Some(user.id), None)
+            .await
+            .unwrap();
         svc.finish_chat(&ctx, "回答内容", Some("推理过程内容"))
             .await
             .unwrap();
@@ -740,7 +758,12 @@ mod tests {
 
         // 无推理时落库为 None
         let ctx2 = svc
-            .prepare_chat(&Actor::user(1), tid, Some(assistant.id), Some("追问".into()))
+            .prepare_chat(
+                &Actor::user(1),
+                tid,
+                Some(assistant.id),
+                Some("追问".into()),
+            )
             .await
             .unwrap();
         svc.finish_chat(&ctx2, "再回答", None).await.unwrap();
@@ -784,7 +807,10 @@ mod tests {
     #[tokio::test]
     async fn prepare_chat_tree_not_found() {
         let svc = setup().await;
-        let Err(err) = svc.prepare_chat(&Actor::user(1), 999_999, None, Some("x".into())).await else {
+        let Err(err) = svc
+            .prepare_chat(&Actor::user(1), 999_999, None, Some("x".into()))
+            .await
+        else {
             panic!("应因树不存在而失败");
         };
         assert!(matches!(err, ServiceError::NotFound(_)));
@@ -834,7 +860,10 @@ mod tests {
             .unwrap();
 
         // 继续 user 节点：不插入新节点，inserted_user_id 为 None
-        let ctx = svc.prepare_chat(&Actor::user(1), tid, Some(user.id), None).await.unwrap();
+        let ctx = svc
+            .prepare_chat(&Actor::user(1), tid, Some(user.id), None)
+            .await
+            .unwrap();
         assert_eq!(ctx.inserted_user_id, None);
         assert_eq!(ctx.ai_parent_id, Some(user.id));
         // 消息链只有该 user 节点自己
@@ -854,12 +883,20 @@ mod tests {
             .insert_node(tid, None, "user", "q", None, None)
             .await
             .unwrap();
-        let ctx1 = svc.prepare_chat(&Actor::user(1), tid, Some(user.id), None).await.unwrap();
+        let ctx1 = svc
+            .prepare_chat(&Actor::user(1), tid, Some(user.id), None)
+            .await
+            .unwrap();
         let assistant = svc.finish_chat(&ctx1, "a", None).await.unwrap();
 
         // 回复 assistant：必须带内容，并新插一个 user 节点挂在其下
         let ctx2 = svc
-            .prepare_chat(&Actor::user(1), tid, Some(assistant.id), Some("追问".into()))
+            .prepare_chat(
+                &Actor::user(1),
+                tid,
+                Some(assistant.id),
+                Some("追问".into()),
+            )
             .await
             .unwrap();
         let new_id = ctx2.inserted_user_id.expect("应插入新 user 节点");
@@ -966,7 +1003,10 @@ mod tests {
             .insert_node(tid, None, "user", "什么是一次函数？", None, None)
             .await
             .unwrap();
-        let ctx = svc.prepare_chat(&Actor::user(1), tid, Some(user.id), None).await.unwrap();
+        let ctx = svc
+            .prepare_chat(&Actor::user(1), tid, Some(user.id), None)
+            .await
+            .unwrap();
         svc.finish_chat(&ctx, "一次函数是……", None).await.unwrap();
 
         let ai = FakeAi::new("「一次函数与导数」\n");
@@ -1081,9 +1121,13 @@ mod tests {
     async fn ownership_matrix_tree_list_and_detail() {
         let m = matrix().await;
 
-        assert_eq!(m.svc.list_trees(&Actor::user(OWNER)).await.unwrap().len(), 1);
+        assert_eq!(
+            m.svc.list_trees(&Actor::user(OWNER)).await.unwrap().len(),
+            1
+        );
         assert!(
-            m.svc.get_tree(&Actor::user(OWNER), m.owner_tree)
+            m.svc
+                .get_tree(&Actor::user(OWNER), m.owner_tree)
                 .await
                 .unwrap()
                 .is_some()
@@ -1097,7 +1141,8 @@ mod tests {
             "别人的树不该出现在列表里"
         );
         assert!(
-            m.svc.get_tree(&Actor::user(OTHER), m.owner_tree)
+            m.svc
+                .get_tree(&Actor::user(OTHER), m.owner_tree)
                 .await
                 .unwrap()
                 .is_none(),
@@ -1105,21 +1150,42 @@ mod tests {
         );
 
         // admin 全管：两棵树都在
-        assert_eq!(m.svc.list_trees(&Actor::admin(ADMIN)).await.unwrap().len(), 2);
-        assert!(m.svc.get_tree(&Actor::admin(ADMIN), m.owner_tree).await.unwrap().is_some());
+        assert_eq!(
+            m.svc.list_trees(&Actor::admin(ADMIN)).await.unwrap().len(),
+            2
+        );
+        assert!(
+            m.svc
+                .get_tree(&Actor::admin(ADMIN), m.owner_tree)
+                .await
+                .unwrap()
+                .is_some()
+        );
 
         // kind 过滤走的是同一条归属条件
         assert_eq!(
-            m.svc.list_trees_by_kind(&Actor::user(OWNER), "chat").await.unwrap().len(),
+            m.svc
+                .list_trees_by_kind(&Actor::user(OWNER), "chat")
+                .await
+                .unwrap()
+                .len(),
             1
         );
         assert_eq!(
-            m.svc.list_trees_by_kind(&Actor::user(OTHER), "chat").await.unwrap().len(),
+            m.svc
+                .list_trees_by_kind(&Actor::user(OTHER), "chat")
+                .await
+                .unwrap()
+                .len(),
             1,
             "他人只看得到自己那棵"
         );
         assert_eq!(
-            m.svc.list_trees_by_kind(&Actor::admin(ADMIN), "chat").await.unwrap().len(),
+            m.svc
+                .list_trees_by_kind(&Actor::admin(ADMIN), "chat")
+                .await
+                .unwrap()
+                .len(),
             2
         );
     }
@@ -1237,7 +1303,12 @@ mod tests {
         // admin 全管：写得进 OWNER 的树
         let ctx = m
             .svc
-            .prepare_chat(&Actor::admin(ADMIN), m.owner_tree, None, Some("管理员的提问".into()))
+            .prepare_chat(
+                &Actor::admin(ADMIN),
+                m.owner_tree,
+                None,
+                Some("管理员的提问".into()),
+            )
             .await
             .unwrap();
         assert!(ctx.inserted_user_id.is_some());
@@ -1334,13 +1405,24 @@ mod tests {
             .unwrap_err();
         assert!(matches!(err, ServiceError::NotFound(_)));
         assert!(
-            m.svc.get_tree(&Actor::user(OWNER), m.owner_tree).await.unwrap().is_some(),
+            m.svc
+                .get_tree(&Actor::user(OWNER), m.owner_tree)
+                .await
+                .unwrap()
+                .is_some(),
             "越权删除不应生效"
         );
 
-        m.svc.delete_tree(&Actor::admin(ADMIN), m.owner_tree).await.unwrap();
+        m.svc
+            .delete_tree(&Actor::admin(ADMIN), m.owner_tree)
+            .await
+            .unwrap();
         assert!(
-            m.svc.get_tree(&Actor::admin(ADMIN), m.owner_tree).await.unwrap().is_none(),
+            m.svc
+                .get_tree(&Actor::admin(ADMIN), m.owner_tree)
+                .await
+                .unwrap()
+                .is_none(),
             "删掉之后连 admin 也查不到"
         );
         let leftover: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM chat_node WHERE tree_id = ?1")
@@ -1357,38 +1439,66 @@ mod tests {
         let m = matrix().await;
 
         // 节点命中
-        let mine = m.query.search(&Actor::user(OWNER), "费曼技巧四步", 20).await.unwrap();
+        let mine = m
+            .query
+            .search(&Actor::user(OWNER), "费曼技巧四步", 20)
+            .await
+            .unwrap();
         assert_eq!(mine.hits.len(), 1);
         assert_eq!(mine.hits[0].node_id, Some(m.owner_node.id));
 
         // 标题命中（树级）
-        let mine = m.query.search(&Actor::user(OWNER), "费曼学习法", 20).await.unwrap();
+        let mine = m
+            .query
+            .search(&Actor::user(OWNER), "费曼学习法", 20)
+            .await
+            .unwrap();
         assert_eq!(mine.hits.len(), 1);
         assert_eq!(mine.hits[0].tree_id, m.owner_tree);
         assert_eq!(mine.hits[0].node_id, None);
 
         // 他人：两条路径都搜不到
         assert!(
-            m.query.search(&Actor::user(OTHER), "费曼技巧四步", 20).await.unwrap().hits.is_empty()
-                && m.query.search(&Actor::user(OTHER), "费曼学习法", 20).await.unwrap().hits.is_empty(),
+            m.query
+                .search(&Actor::user(OTHER), "费曼技巧四步", 20)
+                .await
+                .unwrap()
+                .hits
+                .is_empty()
+                && m.query
+                    .search(&Actor::user(OTHER), "费曼学习法", 20)
+                    .await
+                    .unwrap()
+                    .hits
+                    .is_empty(),
             "搜索不得穿透归属"
         );
 
         // admin 全量：OWNER 的命中看得到
         assert_eq!(
-            m.query.search(&Actor::admin(ADMIN), "费曼技巧四步", 20).await.unwrap().hits.len(),
+            m.query
+                .search(&Actor::admin(ADMIN), "费曼技巧四步", 20)
+                .await
+                .unwrap()
+                .hits
+                .len(),
             1
         );
 
         // 全局搜索端口（`SearchPort` 仍只收 user_id）按普通用户口径搜自己的
-        let hits = SearchPort::search(&m.query, &Actor::user(OWNER), "费曼技巧四步", 20).await.unwrap();
+        let hits = SearchPort::search(&m.query, &Actor::user(OWNER), "费曼技巧四步", 20)
+            .await
+            .unwrap();
         assert_eq!(hits.len(), 1);
         assert!(
             hits.iter().all(|h| h.id == m.owner_tree),
             "命中只应属于自己的树"
         );
         assert!(
-            SearchPort::search(&m.query, &Actor::user(OTHER), "费曼技巧四步", 20).await.unwrap().is_empty(),
+            SearchPort::search(&m.query, &Actor::user(OTHER), "费曼技巧四步", 20)
+                .await
+                .unwrap()
+                .is_empty(),
             "他人搜不到"
         );
     }
@@ -1403,9 +1513,25 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(m.svc.list_presets(&Actor::user(OWNER)).await.unwrap().len(), 1);
-        assert!(m.svc.list_presets(&Actor::user(OTHER)).await.unwrap().is_empty());
-        assert_eq!(m.svc.list_presets(&Actor::admin(ADMIN)).await.unwrap().len(), 1);
+        assert_eq!(
+            m.svc.list_presets(&Actor::user(OWNER)).await.unwrap().len(),
+            1
+        );
+        assert!(
+            m.svc
+                .list_presets(&Actor::user(OTHER))
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(
+            m.svc
+                .list_presets(&Actor::admin(ADMIN))
+                .await
+                .unwrap()
+                .len(),
+            1
+        );
 
         let err = m
             .svc
@@ -1430,7 +1556,16 @@ mod tests {
             .update_preset(&Actor::admin(ADMIN), preset.id, "admin 改的", "x")
             .await
             .unwrap();
-        m.svc.delete_preset(&Actor::admin(ADMIN), preset.id).await.unwrap();
-        assert!(m.svc.list_presets(&Actor::admin(ADMIN)).await.unwrap().is_empty());
+        m.svc
+            .delete_preset(&Actor::admin(ADMIN), preset.id)
+            .await
+            .unwrap();
+        assert!(
+            m.svc
+                .list_presets(&Actor::admin(ADMIN))
+                .await
+                .unwrap()
+                .is_empty()
+        );
     }
 }

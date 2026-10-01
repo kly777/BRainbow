@@ -75,9 +75,7 @@ impl ReadingQueryService {
 
     pub async fn article(&self, actor: &Actor, id: i64) -> Result<Option<Article>, ServiceError> {
         let repo = &self.repo;
-        repo.get_article(actor, id)
-            .await
-            .map_err(ServiceError::Db)
+        repo.get_article(actor, id).await.map_err(ServiceError::Db)
     }
 
     /// 获取文章中的所有词
@@ -188,10 +186,16 @@ mod tests {
 
         // B: 75% 认识（距离 0.15），C: 100% 认识（距离 0.1），A: 0%（距离 0.9）
         for word in ["alpha", "beta", "gamma"] {
-            service.mark_word(&Actor::user(1), word, "known").await.unwrap();
+            service
+                .mark_word(&Actor::user(1), word, "known")
+                .await
+                .unwrap();
         }
         for word in ["one", "two"] {
-            service.mark_word(&Actor::user(1), word, "known").await.unwrap();
+            service
+                .mark_word(&Actor::user(1), word, "known")
+                .await
+                .unwrap();
         }
 
         let list = query.list_articles(&Actor::user(1)).await.unwrap();

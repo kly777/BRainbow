@@ -227,7 +227,9 @@ mod tests {
     /// 读响应体（断言错误体形状用）
     async fn body_of(response: Response) -> (StatusCode, ErrorBody) {
         let status = response.status();
-        let bytes = axum::body::to_bytes(response.into_body(), 4096).await.unwrap();
+        let bytes = axum::body::to_bytes(response.into_body(), 4096)
+            .await
+            .unwrap();
         (status, serde_json::from_slice(&bytes).unwrap())
     }
 

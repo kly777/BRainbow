@@ -381,11 +381,7 @@ mod tests {
         assert!(updated.updated_at > card.updated_at);
 
         // 再查一次确认持久化
-        let found = repo
-            .find_by_id(&actor(), card.id)
-            .await
-            .unwrap()
-            .unwrap();
+        let found = repo.find_by_id(&actor(), card.id).await.unwrap().unwrap();
         assert_eq!(found.content, "新内容");
     }
 
@@ -406,9 +402,7 @@ mod tests {
     #[tokio::test]
     async fn update_nonexistent_card_fails() {
         let repo = setup_db().await;
-        let result = repo
-            .update(&actor(), 999, Some("内容".to_string()))
-            .await;
+        let result = repo.update(&actor(), 999, Some("内容".to_string())).await;
         assert!(result.is_err());
     }
 
@@ -424,12 +418,7 @@ mod tests {
         assert_eq!(affected, 1);
 
         // 验证已删除
-        assert!(
-            repo.find_by_id(&actor(), card.id)
-                .await
-                .unwrap()
-                .is_none()
-        );
+        assert!(repo.find_by_id(&actor(), card.id).await.unwrap().is_none());
     }
 
     #[tokio::test]

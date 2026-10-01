@@ -577,10 +577,11 @@ mod tests {
             .execute(&pool)
             .await
             .unwrap();
-        let updated: String = sqlx::query_scalar("SELECT updated_at FROM file WHERE stored_id = 's1'")
-            .fetch_one(&pool)
-            .await
-            .unwrap();
+        let updated: String =
+            sqlx::query_scalar("SELECT updated_at FROM file WHERE stored_id = 's1'")
+                .fetch_one(&pool)
+                .await
+                .unwrap();
         assert_eq!(updated, "2026-09-11T10:00:00+00:00");
     }
 
@@ -756,14 +757,18 @@ mod tests {
             .execute(pool)
             .await
             .unwrap();
-        sqlx::query("INSERT INTO user (id, name, password_hash, role) VALUES (1, 'boss', 'x', 'admin')")
-            .execute(pool)
-            .await
-            .unwrap();
-        sqlx::query("INSERT INTO user (id, name, password_hash, role) VALUES (2, 'kid', 'x', 'user')")
-            .execute(pool)
-            .await
-            .unwrap();
+        sqlx::query(
+            "INSERT INTO user (id, name, password_hash, role) VALUES (1, 'boss', 'x', 'admin')",
+        )
+        .execute(pool)
+        .await
+        .unwrap();
+        sqlx::query(
+            "INSERT INTO user (id, name, password_hash, role) VALUES (2, 'kid', 'x', 'user')",
+        )
+        .execute(pool)
+        .await
+        .unwrap();
         for sql in [
             "INSERT INTO card (content) VALUES ('老卡片')",
             "INSERT INTO task (title) VALUES ('老任务')",
@@ -797,14 +802,12 @@ mod tests {
         migrate(&pool).await.unwrap();
         assert_eq!(user_version(&pool).await, SCHEMA_VERSION);
 
-        for table in [
-            "card",
-            "task",
-            "chunk",
-            "bookmark",
-            "ai_settings",
-        ] {
-            assert_eq!(null_user_id_count(&pool, table).await, 0, "{table} 应无无主行");
+        for table in ["card", "task", "chunk", "bookmark", "ai_settings"] {
+            assert_eq!(
+                null_user_id_count(&pool, table).await,
+                0,
+                "{table} 应无无主行"
+            );
         }
         // card 里那条有主的仍属普通用户，且多了认领来的那条
         let owners: Vec<(String, Option<i64>)> =
@@ -990,8 +993,9 @@ mod tests {
         use sqlx::sqlite::SqliteConnectOptions;
         use std::str::FromStr;
 
-        let path = std::env::var("BRAINBOW_FIXTURE_DB")
-            .expect("用法：BRAINBOW_FIXTURE_DB=<库文件副本> cargo test migrate_fixture_db -- --ignored");
+        let path = std::env::var("BRAINBOW_FIXTURE_DB").expect(
+            "用法：BRAINBOW_FIXTURE_DB=<库文件副本> cargo test migrate_fixture_db -- --ignored",
+        );
         assert!(
             std::path::Path::new(&path).exists(),
             "{path} 不存在 —— 先 cp 一份真库副本"

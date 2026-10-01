@@ -126,7 +126,9 @@ mod tests {
     }
 
     async fn body_json(resp: Response) -> serde_json::Value {
-        let bytes = axum::body::to_bytes(resp.into_body(), 64 * 1024).await.unwrap();
+        let bytes = axum::body::to_bytes(resp.into_body(), 64 * 1024)
+            .await
+            .unwrap();
         serde_json::from_slice(&bytes).unwrap()
     }
 
@@ -165,7 +167,10 @@ mod tests {
         )
         .await;
         assert_eq!(unsupported.status(), StatusCode::UNSUPPORTED_MEDIA_TYPE);
-        assert_eq!(body_json(unsupported).await["code"], "UNSUPPORTED_MEDIA_TYPE");
+        assert_eq!(
+            body_json(unsupported).await["code"],
+            "UNSUPPORTED_MEDIA_TYPE"
+        );
 
         let data_error = rewrite(
             plain_response(
@@ -198,7 +203,11 @@ mod tests {
     #[tokio::test]
     async fn non_error_text_responses_are_untouched() {
         // 200 的 text/plain（文件内容路由会把 .txt 一路透传）不能被改写
-        let resp = rewrite(plain_response(StatusCode::OK, "hello"), "/api/file/1/data/a.txt").await;
+        let resp = rewrite(
+            plain_response(StatusCode::OK, "hello"),
+            "/api/file/1/data/a.txt",
+        )
+        .await;
         assert_eq!(resp.status(), StatusCode::OK);
         let bytes = axum::body::to_bytes(resp.into_body(), 1024).await.unwrap();
         assert_eq!(&bytes[..], b"hello");
@@ -223,7 +232,12 @@ mod tests {
             )
             .await;
             assert_eq!(resp.status(), StatusCode::METHOD_NOT_ALLOWED);
-            assert!(resp.headers().get(header::CONTENT_TYPE).is_some_and(|v| v.to_str().unwrap().starts_with("text/plain")), "{path} 不该被改写");
+            assert!(
+                resp.headers()
+                    .get(header::CONTENT_TYPE)
+                    .is_some_and(|v| v.to_str().unwrap().starts_with("text/plain")),
+                "{path} 不该被改写"
+            );
         }
         assert!(is_api_path("/api/tasks"));
         assert!(is_api_path("/api"));
@@ -235,7 +249,9 @@ mod tests {
         // 405 的 Allow 头不能丢（浏览器/CORS 预检要看它）
         let resp = plain_response(StatusCode::METHOD_NOT_ALLOWED, "Method Not Allowed");
         let (mut parts, body) = resp.into_parts();
-        parts.headers.insert(header::ALLOW, "GET, POST".parse().unwrap());
+        parts
+            .headers
+            .insert(header::ALLOW, "GET, POST".parse().unwrap());
         let resp = Response::from_parts(parts, body);
 
         let out = rewrite(resp, "/api/health").await;

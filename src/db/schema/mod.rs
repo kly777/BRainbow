@@ -93,11 +93,11 @@ impl Decl {
     }
 
     /// 登记生成列表达式（见 [`Decl::generated`]）
-    pub(crate) const fn generated(
-        self,
-        exprs: &'static [(&'static str, &'static str)],
-    ) -> Self {
-        Self { generated: exprs, ..self }
+    pub(crate) const fn generated(self, exprs: &'static [(&'static str, &'static str)]) -> Self {
+        Self {
+            generated: exprs,
+            ..self
+        }
     }
 }
 
@@ -310,7 +310,10 @@ mod tests {
                 continue;
             }
             let Some((_, rest)) = decl.ddl.split_once(" ON ") else {
-                panic!("索引声明 `{}` 的 DDL 里没有 `ON <表>`：{}", decl.name, decl.ddl);
+                panic!(
+                    "索引声明 `{}` 的 DDL 里没有 `ON <表>`：{}",
+                    decl.name, decl.ddl
+                );
             };
             let target = rest.split(['(', ' ']).next().unwrap_or_default();
             assert!(

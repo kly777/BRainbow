@@ -10,11 +10,11 @@ pub use handler::{
     get_time_window_handler, get_time_window_stats_handler, get_time_windows_handler,
     update_time_window_handler,
 };
-pub use model::{RecurrenceFrequency, TimeWindow, TimeWindowType};
 /// 请求 DTO 只给测试构造入参用（生产路径由 axum 从 body 反序列化），
 /// 非测试构建里无人引用 —— 所以只在本 crate 的测试里导出，免得常态构建报未使用。
 #[cfg(test)]
 pub use model::CreateTimeWindowRequest;
+pub use model::{RecurrenceFrequency, TimeWindow, TimeWindowType};
 pub use query::TimeWindowQueryService;
 pub use service::TimeWindowService;
 

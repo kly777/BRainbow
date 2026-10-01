@@ -106,12 +106,7 @@ pub async fn get_signs_by_signifier_handler(
     Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
     let result = query
-        .by_signifier(
-            &actor,
-            &signifier,
-            pagination.limit(),
-            pagination.offset(),
-        )
+        .by_signifier(&actor, &signifier, pagination.limit(), pagination.offset())
         .await
         .map(|(items, total)| {
             let items: Vec<SignResponse> = items.into_iter().map(SignResponse::from).collect();
@@ -127,12 +122,7 @@ pub async fn get_signs_by_signified_handler(
     Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
     let result = query
-        .by_signified(
-            &actor,
-            &signified,
-            pagination.limit(),
-            pagination.offset(),
-        )
+        .by_signified(&actor, &signified, pagination.limit(), pagination.offset())
         .await
         .map(|(items, total)| {
             let items: Vec<SignResponse> = items.into_iter().map(SignResponse::from).collect();

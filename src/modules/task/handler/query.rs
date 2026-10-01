@@ -103,11 +103,7 @@ pub async fn get_dag_handler(
     let svc = &query_service;
 
     match svc
-        .dag(
-            &actor,
-            query.task_id,
-            query.depth.unwrap_or(3),
-        )
+        .dag(&actor, query.task_id, query.depth.unwrap_or(3))
         .await
     {
         Ok(view) => Json(view).into_response(),
@@ -151,12 +147,7 @@ pub async fn search_tasks_handler(
 
     let svc = &query_service;
     match svc
-        .search(
-            &actor,
-            &query,
-            pagination.limit(),
-            pagination.offset(),
-        )
+        .search(&actor, &query, pagination.limit(), pagination.offset())
         .await
     {
         Ok((tasks, total)) => {

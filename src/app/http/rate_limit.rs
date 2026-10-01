@@ -116,16 +116,25 @@ mod tests {
     #[test]
     fn header_ip_rejects_garbage_and_canonicalizes() {
         assert_eq!(
-            header_ip(&req_with(&[("cf-connecting-ip", "203.0.113.7")]), "cf-connecting-ip"),
+            header_ip(
+                &req_with(&[("cf-connecting-ip", "203.0.113.7")]),
+                "cf-connecting-ip"
+            ),
             Some("203.0.113.7".into())
         );
         // IPv6 归一化：同一个客户端的两种写法落进同一个桶
         assert_eq!(
-            header_ip(&req_with(&[("cf-connecting-ip", "::FFFF:1.2.3.4")]), "cf-connecting-ip"),
+            header_ip(
+                &req_with(&[("cf-connecting-ip", "::FFFF:1.2.3.4")]),
+                "cf-connecting-ip"
+            ),
             Some("1.2.3.4".into())
         );
         assert_eq!(
-            header_ip(&req_with(&[("cf-connecting-ip", "2001:0DB8::1")]), "cf-connecting-ip"),
+            header_ip(
+                &req_with(&[("cf-connecting-ip", "2001:0DB8::1")]),
+                "cf-connecting-ip"
+            ),
             Some("2001:db8::1".into())
         );
         // 非 IP（含逗号列表 / 空值）不采信
@@ -174,7 +183,10 @@ mod tests {
             "1.2.3.4"
         );
         // 全是垃圾 / 无 XFF → 直连地址
-        assert_eq!(client_ip(&req_with(&[("x-forwarded-for", "a, b")])), "9.9.9.9");
+        assert_eq!(
+            client_ip(&req_with(&[("x-forwarded-for", "a, b")])),
+            "9.9.9.9"
+        );
         assert_eq!(client_ip(&req_with(&[])), "9.9.9.9");
     }
 

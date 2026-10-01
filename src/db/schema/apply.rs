@@ -31,7 +31,10 @@ pub(crate) type Actions = Vec<String>;
 ///    顺序反了会撞出 `database disk image is malformed`）
 /// 6. **FTS** —— 虚表/触发器：形状不符则整组重建并 `rebuild` 回填
 /// 7. **声明之外的列** —— 只删登记在 `legacy::COLUMNS` 里的；不认识的留着并告警
-pub(crate) async fn reconcile(pool: &SqlitePool, from_version: i64) -> Result<Actions, sqlx::Error> {
+pub(crate) async fn reconcile(
+    pool: &SqlitePool,
+    from_version: i64,
+) -> Result<Actions, sqlx::Error> {
     let mut tx = pool.begin().await?;
     let mut actions = Actions::new();
 
@@ -41,7 +44,10 @@ pub(crate) async fn reconcile(pool: &SqlitePool, from_version: i64) -> Result<Ac
         "③ 时间戳规范化",
         repairs::normalize_timestamps(&mut tx).await,
     )?);
-    actions.extend(phase("③ 数据修复", repairs::run(&mut tx, from_version).await)?);
+    actions.extend(phase(
+        "③ 数据修复",
+        repairs::run(&mut tx, from_version).await,
+    )?);
     actions.extend(phase("④ 索引", sync_indexes(&mut tx).await)?);
     actions.extend(phase("⑤ 时间触发器", time::sync_triggers(&mut tx).await)?);
     actions.extend(phase("⑥ FTS", fts::sync(&mut tx).await)?);

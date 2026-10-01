@@ -52,10 +52,7 @@ impl OntoService {
     }
 
     pub async fn delete(&self, actor: &Actor, id: i32) -> Result<u64, ServiceError> {
-        self.repo
-            .delete(actor, id)
-            .await
-            .map_err(ServiceError::Db)
+        self.repo.delete(actor, id).await.map_err(ServiceError::Db)
     }
 }
 
@@ -89,7 +86,10 @@ mod tests {
     #[tokio::test]
     async fn create_empty_name_rejected() {
         let (svc, _qsvc) = real_service().await;
-        let err = svc.create(&Actor::user(1), "  ".into(), None).await.unwrap_err();
+        let err = svc
+            .create(&Actor::user(1), "  ".into(), None)
+            .await
+            .unwrap_err();
         assert!(matches!(err, ServiceError::InvalidInput(_)));
     }
 
@@ -100,7 +100,12 @@ mod tests {
         let (items, total) = qsvc.list(&Actor::user(1), 10, 0).await.unwrap();
         assert_eq!(total, 1);
         assert_eq!(items[0].name, "a");
-        assert!(qsvc.by_id(&Actor::user(1), items[0].id).await.unwrap().is_some());
+        assert!(
+            qsvc.by_id(&Actor::user(1), items[0].id)
+                .await
+                .unwrap()
+                .is_some()
+        );
         assert!(qsvc.by_id(&Actor::user(1), 999).await.unwrap().is_none());
     }
 
@@ -114,6 +119,11 @@ mod tests {
         let u = qsvc.by_id(&Actor::user(1), onto.id).await.unwrap().unwrap();
         assert_eq!(u.name, "y");
         svc.delete(&Actor::user(1), onto.id).await.unwrap();
-        assert!(qsvc.by_id(&Actor::user(1), onto.id).await.unwrap().is_none());
+        assert!(
+            qsvc.by_id(&Actor::user(1), onto.id)
+                .await
+                .unwrap()
+                .is_none()
+        );
     }
 }

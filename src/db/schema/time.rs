@@ -19,27 +19,31 @@ pub(crate) async fn create_time_iso_triggers(
     conn: &mut SqliteConnection,
 ) -> Result<(), sqlx::Error> {
     for (_, ddl) in trigger_ddls(conn).await? {
-        sqlx::query(sqlx::AssertSqlSafe(ddl)).execute(&mut *conn).await?;
+        sqlx::query(sqlx::AssertSqlSafe(ddl))
+            .execute(&mut *conn)
+            .await?;
     }
     Ok(())
 }
 
 /// `reconcile` 用：缺则建，文本与声明不符则替换（老库里的旧触发器形态由此收敛）。
-pub(crate) async fn sync_triggers(
-    conn: &mut SqliteConnection,
-) -> Result<Vec<String>, sqlx::Error> {
+pub(crate) async fn sync_triggers(conn: &mut SqliteConnection) -> Result<Vec<String>, sqlx::Error> {
     let mut actions = Vec::new();
     for (name, ddl) in trigger_ddls(conn).await? {
         match stored_sql(conn, &name).await? {
             None => {
-                sqlx::query(sqlx::AssertSqlSafe(ddl)).execute(&mut *conn).await?;
+                sqlx::query(sqlx::AssertSqlSafe(ddl))
+                    .execute(&mut *conn)
+                    .await?;
                 actions.push(format!("建触发器 {name}"));
             }
             Some(stored) if !same_ddl(&ddl, &stored) => {
                 sqlx::query(sqlx::AssertSqlSafe(format!("DROP TRIGGER {name}")))
                     .execute(&mut *conn)
                     .await?;
-                sqlx::query(sqlx::AssertSqlSafe(ddl)).execute(&mut *conn).await?;
+                sqlx::query(sqlx::AssertSqlSafe(ddl))
+                    .execute(&mut *conn)
+                    .await?;
                 actions.push(format!("替换触发器 {name}"));
             }
             Some(_) => {}

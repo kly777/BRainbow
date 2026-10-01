@@ -18,11 +18,7 @@ pub async fn get_tasks_handler(
     Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
     match query
-        .list(
-            &actor,
-            pagination.limit(),
-            pagination.offset(),
-        )
+        .list(&actor, pagination.limit(), pagination.offset())
         .await
     {
         Ok((tasks, total)) => {
@@ -39,11 +35,7 @@ pub async fn get_all_tasks_handler(
     Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
     match query
-        .list_all(
-            &actor,
-            pagination.limit(),
-            pagination.offset(),
-        )
+        .list_all(&actor, pagination.limit(), pagination.offset())
         .await
     {
         Ok((tasks, total)) => {

@@ -19,9 +19,7 @@ pub(crate) struct FtsObjects {
 ///
 /// 只建结构、不重建索引这句是给迁移链说的；这里连 rebuild 一起做 —— 新库没有数据，
 /// rebuild 是空转，老库（`create_tables` 也会在老库上跑）则有数据要回填。
-pub(crate) async fn create_fts_indexes(
-    conn: &mut SqliteConnection,
-) -> Result<(), sqlx::Error> {
+pub(crate) async fn create_fts_indexes(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
     let objects = applicable(conn).await?;
     for objects in &objects {
         create_table(conn, objects).await?;
@@ -94,9 +92,11 @@ async fn drop_triggers(
     objects: &FtsObjects,
 ) -> Result<(), sqlx::Error> {
     for (name, _) in &objects.triggers {
-        sqlx::query(sqlx::AssertSqlSafe(format!("DROP TRIGGER IF EXISTS {name}")))
-            .execute(&mut *conn)
-            .await?;
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "DROP TRIGGER IF EXISTS {name}"
+        )))
+        .execute(&mut *conn)
+        .await?;
     }
     Ok(())
 }

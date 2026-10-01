@@ -118,7 +118,10 @@ impl TimeWindowRepository {
     /// 只看行、不看归属：**给 service 的写路径用**（先拿到 `task_id` 才能问"这任务是他的吗"）。
     ///
     /// 不要把它当读接口用 —— 对外读一律走带 `actor` 的 [`Self::find_by_id`]。
-    pub(crate) async fn find_by_id_unscoped(&self, id: i32) -> Result<Option<TimeWindow>, sqlx::Error> {
+    pub(crate) async fn find_by_id_unscoped(
+        &self,
+        id: i32,
+    ) -> Result<Option<TimeWindow>, sqlx::Error> {
         sqlx::query_as!(
             TimeWindow,
             r#"SELECT id AS "id: i32",
@@ -431,9 +434,8 @@ impl TimeWindowRepository {
         end_time: DateTime<Utc>,
         exclude_id: Option<i32>,
     ) -> Result<bool, sqlx::Error> {
-        let mut builder = QueryBuilder::new(
-            "SELECT COUNT(*) as count FROM time_window tw WHERE tw.task_id = ",
-        );
+        let mut builder =
+            QueryBuilder::new("SELECT COUNT(*) as count FROM time_window tw WHERE tw.task_id = ");
         builder.push_bind(task_id);
         builder.push(" AND (start_time < ");
         builder.push_bind(end_time);
@@ -446,7 +448,9 @@ impl TimeWindowRepository {
         // 归属随父任务（见 doc/design/authorization.md §3.1）
         builder.push(" AND (");
         builder.push_bind(actor.owner_scope());
-        builder.push(" IS NULL OR EXISTS (SELECT 1 FROM task t WHERE t.id = tw.task_id AND t.user_id = ");
+        builder.push(
+            " IS NULL OR EXISTS (SELECT 1 FROM task t WHERE t.id = tw.task_id AND t.user_id = ",
+        );
         builder.push_bind(actor.owner_scope());
         builder.push("))");
 
@@ -667,7 +671,8 @@ mod tests {
 
         // 完全包含、部分重叠、边界相接
         assert!(
-            repo.check_time_conflict(&actor(), 
+            repo.check_time_conflict(
+                &actor(),
                 1,
                 now + Duration::minutes(30),
                 now + Duration::hours(1),
@@ -677,19 +682,37 @@ mod tests {
             .unwrap()
         );
         assert!(
-            repo.check_time_conflict(&actor(), 1, now - Duration::hours(1), now + Duration::hours(1), None)
+            repo.check_time_conflict(
+                &actor(),
+                1,
+                now - Duration::hours(1),
+                now + Duration::hours(1),
+                None
+            )
+            .await
+            .unwrap()
+        );
+        assert!(
+            !repo
+                .check_time_conflict(
+                    &actor(),
+                    1,
+                    now + Duration::hours(2),
+                    now + Duration::hours(3),
+                    None
+                )
                 .await
                 .unwrap()
         );
         assert!(
             !repo
-                .check_time_conflict(&actor(), 1, now + Duration::hours(2), now + Duration::hours(3), None)
-                .await
-                .unwrap()
-        );
-        assert!(
-            !repo
-                .check_time_conflict(&actor(), 1, now - Duration::hours(2), now - Duration::hours(1), None)
+                .check_time_conflict(
+                    &actor(),
+                    1,
+                    now - Duration::hours(2),
+                    now - Duration::hours(1),
+                    None
+                )
                 .await
                 .unwrap()
         );
@@ -777,11 +800,17 @@ mod tests {
             .unwrap();
         }
 
-        let (rows, total) = repo.find_by_task_id_paginated(&actor(), 1, 2, 0).await.unwrap();
+        let (rows, total) = repo
+            .find_by_task_id_paginated(&actor(), 1, 2, 0)
+            .await
+            .unwrap();
         assert_eq!(total, 5);
         assert_eq!(rows.len(), 2);
 
-        let (rows2, _) = repo.find_by_task_id_paginated(&actor(), 1, 2, 4).await.unwrap();
+        let (rows2, _) = repo
+            .find_by_task_id_paginated(&actor(), 1, 2, 4)
+            .await
+            .unwrap();
         assert_eq!(rows2.len(), 1);
     }
 }

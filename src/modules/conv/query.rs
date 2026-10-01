@@ -30,9 +30,7 @@ impl ConvQueryService {
         offset: i64,
         search_type: &str,
     ) -> Result<SearchResponse, ServiceError> {
-        self.repo
-            .search(actor, q, limit, offset, search_type)
-            .await
+        self.repo.search(actor, q, limit, offset, search_type).await
     }
 
     /// 知识条目详情（标题 + 文章）
@@ -78,13 +76,9 @@ impl SearchPort for ConvQueryService {
             return Ok(vec![]);
         };
         if let Some(fts) = fts_query(q) {
-            self.repo
-                .search_hits_fts(actor, &fts, cap)
-                .await
+            self.repo.search_hits_fts(actor, &fts, cap).await
         } else {
-            self.repo
-                .search_hits(actor, &like, cap)
-                .await
+            self.repo.search_hits(actor, &like, cap).await
         }
     }
 }

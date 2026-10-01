@@ -230,11 +230,7 @@ mod tests {
         assert_eq!(onto.name, "test-name");
         assert_eq!(onto.description, Some("desc".into()));
 
-        let found = repo
-            .find_by_id(&actor(), onto.id)
-            .await
-            .unwrap()
-            .unwrap();
+        let found = repo.find_by_id(&actor(), onto.id).await.unwrap().unwrap();
         assert_eq!(found.name, "test-name");
     }
 
@@ -289,12 +285,7 @@ mod tests {
         let repo = setup_db().await;
         let onto = repo.create(TEST_USER_ID, "x".into(), None).await.unwrap();
         assert_eq!(repo.delete(&actor(), onto.id).await.unwrap(), 1);
-        assert!(
-            repo.find_by_id(&actor(), onto.id)
-                .await
-                .unwrap()
-                .is_none()
-        );
+        assert!(repo.find_by_id(&actor(), onto.id).await.unwrap().is_none());
     }
 
     #[tokio::test]

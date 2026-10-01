@@ -928,11 +928,7 @@ pub async fn delete_handler(
     Query(query): Query<DeleteQuery>,
 ) -> impl IntoResponse {
     match service
-        .delete(
-            &stored_id,
-            query.force.unwrap_or(false),
-            &actor,
-        )
+        .delete(&stored_id, query.force.unwrap_or(false), &actor)
         .await
     {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),

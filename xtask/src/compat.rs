@@ -73,10 +73,7 @@ fn classify_magic(bytes: &[u8]) -> Format {
         [0xcf, 0xfa, 0xed, 0xfe],
         [0xca, 0xfe, 0xba, 0xbe],
     ];
-    if MACHO_MAGICS
-        .iter()
-        .any(|magic| bytes.starts_with(magic))
-    {
+    if MACHO_MAGICS.iter().any(|magic| bytes.starts_with(magic)) {
         return Format::MachO;
     }
     Format::Unknown
@@ -171,9 +168,10 @@ pub enum Verdict {
 /// 比一比本地产物与远端。
 pub fn compare(remote: &Remote, binary: &Path) -> Result<Verdict> {
     if !binary.is_file() {
-        return Ok(Verdict::Unknown(missing_binary_hint(binary).unwrap_or_else(
-            || format!("{} 还不存在（先 `just build`）", binary.display()),
-        )));
+        return Ok(Verdict::Unknown(
+            missing_binary_hint(binary)
+                .unwrap_or_else(|| format!("{} 还不存在（先 `just build`）", binary.display())),
+        ));
     }
     // **先认格式**：服务端是 Linux，只有 ELF 跑得起来。别的格式里同样没有
     // glibc 符号，直接进下面的版本比较会被判成"静态、兼容"——

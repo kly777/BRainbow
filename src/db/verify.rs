@@ -137,19 +137,18 @@ pub async fn check_schema(pool: &SqlitePool) -> SchemaCheck {
                 if !existing.contains(table) {
                     continue;
                 }
-                let actual: BTreeSet<String> = match sqlx::query_scalar(
-                    "SELECT name FROM pragma_table_xinfo(?1)",
-                )
-                .bind(table)
-                .fetch_all(pool)
-                .await
-                {
-                    Ok(names) => names.into_iter().collect(),
-                    Err(e) => {
-                        check.error = Some(format!("读取 {table} 的列失败: {e}"));
-                        return check;
-                    }
-                };
+                let actual: BTreeSet<String> =
+                    match sqlx::query_scalar("SELECT name FROM pragma_table_xinfo(?1)")
+                        .bind(table)
+                        .fetch_all(pool)
+                        .await
+                    {
+                        Ok(names) => names.into_iter().collect(),
+                        Err(e) => {
+                            check.error = Some(format!("读取 {table} 的列失败: {e}"));
+                            return check;
+                        }
+                    };
                 for column in wanted.difference(&actual) {
                     check.missing_columns.push(format!("{table}.{column}"));
                 }
@@ -378,7 +377,10 @@ mod tests {
 
         let check = check_schema(&pool).await;
         assert!(!check.is_ok());
-        assert_eq!(check.user_version, SCHEMA_VERSION, "版本号没变，漂移是唯一线索");
+        assert_eq!(
+            check.user_version, SCHEMA_VERSION,
+            "版本号没变，漂移是唯一线索"
+        );
         assert_eq!(check.missing_columns, vec!["file.is_private".to_string()]);
         assert!(check.summary().contains("缺失列"));
     }

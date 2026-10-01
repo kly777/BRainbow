@@ -163,7 +163,12 @@ mod tests {
             content: "hello world".into(),
         });
 
-        let (status, body) = body_of(upload_article(state, Extension(actor()), body).await.into_response()).await;
+        let (status, body) = body_of(
+            upload_article(state, Extension(actor()), body)
+                .await
+                .into_response(),
+        )
+        .await;
         assert_eq!(status, StatusCode::BAD_REQUEST);
         assert_eq!(body.code, "INVALID_INPUT");
         assert_eq!(body.message, "文章标题不能为空");
@@ -179,7 +184,12 @@ mod tests {
             .unwrap();
 
         let state = State(ReadingQueryService::new(db));
-        let (status, body) = body_of(list_articles(state, Extension(actor())).await.into_response()).await;
+        let (status, body) = body_of(
+            list_articles(state, Extension(actor()))
+                .await
+                .into_response(),
+        )
+        .await;
         assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR);
         assert_eq!(body.code, "DB_ERROR");
         assert_eq!(body.message, "数据库操作失败");

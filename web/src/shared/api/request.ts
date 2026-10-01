@@ -22,7 +22,10 @@ let _authFiredAt = 0;
  * `notice` 用来改文案：同样是 401，"没登录"和"登录的那个人已经不存在了"
  * 对用户是两件事（后者要说明白为什么突然要重新登录）。
  */
-function triggerAuthRequired(notice?: { title: string; message: string }): void {
+function triggerAuthRequired(notice?: {
+	title: string;
+	message: string;
+}): void {
 	const now = Date.now();
 	if (now - _authFiredAt < 3000) return;
 	_authFiredAt = now;

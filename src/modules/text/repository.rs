@@ -178,8 +178,12 @@ mod tests {
     #[tokio::test]
     async fn save_overwrites() {
         let repo = setup().await;
-        repo.save_tabs(&user(1), &[("a".into(), "old".into())]).await.unwrap();
-        repo.save_tabs(&user(1), &[("a".into(), "new".into())]).await.unwrap();
+        repo.save_tabs(&user(1), &[("a".into(), "old".into())])
+            .await
+            .unwrap();
+        repo.save_tabs(&user(1), &[("a".into(), "new".into())])
+            .await
+            .unwrap();
         let loaded = repo.load_tabs(&user(1)).await.unwrap();
         assert_eq!(loaded[0].2, "new");
     }

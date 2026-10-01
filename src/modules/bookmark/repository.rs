@@ -146,7 +146,11 @@ impl BookmarkRepo {
     }
 
     /// 根据 ID 获取书签
-    pub async fn find_by_id(&self, actor: &Actor, id: i32) -> Result<Option<Bookmark>, sqlx::Error> {
+    pub async fn find_by_id(
+        &self,
+        actor: &Actor,
+        id: i32,
+    ) -> Result<Option<Bookmark>, sqlx::Error> {
         let row = sqlx::query_as!(
             BookmarkRow,
             r#"SELECT id AS "id: i32", title, url, description,
@@ -209,7 +213,8 @@ impl BookmarkRepo {
         .fetch_one(&mut *tx)
         .await?;
 
-        self.replace_tags_in_tx(&mut tx, user_id, row.id, tags).await?;
+        self.replace_tags_in_tx(&mut tx, user_id, row.id, tags)
+            .await?;
         tx.commit().await?;
 
         let mut bookmark = Bookmark {
@@ -885,12 +890,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(repo.delete(&actor(), bm.id).await.unwrap(), 1);
-        assert!(
-            repo.find_by_id(&actor(), bm.id)
-                .await
-                .unwrap()
-                .is_none()
-        );
+        assert!(repo.find_by_id(&actor(), bm.id).await.unwrap().is_none());
         // 标签本身保留，关联清除
         let tags = repo.search_tags(&actor(), None).await.unwrap();
         assert_eq!(tags.len(), 1);
@@ -1100,7 +1100,11 @@ mod tests {
             )
             .await
             .unwrap();
-        let tag = repo.search_tags(&actor(), Some("编程")).await.unwrap().remove(0);
+        let tag = repo
+            .search_tags(&actor(), Some("编程"))
+            .await
+            .unwrap()
+            .remove(0);
 
         assert_eq!(repo.delete_tag(&actor(), tag.id).await.unwrap(), 1);
         let got = repo.get_bookmark_tags(bm.id).await.unwrap();

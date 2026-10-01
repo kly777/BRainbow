@@ -205,7 +205,6 @@ mod tests {
     // 代价是 Windows 上少跑一条本可以过的用例
     // （`probe_reports_missing_binary_as_unavailable`，它只用了一个不存在的路径）。
     #![cfg(unix)]
-
     #![allow(clippy::unwrap_used)]
     use super::*;
 

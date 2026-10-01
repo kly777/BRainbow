@@ -419,12 +419,7 @@ mod tests {
     async fn auth_service() -> (AuthService, Arc<SqlitePool>) {
         let pool = Arc::new(SqlitePool::connect("sqlite::memory:").await.unwrap());
         crate::db::migrate(&pool).await.unwrap();
-        let admin = AdminService::new(
-            pool.clone(),
-            TEST_SECRET.into(),
-            false,
-            test_paths(),
-        );
+        let admin = AdminService::new(pool.clone(), TEST_SECRET.into(), false, test_paths());
         (AuthService::new(admin, pool.clone()), pool)
     }
 

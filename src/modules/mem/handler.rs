@@ -121,10 +121,7 @@ pub async fn batch_get_mems_tags(
         return Json(BatchDataResponse::empty());
     }
     let svc = &query;
-    Json(
-        svc.get_mems_tags_batch(&actor, &payload.items)
-            .await,
-    )
+    Json(svc.get_mems_tags_batch(&actor, &payload.items).await)
 }
 
 pub async fn export_csv(
@@ -207,10 +204,7 @@ pub async fn batch_delete(
 ) -> Json<BatchResponse> {
     guard_empty_batch!(payload.items);
     let svc = &service;
-    Json(
-        svc.batch_delete(&actor, &payload.items)
-            .await,
-    )
+    Json(svc.batch_delete(&actor, &payload.items).await)
 }
 
 pub async fn batch_reset(
@@ -232,10 +226,7 @@ pub async fn create_tag(
         return error::bad_request("标签名不能为空");
     }
     let svc = &service;
-    match svc
-        .create_tag(&actor, payload.name.trim())
-        .await
-    {
+    match svc.create_tag(&actor, payload.name.trim()).await {
         Ok(tag) => Json(tag).into_response(),
         Err(e) => e.into_response(),
     }
@@ -444,10 +435,7 @@ pub async fn get_due(
         .map(|v| v.split(',').filter_map(|s| s.trim().parse().ok()).collect())
         .unwrap_or_default();
     let svc = &service;
-    match svc
-        .get_due(&actor, limit, &tag_ids, &exclude_tag_ids)
-        .await
-    {
+    match svc.get_due(&actor, limit, &tag_ids, &exclude_tag_ids).await {
         Ok(res) => Json(res).into_response(),
         Err(e) => e.into_response(),
     }

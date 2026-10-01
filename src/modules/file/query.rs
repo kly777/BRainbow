@@ -815,11 +815,30 @@ mod tests {
             .execute(&*_pool)
             .await
             .unwrap();
-        assert!(query.search(&Actor::user(7), "别人", 5).await.unwrap().is_empty());
-        assert_eq!(query.search(&Actor::user(8), "别人", 5).await.unwrap().len(), 1);
+        assert!(
+            query
+                .search(&Actor::user(7), "别人", 5)
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(
+            query
+                .search(&Actor::user(8), "别人", 5)
+                .await
+                .unwrap()
+                .len(),
+            1
+        );
 
         // 空 / 纯空白查询直接返回空
-        assert!(query.search(&Actor::user(7), "   ", 5).await.unwrap().is_empty());
+        assert!(
+            query
+                .search(&Actor::user(7), "   ", 5)
+                .await
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[test]
@@ -944,7 +963,13 @@ mod tests {
         assert_eq!(hits[0].snippet, "元信息 author");
 
         // 值不匹配时不命中
-        assert!(query.search(&Actor::user(7), "不存在的作者", 5).await.unwrap().is_empty());
+        assert!(
+            query
+                .search(&Actor::user(7), "不存在的作者", 5)
+                .await
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[test]

@@ -291,9 +291,7 @@ fn drop_c_toolchain(cmd: Cmd, cfg: &Config, cross: bool) -> Cmd {
     if !cross && !host_c_toolchain_conflicts(cfg) {
         return cmd;
     }
-    C_TOOLCHAIN_ENV
-        .iter()
-        .fold(cmd, |cmd, key| cmd.unset(key))
+    C_TOOLCHAIN_ENV.iter().fold(cmd, |cmd, key| cmd.unset(key))
 }
 
 /// 目标三元组是否装好了（`<sysroot>/lib/rustlib/<triple>` 在不在）。
@@ -308,7 +306,10 @@ fn target_installed(target: &str) -> bool {
     let Some(sysroot) = Cmd::new("rustc").args(&["--print", "sysroot"]).probe() else {
         return false;
     };
-    Path::new(&sysroot).join("lib/rustlib").join(target).is_dir()
+    Path::new(&sysroot)
+        .join("lib/rustlib")
+        .join(target)
+        .is_dir()
 }
 
 /// `native` / 空串 = 本机；其余原样当作目标三元组。
@@ -625,8 +626,14 @@ mod tests {
     /// （部署脚本要的就是这个名字），本机 Windows 出 `brainbow.exe`。
     #[test]
     fn binary_name_follows_the_target() {
-        assert_eq!(binary_file_name(Some("x86_64-unknown-linux-musl")), "brainbow");
-        assert_eq!(binary_file_name(Some("x86_64-unknown-linux-gnu")), "brainbow");
+        assert_eq!(
+            binary_file_name(Some("x86_64-unknown-linux-musl")),
+            "brainbow"
+        );
+        assert_eq!(
+            binary_file_name(Some("x86_64-unknown-linux-gnu")),
+            "brainbow"
+        );
         assert_eq!(
             binary_file_name(Some("x86_64-pc-windows-msvc")),
             "brainbow.exe"
@@ -634,7 +641,11 @@ mod tests {
         // 本机：跟着构建平台
         assert_eq!(
             binary_file_name(None),
-            if cfg!(windows) { "brainbow.exe" } else { "brainbow" }
+            if cfg!(windows) {
+                "brainbow.exe"
+            } else {
+                "brainbow"
+            }
         );
     }
 

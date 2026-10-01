@@ -346,12 +346,20 @@ mod tests {
         .await
         .unwrap();
 
-        let res = ctx.svc.search(&Actor::user(1), "feynman-technique", 5).await.unwrap();
+        let res = ctx
+            .svc
+            .search(&Actor::user(1), "feynman-technique", 5)
+            .await
+            .unwrap();
         let hit = res.hits.iter().find(|h| h.kind == "bookmark").unwrap();
         assert_eq!(hit.id, 1);
         assert_eq!(hit.snippet, "https://feynman-technique.com/");
 
-        let res = ctx.svc.search(&Actor::user(1), "费曼技巧", 5).await.unwrap();
+        let res = ctx
+            .svc
+            .search(&Actor::user(1), "费曼技巧", 5)
+            .await
+            .unwrap();
         let hit = res.hits.iter().find(|h| h.kind == "bookmark").unwrap();
         assert_eq!(hit.id, 2);
         assert!(hit.snippet.contains("详细说明"));
@@ -484,7 +492,11 @@ mod tests {
         sqlx::query("INSERT INTO reading_article (title, content, user_id) VALUES ('关键词XYZ完全指南', '正文没有命中词', 1)")
             .execute(&ctx.pool).await.unwrap();
 
-        let res = ctx.svc.search(&Actor::user(1), "关键词XYZ", 5).await.unwrap();
+        let res = ctx
+            .svc
+            .search(&Actor::user(1), "关键词XYZ", 5)
+            .await
+            .unwrap();
         let hits: Vec<_> = res.hits.iter().filter(|h| h.kind == "reading").collect();
         assert_eq!(hits.len(), 2);
         assert_eq!(hits[0].title, "关键词XYZ完全指南");
@@ -504,7 +516,11 @@ mod tests {
                 .await
                 .unwrap();
         }
-        let res = ctx.svc.search(&Actor::user(1), "共享关键词", 1).await.unwrap();
+        let res = ctx
+            .svc
+            .search(&Actor::user(1), "共享关键词", 1)
+            .await
+            .unwrap();
         let card_hits: Vec<_> = res.hits.iter().filter(|h| h.kind == "card").collect();
         assert_eq!(card_hits.len(), 1);
     }

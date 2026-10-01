@@ -49,10 +49,7 @@ impl SignService {
     }
 
     pub async fn delete(&self, actor: &Actor, id: i32) -> Result<u64, ServiceError> {
-        self.repo
-            .delete(actor, id)
-            .await
-            .map_err(ServiceError::Db)
+        self.repo.delete(actor, id).await.map_err(ServiceError::Db)
     }
 }
 
@@ -117,10 +114,20 @@ mod tests {
     #[tokio::test]
     async fn by_signifier_query() {
         let (svc, qsvc) = setup().await;
-        svc.create(&Actor::user(1), "月".into(), "moon".into(), None, None, None)
+        svc.create(
+            &Actor::user(1),
+            "月".into(),
+            "moon".into(),
+            None,
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+        let (items, _) = qsvc
+            .by_signifier(&Actor::user(1), "月", 10, 0)
             .await
             .unwrap();
-        let (items, _) = qsvc.by_signifier(&Actor::user(1), "月", 10, 0).await.unwrap();
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].signified, "moon");
     }

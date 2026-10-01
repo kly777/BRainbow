@@ -18,14 +18,20 @@ use crate::shared::actor::Actor;
 async fn setup(pool: &SqlitePool) {
     db::migrate(pool).await.unwrap();
     // 两个普通用户 + 一个管理员（id 3）
-    for (id, name, role) in [(1, "user_a", "user"), (2, "user_b", "user"), (3, "boss", "admin")] {
-        sqlx::query("INSERT OR IGNORE INTO user (id, name, password_hash, role) VALUES (?, ?, 'x', ?)")
-            .bind(id)
-            .bind(name)
-            .bind(role)
-            .execute(pool)
-            .await
-            .unwrap();
+    for (id, name, role) in [
+        (1, "user_a", "user"),
+        (2, "user_b", "user"),
+        (3, "boss", "admin"),
+    ] {
+        sqlx::query(
+            "INSERT OR IGNORE INTO user (id, name, password_hash, role) VALUES (?, ?, 'x', ?)",
+        )
+        .bind(id)
+        .bind(name)
+        .bind(role)
+        .execute(pool)
+        .await
+        .unwrap();
     }
 }
 
@@ -121,7 +127,13 @@ async fn bookmark_isolation_between_users() {
     let qsvc = crate::modules::bookmark::BookmarkQueryService::new(pool);
 
     let bm_a = svc
-        .create(&Actor::user(1), "A 的书签", "https://a.example.com", "", &[])
+        .create(
+            &Actor::user(1),
+            "A 的书签",
+            "https://a.example.com",
+            "",
+            &[],
+        )
         .await
         .unwrap();
 
@@ -130,9 +142,19 @@ async fn bookmark_isolation_between_users() {
         .await
         .unwrap();
     assert_eq!(total, 0, "B 不应看到 A 的书签");
-    assert!(qsvc.by_id(&Actor::user(2), bm_a.id).await.unwrap().is_none());
+    assert!(
+        qsvc.by_id(&Actor::user(2), bm_a.id)
+            .await
+            .unwrap()
+            .is_none()
+    );
     assert_eq!(svc.delete(&Actor::user(2), bm_a.id).await.unwrap(), 0);
-    assert!(qsvc.by_id(&Actor::user(1), bm_a.id).await.unwrap().is_some());
+    assert!(
+        qsvc.by_id(&Actor::user(1), bm_a.id)
+            .await
+            .unwrap()
+            .is_some()
+    );
 }
 
 /// mem：A 创建 → B 不可见/不可复习
@@ -242,7 +264,11 @@ async fn onto_isolation_between_users() {
         .await
         .unwrap();
 
-    assert_eq!(qsvc.list(&b, 10, 0).await.unwrap().1, 0, "B 不应看到 A 的本体");
+    assert_eq!(
+        qsvc.list(&b, 10, 0).await.unwrap().1,
+        0,
+        "B 不应看到 A 的本体"
+    );
     assert!(qsvc.by_id(&b, onto_a.id).await.unwrap().is_none());
     assert!(
         svc.update(&b, onto_a.id, Some("B 改的".into()), None)
@@ -253,11 +279,17 @@ async fn onto_isolation_between_users() {
     assert_eq!(svc.delete(&b, onto_a.id).await.unwrap(), 0, "B 不该删得掉");
     // 搜索命中同样按归属过滤（搜索层仍只传 user_id，admin 全量搜索待该层改造）
     assert!(
-        qsvc.search(&Actor::user(2), "以教促学", 5).await.unwrap().is_empty(),
+        qsvc.search(&Actor::user(2), "以教促学", 5)
+            .await
+            .unwrap()
+            .is_empty(),
         "B 不该搜到 A 的本体"
     );
     assert_eq!(
-        qsvc.search(&Actor::user(1), "以教促学", 5).await.unwrap().len(),
+        qsvc.search(&Actor::user(1), "以教促学", 5)
+            .await
+            .unwrap()
+            .len(),
         1,
         "A 搜得到自己的"
     );
@@ -290,11 +322,19 @@ async fn sign_isolation_between_users() {
         .await
         .unwrap();
 
-    assert_eq!(qsvc.list(&b, 10, 0).await.unwrap().1, 0, "B 不该看到 A 的关系");
+    assert_eq!(
+        qsvc.list(&b, 10, 0).await.unwrap().1,
+        0,
+        "B 不该看到 A 的关系"
+    );
     assert!(qsvc.by_id(&b, sig.id).await.unwrap().is_none());
     assert_eq!(svc.delete(&b, sig.id).await.unwrap(), 0, "B 不该删得掉");
     assert!(
-        qsvc.by_signifier(&b, "日", 10, 0).await.unwrap().0.is_empty(),
+        qsvc.by_signifier(&b, "日", 10, 0)
+            .await
+            .unwrap()
+            .0
+            .is_empty(),
         "B 按能指也查不到"
     );
 
@@ -310,8 +350,8 @@ async fn sign_isolation_between_users() {
 #[tokio::test]
 async fn time_window_follows_its_parent_task() {
     use crate::modules::task::dto::CreateTaskRequest;
-    use crate::modules::time_window::{CreateTimeWindowRequest, TimeWindowType};
     use crate::modules::time_window::port::TaskTimeWindowValidator;
+    use crate::modules::time_window::{CreateTimeWindowRequest, TimeWindowType};
 
     let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
     setup(&pool).await;
@@ -352,7 +392,13 @@ async fn time_window_follows_its_parent_task() {
 
     // B：读不到、列不出、建不上、删不掉
     assert!(qsvc.by_id(&b, window_a.id).await.unwrap().is_none());
-    assert_eq!(qsvc.list_by_task(&b, task_a.id, None, 10, 0).await.unwrap().1, 0);
+    assert_eq!(
+        qsvc.list_by_task(&b, task_a.id, None, 10, 0)
+            .await
+            .unwrap()
+            .1,
+        0
+    );
     assert!(
         svc.create(&b, mk(5)).await.is_err(),
         "B 不该能往 A 的任务上挂窗口"
@@ -368,7 +414,13 @@ async fn time_window_follows_its_parent_task() {
 
     // A 自己：一切正常
     assert!(qsvc.by_id(&a, window_a.id).await.unwrap().is_some());
-    assert_eq!(qsvc.list_by_task(&a, task_a.id, None, 10, 0).await.unwrap().1, 1);
+    assert_eq!(
+        qsvc.list_by_task(&a, task_a.id, None, 10, 0)
+            .await
+            .unwrap()
+            .1,
+        1
+    );
 
     // admin：看得见、建得上、删得掉
     assert!(qsvc.by_id(&admin, window_a.id).await.unwrap().is_some());

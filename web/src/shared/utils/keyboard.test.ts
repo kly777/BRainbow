@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // ── 键盘让路判定 ──
 
 import { describe, expect, it } from "vitest";

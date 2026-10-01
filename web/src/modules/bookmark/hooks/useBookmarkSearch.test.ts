@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // ── useBookmarkSearch 契约测试 ──
 // 最要紧的一条是"不闪烁"：搜索中必须保留上一次的结果（页面只在首次搜索给加载态，
 // 更新过程只用「更新中…」提示）。这条契约原先靠页面里手写的 4 个信号 + searchSeq

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // ── useCardEdit 编辑生命周期（测试覆盖扩充）──
 // ID 解析 / dirty / 时间戳标签 / 保存与删除分支 / 快捷键。
 // 注意：createResource 的解析时序在 jsdom 下不稳定，

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import type { ChatNode } from "@modules/chat";
 import { describe, expect, it } from "vitest";
 import {

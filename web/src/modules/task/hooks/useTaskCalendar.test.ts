@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { createRoot } from "solid-js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useTaskCalendar } from "./useTaskCalendar.ts";

@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 // ── useBookmarkPage 列表数据源回归 ──
 // 本 hook 刚从"手写信号 + loadSeq 竞态守卫 + createEffect 重取"迁到
 // useListResource。这组断言锁住迁移后的三条关键行为：

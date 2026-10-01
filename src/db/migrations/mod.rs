@@ -1,35 +1,58 @@
 //! 版本化迁移：v1 = create_tables 基线；每个后续版本一个迁移函数。
 //!
 //! 迁移必须幂等：列/表已存在则跳过；ALTER 失败必须上抛。
-
-mod v10;
-mod v11;
-mod v12;
-mod v13;
-mod v14;
-mod v15;
-mod v16;
-mod v17;
-mod v18;
-mod v19;
-mod v20;
-mod v21;
-mod v2;
-mod v3;
-mod v4;
-mod v5;
-mod v6;
-mod v7;
-mod v8;
-mod v9;
+//!
+//! **登记只有一处**：链尾的 [`migration_chain!`] 调用 —— 加一版 = 新建 `vN.rs`
+//! + 在那里加一项，`mod` 声明、版本分发、`LATEST_USER_VERSION` 全部由它派生。
 
 use sqlx::SqlitePool;
 
 use super::helpers::set_user_version;
 use super::schema::create_tables;
 
-/// 程序支持的最新 schema 版本
-pub const LATEST_USER_VERSION: i64 = 21;
+/// 迁移链：**唯一的登记处**。
+///
+/// 展开出四样东西：`mod vN;` 声明、[`CHAIN_VERSIONS`]、[`LATEST_USER_VERSION`]
+/// （取链尾）、以及 `apply_migration` 的分发 match。在此之前这三处各写一遍
+/// （模块列表 / match 分支 / 手写常量），漏掉任何一处都不在编译期报错 ——
+/// 现在只有一张表可漏，且漏了会被 `chain_versions_are_sorted_and_contiguous` 抓住。
+macro_rules! migration_chain {
+    // 取链尾版本号：`LATEST_USER_VERSION` 由此派生，省得再手写一个会漂的常量
+    (@last $last:literal) => { $last };
+    (@last $head:literal, $($tail:literal),+) => { migration_chain!(@last $($tail),+) };
+
+    ($($version:literal => $module:ident),+ $(,)?) => {
+        $(mod $module;)+
+
+        /// 链上登记过的版本号（升序，即应用顺序）；v1 是基线，不在链里
+        pub(crate) const CHAIN_VERSIONS: &[i64] = &[$($version),+];
+
+        /// 程序支持的最新 schema 版本（链尾派生，不再手写）
+        pub const LATEST_USER_VERSION: i64 = migration_chain!(@last $($version),+);
+
+        /// 在单事务中执行一个版本迁移并推进 user_version
+        async fn apply_migration(pool: &SqlitePool, target: i64) -> Result<(), sqlx::Error> {
+            let mut tx = pool.begin().await?;
+            match target {
+                $($version => $module::migrate(&mut tx).await?,)+
+                // 链里没有这个版本号：正常不该发生（分发与清单同源）
+                _ => {
+                    return Err(sqlx::Error::Configuration(Box::new(std::io::Error::other(
+                        format!("未知的迁移版本: {target}"),
+                    ))));
+                }
+            }
+            set_user_version(&mut tx, target).await?;
+            tx.commit().await
+        }
+    };
+}
+
+migration_chain! {
+    2 => v2, 3 => v3, 4 => v4, 5 => v5, 6 => v6, 7 => v7, 8 => v8, 9 => v9, 10 => v10,
+    11 => v11, 12 => v12, 13 => v13, 14 => v14, 15 => v15, 16 => v16, 17 => v17, 18 => v18,
+    19 => v19, 20 => v20, 21 => v21,
+}
 
 /// 迁移链用 `ALTER TABLE … ADD COLUMN` 加过的列：(表, 列)。
 ///
@@ -121,7 +144,7 @@ pub async fn migrate(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         }
     }
 
-    for target in (current.max(1) + 1)..=LATEST_USER_VERSION {
+    for &target in CHAIN_VERSIONS.iter().filter(|&&v| v > current) {
         apply_migration(pool, target).await?;
     }
     Ok(())
@@ -133,42 +156,8 @@ pub async fn migrate(pool: &SqlitePool) -> Result<(), sqlx::Error> {
 /// 需要这个函数显式地把 v2…v21 都跑一遍。
 #[cfg(test)]
 pub(crate) async fn apply_full_chain_for_test(pool: &SqlitePool) -> Result<(), sqlx::Error> {
-    for target in 2..=LATEST_USER_VERSION {
+    for &target in CHAIN_VERSIONS {
         apply_migration(pool, target).await?;
     }
     Ok(())
-}
-
-/// 在单事务中执行一个版本迁移并推进 user_version
-async fn apply_migration(pool: &SqlitePool, target: i64) -> Result<(), sqlx::Error> {
-    let mut tx = pool.begin().await?;
-    match target {
-        2 => v2::migrate(&mut tx).await?,
-        3 => v3::migrate(&mut tx).await?,
-        4 => v4::migrate(&mut tx).await?,
-        5 => v5::migrate(&mut tx).await?,
-        6 => v6::migrate(&mut tx).await?,
-        7 => v7::migrate(&mut tx).await?,
-        8 => v8::migrate(&mut tx).await?,
-        9 => v9::migrate(&mut tx).await?,
-        10 => v10::migrate(&mut tx).await?,
-        11 => v11::migrate(&mut tx).await?,
-        12 => v12::migrate(&mut tx).await?,
-        13 => v13::migrate(&mut tx).await?,
-        14 => v14::migrate(&mut tx).await?,
-        15 => v15::migrate(&mut tx).await?,
-        16 => v16::migrate(&mut tx).await?,
-        17 => v17::migrate(&mut tx).await?,
-        18 => v18::migrate(&mut tx).await?,
-        19 => v19::migrate(&mut tx).await?,
-        20 => v20::migrate(&mut tx).await?,
-        21 => v21::migrate(&mut tx).await?,
-        _ => {
-            return Err(sqlx::Error::Configuration(Box::new(std::io::Error::other(
-                format!("未知的迁移版本: {target}"),
-            ))));
-        }
-    }
-    set_user_version(&mut tx, target).await?;
-    tx.commit().await
 }

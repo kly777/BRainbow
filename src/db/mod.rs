@@ -27,8 +27,8 @@ mod tests {
     #![allow(clippy::unwrap_used)]
     use super::helpers::column_exists;
     use super::migrations::{
-        ADDED_COLUMNS, ADDED_COLUMNS_UNDROPPABLE, LATEST_USER_VERSION, apply_full_chain_for_test,
-        migrate,
+        ADDED_COLUMNS, ADDED_COLUMNS_UNDROPPABLE, CHAIN_VERSIONS, LATEST_USER_VERSION,
+        apply_full_chain_for_test, migrate,
     };
     use super::schema::{TIME_COLUMNS, create_tables};
     use sqlx::SqlitePool;
@@ -44,6 +44,32 @@ mod tests {
         .fetch_all(pool)
         .await
         .unwrap()
+    }
+
+    /// 链的登记处只有一处（`migration_chain!`）：版本号必须从 v2 起连续递增，
+    /// 且 `LATEST_USER_VERSION` 就是链尾（它由链尾派生）。
+    ///
+    /// 盯的是"漏登记/写错版本号"：`migrate` 按链上的版本号逐个升级，链上缺一版
+    /// 不会被编译器发现 —— 只有这里能拦。
+    #[test]
+    fn chain_versions_are_sorted_and_contiguous() {
+        assert_eq!(
+            CHAIN_VERSIONS.first().copied(),
+            Some(2),
+            "链从 v2 开始（v1 是 create_tables 基线，不在链里）"
+        );
+        assert_eq!(
+            CHAIN_VERSIONS.last().copied(),
+            Some(LATEST_USER_VERSION),
+            "LATEST_USER_VERSION 必须等于链尾：{CHAIN_VERSIONS:?}"
+        );
+        for pair in CHAIN_VERSIONS.windows(2) {
+            assert_eq!(
+                pair[1],
+                pair[0] + 1,
+                "版本号必须连续递增，链是：{CHAIN_VERSIONS:?}"
+            );
+        }
     }
 
     /// **基线 ≡ 基线 + 完整迁移链**：`migrate()` 正是靠这条才敢在全新库上跳过迁移链

@@ -900,6 +900,43 @@ mod tests {
         assert!(dup.is_err(), "同名标签不应能重复创建");
     }
 
+    /// 把 `BRAINBOW_FIXTURE_DB` 指向的库文件跑一遍 `migrate`（**真库副本演练**）。
+    ///
+    /// 用法（必须先在副本上跑，绝不要指向真库）：
+    ///
+    /// ```text
+    /// cp brainbow.db target/rehearsal.db
+    /// BRAINBOW_FIXTURE_DB=target/rehearsal.db \
+    ///   cargo test --quiet migrate_fixture_db -- --ignored --nocapture
+    /// ```
+    ///
+    /// 为什么需要它：内存库里的合成形状证明不了真库能升上来 —— 真库有 178MB 数据、
+    /// 有历史形状（v19 时代的 file 脏时间戳、`user_id IS NULL` 的无主行、未合并的同名
+    /// 标签）。迁移改动的验收方式是：升级前后各 dump 一份 `sqlite_master` 与关键计数，
+    /// 逐项对照。
+    #[tokio::test]
+    #[ignore = "只在演练真库副本时手动跑"]
+    async fn migrate_fixture_db() {
+        use sqlx::sqlite::SqliteConnectOptions;
+        use std::str::FromStr;
+
+        let path = std::env::var("BRAINBOW_FIXTURE_DB")
+            .expect("用法：BRAINBOW_FIXTURE_DB=<库文件副本> cargo test migrate_fixture_db -- --ignored");
+        assert!(
+            std::path::Path::new(&path).exists(),
+            "{path} 不存在 —— 先 cp 一份真库副本"
+        );
+
+        let options = SqliteConnectOptions::from_str(&format!("sqlite:{path}")).unwrap();
+        let pool = SqlitePool::connect_with(options).await.unwrap();
+        migrate(&pool).await.unwrap();
+        let version = user_version(&pool).await;
+        // 干净关闭：否则 WAL 会留下来（178MB 库跑完升级能留下上百 MB 的 -wal），
+        // 下一次拿它跟新拷的主库拼在一起会得到一个不可信的状态（踩过一次）
+        pool.close().await;
+        println!("迁移完成：{path} → user_version = {version}");
+    }
+
     /// 为 `just sqlx-prepare` 生成最新 schema 的 fixture 库。
     /// 不跑迁移器而直接使用开发库生成 .sqlx 会拿到历史 schema。
     #[tokio::test]

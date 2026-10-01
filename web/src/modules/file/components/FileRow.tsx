@@ -10,10 +10,13 @@ import { canZoom } from "../lib/thumbnail.ts";
 import FileItemActions from "./FileItemActions.tsx";
 import FileTags from "./FileTags.tsx";
 import { FileThumb } from "./FileThumb.tsx";
+import HighlightedText from "./HighlightedText.tsx";
 
 /** 列表视图的一行：徽章/缩略图 + 文件名 + 元信息 + 操作 */
 const FileRow: Component<{
 	item: FileItem;
+	/** 当前搜索词（空 = 不在搜索）：命中词要高亮，与卡片/面板同一套规则 */
+	query: string;
 	highlighted: boolean;
 	selectMode: boolean;
 	selected: boolean;
@@ -63,7 +66,10 @@ const FileRow: Component<{
 		<div class={styles.rowMain}>
 			<Tooltip label={props.item.original_name} class={styles.nameTipHost}>
 				<button type="button" class={styles.nameBtn} onClick={props.onOpen}>
-					{props.item.original_name}
+					<HighlightedText
+						text={props.item.original_name}
+						query={props.query}
+					/>
 				</button>
 			</Tooltip>
 			<div class={styles.rowMeta}>
@@ -105,7 +111,7 @@ const FileRow: Component<{
 				{(snippet) => (
 					<p class={styles.matchSnippet}>
 						<span class={styles.matchSnippetLabel}>正文</span>
-						{snippet()}
+						<HighlightedText text={snippet()} query={props.query} />
 					</p>
 				)}
 			</Show>

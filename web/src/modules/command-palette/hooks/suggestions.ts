@@ -2,6 +2,9 @@
 
 import { NAV_ITEMS, NAV_ROUTES } from "@config/navigation";
 import { fillPath, PATHS } from "@config/paths";
+// 这个文件跑在 node 环境的测试里，**不能走 `@shared/utils` 的 barrel**：
+// 它会把整棵工具图拉进来，其中 @solidjs/router 在导入期就碰 `window`（会炸）
+import { highlightKeywords } from "@shared/utils/highlight.ts";
 import { getRecentPages } from "@shared/utils/recent-pages.ts";
 import type { SearchHit, SearchTarget } from "../api.ts";
 import { fuzzyFilter } from "./fuzzy.ts";
@@ -123,22 +126,6 @@ export function buildCmdItems(q: string, commands: CmdEntry[]): Suggestion[] {
 		desc: c.desc,
 		onSelect: c.action,
 	}));
-}
-
-/** 将文本中的关键词用 <mark> 标签高亮（转义 HTML 实体后替换） */
-function highlightKeywords(text: string, query: string): string {
-	if (!query || !text) return "";
-	const escaped = text
-		.replace(/&/g, "&amp;")
-		.replace(/</g, "&lt;")
-		.replace(/>/g, "&gt;");
-	const terms = query.trim().split(/\s+/).filter(Boolean);
-	let result = escaped;
-	for (const term of terms) {
-		const re = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
-		result = result.replace(re, (m) => `<mark>${m}</mark>`);
-	}
-	return result;
 }
 
 /** 站内搜索建议（? 前缀模式），按模块分组展示，末尾附加"网页搜索"兜底项 */

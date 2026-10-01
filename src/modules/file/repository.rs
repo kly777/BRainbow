@@ -5,6 +5,7 @@ use std::sync::Arc;
 use super::model::{FileTag, FileTagWithCount, NewFile, SortOrder};
 use crate::shared::actor::Actor;
 use crate::shared::db_query::like_contains;
+use crate::shared::search::like_terms;
 
 #[derive(Debug, FromRow)]
 pub struct FileRow {
@@ -54,6 +55,34 @@ pub struct FileSearchRow {
     pub file: FileRow,
     /// 命中正文时是正文原文（调用方据此截上下文片段）；文件名命中、或正文没命中时为 NULL
     pub text_hit: Option<String>,
+}
+
+/// 把"多词 AND"条件追加进 WHERE：每个词写成 `(<列 LIKE 词> OR …)`，词与词之间 AND。
+///
+/// 列名由调用方给出（编译期常量），词**走 bind**（用户输入绝不拼进 SQL）；
+/// 词本身已由 [`like_terms`] 转义过 `%` / `_`。空词表退化成恒真 ——
+/// 既与旧行为（`LIKE '%%'` 匹配一切）一致，也不会在 `CASE WHEN …` 里拼出残缺 SQL。
+fn push_terms_all(qb: &mut QueryBuilder<Sqlite>, columns: &[&str], terms: &[String]) {
+    if terms.is_empty() {
+        qb.push("1");
+        return;
+    }
+    for (index, like) in terms.iter().enumerate() {
+        if index > 0 {
+            qb.push(" AND ");
+        }
+        qb.push("(");
+        for (column_index, column) in columns.iter().enumerate() {
+            if column_index > 0 {
+                qb.push(" OR ");
+            }
+            qb.push(*column)
+                .push(" LIKE ")
+                .push_bind(like.clone())
+                .push(" ESCAPE '\\'");
+        }
+        qb.push(")");
+    }
 }
 
 /// 向 WHERE 追加可见性条件（QueryBuilder 侧）。
@@ -432,26 +461,32 @@ impl FileRepository {
         qb.build_query_as::<FileRow>().fetch_all(&*self.db).await
     }
 
-    /// 按文件名**或正文**模糊统计（列表页搜索框；正文见 `file.text_content` 列）
+    /// 按文件名**或正文**模糊统计（列表页搜索框；正文见 `file.text_content` 列）。
+    ///
+    /// 多词查询 = AND：每个词都要命中，且允许落在不同字段（一个命中文件名、
+    /// 另一个命中正文也算）。词表由 [`like_terms`] 拆好并转义，这里只管拼 WHERE。
     pub async fn count_by_name_or_text(
         &self,
         query: &str,
         viewer: Option<&Actor>,
     ) -> Result<i64, sqlx::Error> {
-        let mut qb = QueryBuilder::new("SELECT COUNT(*) FROM file f WHERE (f.original_name LIKE ");
-        qb.push_bind(like_contains(query))
-            .push(" ESCAPE '\\' OR f.text_content LIKE ")
-            .push_bind(like_contains(query))
-            .push(" ESCAPE '\\')");
+        let mut qb = QueryBuilder::new("SELECT COUNT(*) FROM file f WHERE ");
+        push_terms_all(
+            &mut qb,
+            &["f.original_name", "f.text_content"],
+            &like_terms(query),
+        );
         push_visibility(&mut qb, viewer);
         qb.build_query_scalar().fetch_one(&*self.db).await
     }
 
-    /// 按文件名**或正文**模糊搜索（列表页搜索框）。
+    /// 按文件名**或正文**模糊搜索（列表页搜索框）。多词 = AND，见
+    /// [`FileRepository::count_by_name_or_text`]。
     ///
     /// 正文命中的行会捎回正文原文（`text_hit`，调用方据此截上下文片段），
-    /// 但**只在文件名没命中时**才取：文件名命中本身已经说明白了，不必白搬几十 KB 文本。
-    /// 正文列可能有 1 MB（`extract::MAX_TEXT_BYTES`）；进响应的永远是片段，不是原文。
+    /// 但**只在文件名没（整串词）命中时**才取：词全在文件名里就说明白了，
+    /// 不必白搬几十 KB 文本。正文列可能有 1 MB（`extract::MAX_TEXT_BYTES`）；
+    /// 进响应的永远是片段，不是原文。
     pub async fn search_by_name_or_text(
         &self,
         query: &str,
@@ -460,16 +495,13 @@ impl FileRepository {
         offset: i64,
         sort: SortOrder,
     ) -> Result<Vec<FileSearchRow>, sqlx::Error> {
-        let like = like_contains(query);
+        let terms = like_terms(query);
         let mut qb = QueryBuilder::new(
-            "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.category AS file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.is_private, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at, CASE WHEN f.original_name LIKE ",
+            "SELECT f.id, f.stored_id, f.original_name, f.mime_type, f.category AS file_category, f.size_bytes, f.width, f.height, f.duration_ms, f.user_id, f.is_private, f.content_hash, COALESCE(f.created_at, CURRENT_TIMESTAMP) AS created_at, COALESCE(f.updated_at, CURRENT_TIMESTAMP) AS updated_at, CASE WHEN ",
         );
-        qb.push_bind(like.clone())
-            .push(" ESCAPE '\\' THEN NULL ELSE f.text_content END AS text_hit FROM file f WHERE (f.original_name LIKE ")
-            .push_bind(like.clone())
-            .push(" ESCAPE '\\' OR f.text_content LIKE ")
-            .push_bind(like)
-            .push(" ESCAPE '\\')");
+        push_terms_all(&mut qb, &["f.original_name"], &terms);
+        qb.push(" THEN NULL ELSE f.text_content END AS text_hit FROM file f WHERE ");
+        push_terms_all(&mut qb, &["f.original_name", "f.text_content"], &terms);
         push_visibility(&mut qb, viewer);
         qb.push(sort.order_by());
         qb.push(" LIMIT ")
@@ -510,13 +542,16 @@ impl FileRepository {
 
     // ── 全局搜索 ──
 
-    /// 全局搜索：文件名、标签名、元信息值**或正文**命中，文件名命中排在前面
-    /// （正文又排在标签 / 元信息前）。
+    /// 全局搜索：文件名、标签名、元信息值**或正文**命中；文件名命中排在前面，
+    /// 正文又排在标签 / 元信息前。
     ///
-    /// `like` 由 `like_contains` 生成（已转义 `%` / `_` / `\`），
-    /// SQL 里用 `?1` 复用同一个模式串。
+    /// 多词查询 = AND（每个词都要在**某个**字段里命中），与列表搜索、以及走 FTS 的
+    /// 那几个模块同一口径；词表由 [`like_terms`] 拆好并转义。
     ///
-    /// 可见性用静态 SQL 的标准形状 `(?2 IS NULL OR f.is_private = 0 OR f.user_id = ?2)`：
+    /// 因为是动态词数，这条从静态宏换成了 QueryBuilder（按需拼条件）—— 动态 SQL
+    /// 靠测试兜底，可见性与"只捎回命中行的正文"两条口径都有专门的用例钉着。
+    ///
+    /// 可见性用标准形状 `(? IS NULL OR f.is_private = 0 OR f.user_id = ?)`：
     /// admin 的 `owner_scope` 是 NULL → 条件恒真（全量）；普通用户 → 公开 + 自己的。
     /// 搜索端点（`SearchPort`）只给得到 `user_id`，所以落到这里的一定是普通用户口径。
     ///
@@ -526,46 +561,44 @@ impl FileRepository {
     pub async fn search_hits(
         &self,
         actor: &Actor,
-        like: &str,
+        query: &str,
         limit: i64,
     ) -> Result<Vec<FileSearchHit>, sqlx::Error> {
-        sqlx::query_as!(
-            FileSearchHit,
-            r#"SELECT f.id AS "id!: i64",
-                      f.stored_id,
-                      f.original_name,
-                      f.category AS file_category,
-                      f.size_bytes AS "size_bytes!: i64",
-                      (SELECT t.name FROM file_tag_rel r
-                         JOIN file_tag t ON t.id = r.tag_id
-                        WHERE r.file_id = f.id AND t.name LIKE ?1 ESCAPE '\'
-                        ORDER BY t.name LIMIT 1) AS "matched_tag?: String",
-                      (SELECT m.key FROM file_meta m
-                        WHERE m.file_id = f.id AND m.value LIKE ?1 ESCAPE '\'
-                        ORDER BY m.key LIMIT 1) AS "matched_meta?: String",
-                      CASE WHEN f.original_name LIKE ?1 ESCAPE '\' THEN 0 ELSE 1 END AS "name_hit!: i64",
-                      CASE WHEN f.text_content LIKE ?1 ESCAPE '\' THEN 1 ELSE 0 END AS "content_hit!: i64",
-                      CASE WHEN f.text_content LIKE ?1 ESCAPE '\' THEN f.text_content ELSE NULL END AS "text_content?: String"
-                 FROM file f
-                WHERE (?2 IS NULL OR f.is_private = 0 OR f.user_id = ?2)
-                  AND (f.original_name LIKE ?1 ESCAPE '\'
-                       OR f.text_content LIKE ?1 ESCAPE '\'
-                       OR EXISTS (SELECT 1 FROM file_tag_rel r2
-                                    JOIN file_tag t2 ON t2.id = r2.tag_id
-                                   WHERE r2.file_id = f.id AND t2.name LIKE ?1 ESCAPE '\')
-                       OR EXISTS (SELECT 1 FROM file_meta m2
-                                   WHERE m2.file_id = f.id AND m2.value LIKE ?1 ESCAPE '\'))
-                ORDER BY CASE WHEN f.original_name LIKE ?1 ESCAPE '\' THEN 0
-                              WHEN f.text_content LIKE ?1 ESCAPE '\' THEN 1
-                              ELSE 2 END,
-                         f.created_at DESC
-                LIMIT ?3"#,
-            like,
-            actor.owner_scope(),
-            limit
-        )
-        .fetch_all(&*self.db)
-        .await
+        let terms = like_terms(query);
+        let mut qb = QueryBuilder::new(
+            "SELECT f.id, f.stored_id, f.original_name, f.category AS file_category, f.size_bytes, \
+             (SELECT t.name FROM file_tag_rel r JOIN file_tag t ON t.id = r.tag_id \
+               WHERE r.file_id = f.id AND ",
+        );
+        push_terms_all(&mut qb, &["t.name"], &terms);
+        qb.push(" ORDER BY t.name LIMIT 1) AS matched_tag, (SELECT m.key FROM file_meta m WHERE m.file_id = f.id AND ");
+        push_terms_all(&mut qb, &["m.value"], &terms);
+        qb.push(" ORDER BY m.key LIMIT 1) AS matched_meta, CASE WHEN ");
+        push_terms_all(&mut qb, &["f.original_name"], &terms);
+        qb.push(" THEN 0 ELSE 1 END AS name_hit, CASE WHEN ");
+        push_terms_all(&mut qb, &["f.text_content"], &terms);
+        qb.push(" THEN 1 ELSE 0 END AS content_hit, CASE WHEN ");
+        push_terms_all(&mut qb, &["f.original_name"], &terms);
+        qb.push(" THEN NULL ELSE f.text_content END AS text_content, CASE WHEN ");
+        // ORDER BY 的两档打分与上面的 name_hit / content_hit 必须同源（同一组条件）
+        push_terms_all(&mut qb, &["f.original_name"], &terms);
+        qb.push(" THEN 0 WHEN ");
+        push_terms_all(&mut qb, &["f.text_content"], &terms);
+        // 注意：占位符 `?` 由 push_bind 自己追加，字符串里别再写一个（写了会多出占位符）
+        qb.push(" THEN 1 ELSE 2 END AS rank FROM file f WHERE (");
+        qb.push_bind(actor.owner_scope())
+            .push(" IS NULL OR f.is_private = 0 OR f.user_id = ")
+            .push_bind(actor.owner_scope())
+            .push(") AND (");
+        push_terms_all(&mut qb, &["f.original_name", "f.text_content"], &terms);
+        qb.push(" OR EXISTS (SELECT 1 FROM file_tag_rel r2 JOIN file_tag t2 ON t2.id = r2.tag_id WHERE r2.file_id = f.id AND ");
+        push_terms_all(&mut qb, &["t2.name"], &terms);
+        qb.push(") OR EXISTS (SELECT 1 FROM file_meta m2 WHERE m2.file_id = f.id AND ");
+        push_terms_all(&mut qb, &["m2.value"], &terms);
+        qb.push(")) ORDER BY rank, f.created_at DESC LIMIT ")
+            .push_bind(limit);
+
+        qb.build_query_as::<FileSearchHit>().fetch_all(&*self.db).await
     }
 
     // ── 标签操作 ──
@@ -1399,7 +1432,7 @@ mod tests {
         }
         async fn searched(repo: &FileRepository, actor: &Actor) -> Vec<String> {
             sorted(
-                repo.search_hits(actor, &like_contains(".bin"), 10)
+                repo.search_hits(actor, ".bin", 10)
                     .await
                     .unwrap()
                     .into_iter()
@@ -2002,5 +2035,99 @@ mod tests {
                 .all(|row| row.file.stored_id != "c3"),
             "私密文件的正文不该被搜出来"
         );
+    }
+
+    /// 多词查询 = AND，且**允许落在不同字段**：一个词命中文件名、另一个命中正文也算命中。
+    /// 按整串匹配（旧行为）会要求"会议 调休"以这个顺序连续出现，等于搜不到。
+    #[tokio::test]
+    async fn search_ands_terms_across_name_and_content() {
+        let repo = setup().await;
+        let both = repo
+            .insert(new_file_named("m1", "会议记录.docx", "document", Some(7)))
+            .await
+            .unwrap();
+        repo.insert(new_file_named("m2", "会议纪要.docx", "document", Some(7)))
+            .await
+            .unwrap();
+        repo.set_text_content(both.id, "定了三件事：报销、排期、调休")
+            .await
+            .unwrap();
+
+        // 两个词分别在名字与正文里 → 命中
+        let hits = repo
+            .search_by_name_or_text("会议 调休", Some(&Actor::user(7)), 10, 0, SortOrder::default())
+            .await
+            .unwrap();
+        assert_eq!(
+            hits.iter().map(|h| h.file.stored_id.as_str()).collect::<Vec<_>>(),
+            vec!["m1"],
+            "「会议纪要」只有第一个词、正文也没第二个词，不该命中"
+        );
+        assert!(
+            hits[0].text_hit.is_some(),
+            "词没全落在文件名里，片段该带着正文回来"
+        );
+        assert_eq!(
+            repo.count_by_name_or_text("会议 调休", Some(&Actor::user(7)))
+                .await
+                .unwrap(),
+            1
+        );
+
+        // 词全在文件名里：不捎正文（标题已经说明白了）
+        let name_only = repo
+            .search_by_name_or_text("会议 记录", Some(&Actor::user(7)), 10, 0, SortOrder::default())
+            .await
+            .unwrap();
+        assert_eq!(name_only.len(), 1);
+        assert!(name_only[0].text_hit.is_none());
+
+        // 一个词谁都没有 → 整条不命中（AND 的另一半）
+        assert!(
+            repo.search_by_name_or_text(
+                "会议 年度总结",
+                Some(&Actor::user(7)),
+                10,
+                0,
+                SortOrder::default()
+            )
+            .await
+            .unwrap()
+            .is_empty()
+        );
+    }
+
+    /// 全局命中同样按"每个词都要命中"算，且 ORDER BY 的两档打分与 name_hit/content_hit 同源
+    #[tokio::test]
+    async fn search_hits_ands_terms_and_keeps_ranking() {
+        let repo = setup().await;
+        let content = repo
+            .insert(new_file_named("g1", "笔记.docx", "document", Some(7)))
+            .await
+            .unwrap();
+        repo.set_text_content(content.id, "会议里定了调休规则")
+            .await
+            .unwrap();
+        repo.insert(new_file_named("g2", "会议纪要.docx", "document", Some(7)))
+            .await
+            .unwrap();
+
+        let hits = repo
+            .search_hits(&Actor::user(7), "会议 调休", 10)
+            .await
+            .unwrap();
+        assert_eq!(hits.len(), 1, "g2 没有第二个词、正文也空，不该命中");
+        assert_eq!(hits[0].stored_id, "g1");
+        assert_eq!(hits[0].name_hit, 1, "词没全在文件名里 → 不算文件名命中");
+        assert_eq!(hits[0].content_hit, 1);
+
+        // 词全在文件名里：name_hit=0 且不捎正文
+        let name_only = repo
+            .search_hits(&Actor::user(7), "会议 纪要", 10)
+            .await
+            .unwrap();
+        assert_eq!(name_only.len(), 1);
+        assert_eq!(name_only[0].name_hit, 0);
+        assert!(name_only[0].text_content.is_none());
     }
 }

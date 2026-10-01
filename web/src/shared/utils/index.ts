@@ -12,6 +12,7 @@ export * from "./format/delimited.ts";
 export * from "./format/text.ts";
 export * from "./format/time.ts";
 export * from "./greeting.ts";
+export * from "./highlight.ts";
 export * from "./icon.ts";
 export * from "./keyboard.ts";
 export * from "./result.ts";

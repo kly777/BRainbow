@@ -6,10 +6,13 @@ import styles from "../FileList.module.css";
 import FileItemActions from "./FileItemActions.tsx";
 import FileMeta from "./FileMeta.tsx";
 import FileTags from "./FileTags.tsx";
+import HighlightedText from "./HighlightedText.tsx";
 
 /** 卡片展示态：文件名 + 私密标记 + 元信息 + 标签 + 操作区 */
 export default function FileCardView(props: {
 	item: FileItem;
+	/** 当前搜索词（空 = 不在搜索）：命中词要高亮，与面板/搜索页同一套规则 */
+	query: string;
 	onOpen: () => void;
 	onStartRename: (item: FileItem) => void;
 	onDelete: (storedId: string) => void;
@@ -20,7 +23,10 @@ export default function FileCardView(props: {
 				{/* 文件名在卡片里是单行截断的，hover 补全完整名称 */}
 				<Tooltip label={props.item.original_name} class={styles.nameTipHost}>
 					<button type="button" class={styles.nameBtn} onClick={props.onOpen}>
-						{props.item.original_name}
+						<HighlightedText
+							text={props.item.original_name}
+							query={props.query}
+						/>
 					</button>
 				</Tooltip>
 				<Show when={props.item.is_private}>
@@ -35,7 +41,7 @@ export default function FileCardView(props: {
 					{(snippet) => (
 						<p class={styles.matchSnippet}>
 							<span class={styles.matchSnippetLabel}>正文</span>
-							{snippet()}
+							<HighlightedText text={snippet()} query={props.query} />
 						</p>
 					)}
 				</Show>

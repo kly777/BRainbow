@@ -39,7 +39,7 @@ function SuggestionItem(props: {
 				<span
 					class={styles.sugDesc}
 					// 这里用 innerHTML 是刻意的：命中的关键词要加 <mark>；内容在
-					// suggestions 侧已经做过 HTML 实体转义（见 lib 的 highlight 逻辑）
+					// 组装建议时已经先转义再插标记（见 shared/utils/highlight.ts）
 					innerHTML={props.item.highlightedDesc}
 				/>
 			) : (

@@ -492,6 +492,16 @@
 	margin-right: var(--space-2xs);
 }
 
+/* 搜索命中词（name-btn / match-snippet 里由 highlightKeywords 注入的 <mark>）：
+   与搜索页、命令面板同一套令牌（那边各自 scoped 一份，这里是第三处） */
+.name-btn mark,
+.match-snippet mark {
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-ink);
+	border-radius: var(--radius-xs);
+	padding: 0 0.125em;
+}
+
 /* 列表行的行内缺失标记 */
 .missing-tag {
 	color: var(--t-color-danger);

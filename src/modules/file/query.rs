@@ -10,7 +10,9 @@ use super::repository::{FileRepository, FileSearchHit};
 use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
-use crate::shared::search::{SearchHit, SearchPort, SearchTarget, normalize_search, snippet};
+use crate::shared::search::{
+    SearchHit, SearchPort, SearchTarget, anchor_term, clamp_search_limit, snippet, trim_query,
+};
 
 /// 可见性判定：公开文件人人可见；私密文件仅上传者与 admin。
 /// `viewer` 为 `None`（未认证）时只能看到公开文件。
@@ -247,9 +249,10 @@ impl FileQueryService {
                 .await
                 .map_err(ServiceError::Db)?;
             for hit in &hits {
-                // 文件名命中的行 `text_hit` 是 NULL：标题已经说明白了，不必再给片段
+                // 文件名命中的行 `text_hit` 是 NULL：标题已经说明白了，不必再给片段。
+                // 片段围着"文本里最早出现的那个词"展开（多词查询时它才是读者要看的地方）
                 if let Some(text) = &hit.text_hit {
-                    snippets.insert(hit.file.id, snippet(text, q));
+                    snippets.insert(hit.file.id, snippet(text, anchor_term(text, q)));
                 }
             }
             (
@@ -334,7 +337,8 @@ impl FileQueryService {
 /// 元信息键，都没有才展示「分类 · 大小」规格。
 fn search_snippet(hit: &FileSearchHit, kw: &str) -> String {
     if let Some(text) = &hit.text_content {
-        return snippet(text, kw);
+        // 多词查询有多个命中词：围着文本里**最早出现**的那个切上下文
+        return snippet(text, anchor_term(text, kw));
     }
     if hit.name_hit != 0 {
         if let Some(tag) = hit.matched_tag.as_deref() {
@@ -378,12 +382,12 @@ impl SearchPort for FileQueryService {
         q: &str,
         limit: i64,
     ) -> Result<Vec<SearchHit>, ServiceError> {
-        let Some((like, kw, cap)) = normalize_search(q, limit) else {
+        let Some(kw) = trim_query(q) else {
             return Ok(vec![]);
         };
         let rows = self
             .repo
-            .search_hits(actor, &like, cap)
+            .search_hits(actor, kw, clamp_search_limit(limit))
             .await
             .map_err(ServiceError::Db)?;
 

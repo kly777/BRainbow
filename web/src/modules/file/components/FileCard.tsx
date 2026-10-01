@@ -58,6 +58,8 @@ export interface FileCardActions {
  */
 const FileCard: Component<{
 	item: FileItem;
+	/** 当前搜索词（空 = 不在搜索）：命中词要高亮 */
+	query: string;
 	editing: boolean;
 	highlighted: boolean;
 	selectMode: boolean;
@@ -96,6 +98,7 @@ const FileCard: Component<{
 			fallback={
 				<FileCardView
 					item={props.item}
+					query={props.query}
 					onOpen={props.actions.onOpen}
 					onStartRename={props.actions.onStartRename}
 					onDelete={props.actions.onDelete}

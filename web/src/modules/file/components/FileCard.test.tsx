@@ -40,6 +40,7 @@ const noop = () => {};
 function cardProps(over: Partial<CardProps> = {}): CardProps {
 	return {
 		item: item(),
+		query: "",
 		editing: false,
 		highlighted: false,
 		selectMode: false,
@@ -63,6 +64,7 @@ function cardProps(over: Partial<CardProps> = {}): CardProps {
 function rowProps(over: Partial<RowProps> = {}): RowProps {
 	return {
 		item: item(),
+		query: "",
 		highlighted: false,
 		selectMode: false,
 		selected: false,
@@ -172,6 +174,26 @@ describe("FileCard", () => {
 		const plain = mount(() => <FileCard {...cardProps()} />);
 		expect(plain.textContent).not.toContain("会上定了三件事");
 	});
+
+	it("带搜索词时命中处包 <mark>（文件名与正文片段），文字本身不变", () => {
+		const host = mount(() => (
+			<FileCard
+				{...cardProps({
+					item: item({
+						original_name: "会议记录.docx",
+						match_snippet: "会上定了报销与排期",
+					}),
+					query: "会议 报销",
+				})}
+			/>
+		));
+		const marks = [...host.querySelectorAll("mark")].map((m) => m.textContent);
+		expect(marks).toContain("会议"); // 文件名命中
+		expect(marks).toContain("报销"); // 正文片段命中
+		// 高亮不改变读到的文字
+		expect(host.textContent).toContain("会议记录.docx");
+		expect(host.textContent).toContain("会上定了报销与排期");
+	});
 });
 
 describe("FileRow", () => {
@@ -219,5 +241,18 @@ describe("FileRow", () => {
 			/>
 		));
 		expect(host.textContent).toContain("会上定了三件事：报销");
+	});
+
+	it("带搜索词时文件名里的命中处包 <mark>", () => {
+		const host = mount(() => (
+			<FileRow
+				{...rowProps({
+					item: item({ original_name: "会议记录.docx" }),
+					query: "会议",
+				})}
+			/>
+		));
+		expect(host.querySelector("mark")?.textContent).toBe("会议");
+		expect(host.textContent).toContain("会议记录.docx");
 	});
 });

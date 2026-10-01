@@ -31,6 +31,37 @@ pub fn normalize_search(q: &str, limit: i64) -> Option<(String, &str, i64)> {
     Some((like_contains(kw), kw, clamp_search_limit(limit)))
 }
 
+/// 多词查询的 LIKE 模式：按空白拆词，每个词各转一个 `%词%`（通配符已转义）。
+///
+/// **多词 = AND**：每个词都要命中，但允许落在不同字段（文件名命中一个、正文命中另一个
+/// 也算）。这与走 FTS 的那几个模块一致 —— `fts_query` 把词用空格连起来，而 FTS5 的
+/// 空格本身就是 AND。收益是"types programming"能搜到
+/// 《Types and Programming Languages》，而按整串匹配（`%types programming%`）搜不到。
+///
+/// 空查询返回空列表；调用方要保证只把**非空**词表交给拼 WHERE 的地方
+/// （空词表会拼出残缺的 `AND ()`）。
+pub fn like_terms(kw: &str) -> Vec<String> {
+    kw.split_whitespace().map(like_contains).collect()
+}
+
+/// 片段中心词：多词查询里挑**文本中最早出现**的那个词来切上下文 ——
+/// 片段要围着读者最可能看的地方展开；一个都没出现（命中来自标签/元信息等）
+/// 就退回第一个词，与单关键词时的行为一致。
+pub fn anchor_term<'a>(text: &str, kw: &'a str) -> &'a str {
+    let lower = text.to_lowercase();
+    let mut best: Option<(usize, &'a str)> = None;
+    for term in kw.split_whitespace() {
+        if let Some(pos) = lower.find(&term.to_lowercase())
+            && best.is_none_or(|(best_pos, _)| pos < best_pos)
+        {
+            best = Some((pos, term));
+        }
+    }
+    best.map(|(_, term)| term)
+        .or_else(|| kw.split_whitespace().next())
+        .unwrap_or(kw)
+}
+
 /// FTS5 查询最低字符数（trigram tokenizer 需要至少 3 个字符才能匹配）。
 pub const FTS_MIN_QUERY_LEN: usize = 3;
 
@@ -270,5 +301,28 @@ mod tests {
         assert_eq!(clamp_search_limit(-5), 1);
         assert_eq!(clamp_search_limit(SEARCH_LIMIT_CAP + 1), SEARCH_LIMIT_CAP);
         assert_eq!(clamp_search_limit(7), 7);
+    }
+
+    #[test]
+    fn like_terms_splits_escapes_and_keeps_order() {
+        assert_eq!(like_terms("types programming"), vec!["%types%", "%programming%"]);
+        // 通配符照样转义（与单关键词一条口径）
+        assert_eq!(like_terms("  50%  _x "), vec!["%50\\%%", "%\\_x%"]);
+        assert!(like_terms("   ").is_empty());
+    }
+
+    #[test]
+    fn anchor_term_prefers_the_earliest_hit_in_text() {
+        // 两个词都在文本里：取出现更早的那个（片段围着它展开）
+        assert_eq!(
+            anchor_term("先有调休，后有报销的规则", "报销 调休"),
+            "调休"
+        );
+        // 只有一个词在文本里：用它
+        assert_eq!(anchor_term("只有报销", "报销 调休"), "报销");
+        // 一个都没出现（命中来自标签/元信息）：退回第一个词
+        assert_eq!(anchor_term("无关正文", "报销 调休"), "报销");
+        // 单关键词：就是它自己（与旧行为一致）
+        assert_eq!(anchor_term("无关正文", "报销"), "报销");
     }
 }

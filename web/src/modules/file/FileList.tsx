@@ -297,6 +297,7 @@ const FileListPage: Component = () => {
 									fallback={
 										<FileRow
 											item={item}
+											query={f.search()}
 											highlighted={f.highlightId() === item.stored_id}
 											selectMode={f.selectMode()}
 											selected={f.selected().has(item.stored_id)}
@@ -311,6 +312,7 @@ const FileListPage: Component = () => {
 								>
 									<FileCard
 										item={item}
+										query={f.search()}
 										editing={f.editingId() === item.stored_id}
 										highlighted={f.highlightId() === item.stored_id}
 										selectMode={f.selectMode()}

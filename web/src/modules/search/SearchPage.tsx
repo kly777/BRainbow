@@ -1,5 +1,6 @@
 import { Input } from "@components/ui";
 import styles from "@modules/search/SearchPage.module.css";
+import { highlightKeywords } from "@shared/utils";
 import { useNavigate, useSearchParams } from "@solidjs/router";
 import { createEffect, createSignal, For, Show } from "solid-js";
 import {
@@ -8,7 +9,6 @@ import {
 	type SearchHit,
 	searchE,
 } from "./api.ts";
-import { highlightKeywords } from "./lib/highlight.ts";
 
 const MODULES = [
 	{ key: "all", label: "全部" },

@@ -80,11 +80,11 @@
 }
 
 .input {
-	/* 基础形态来自 Control 原语；保留 flex 布局、更大的字号与内边距、以及
+	/* 基础形态来自 Control 原语；保留 flex 布局、更大的内边距、以及
 	   SearchInput 不接受的 bg 底色（:where() 使其无需担心顺序） */
 	flex: 1;
 	padding: var(--space-md) var(--space-2xl) var(--space-md) var(--space-lg);
-	font-size: var(--text-base);
+	font-size: var(--text-sm);
 	background: var(--t-color-bg);
 }
 
@@ -156,7 +156,7 @@
 }
 
 .item-title {
-	font-size: var(--text-base);
+	font-size: var(--text-sm);
 	font-weight: 600;
 	color: var(--t-color-ink);
 	margin-bottom: var(--space-xs);

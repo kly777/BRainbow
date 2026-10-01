@@ -52,7 +52,7 @@
 }
 
 .input {
-	font-size: var(--text-base);
+	font-size: var(--text-sm);
 }
 
 .input::placeholder {

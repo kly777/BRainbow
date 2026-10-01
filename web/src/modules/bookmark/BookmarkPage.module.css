@@ -374,7 +374,7 @@
 	transition:
 		border-color var(--t-transition-fast),
 		box-shadow var(--t-transition-fast);
-	font-size: var(--text-base);
+	font-size: var(--text-sm);
 }
 
 .form-input:focus {

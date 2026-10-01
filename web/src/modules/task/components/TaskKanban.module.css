@@ -52,7 +52,7 @@
 }
 
 .column-label {
-	font-size: var(--text-base);
+	font-size: var(--text-sm);
 	font-weight: 600;
 	color: var(--t-color-ink);
 	flex: 1;

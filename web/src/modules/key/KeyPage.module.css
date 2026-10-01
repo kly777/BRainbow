@@ -20,7 +20,7 @@
 }
 
 .card-title {
-	font-size: var(--text-base);
+	font-size: var(--text-sm);
 	color: var(--t-color-ink);
 	margin: 0;
 }

@@ -83,7 +83,7 @@
 }
 
 .card-title {
-	font-size: var(--text-base);
+	font-size: var(--text-sm);
 	font-weight: 600;
 	min-width: 0;
 	overflow-wrap: break-word;

@@ -35,7 +35,7 @@
 
 .input {
 	border-radius: var(--radius-sm);
-	font-size: var(--text-base);
+	font-size: var(--text-sm);
 }
 
 .input::placeholder {
@@ -44,7 +44,6 @@
 
 .textarea {
 	border-radius: var(--radius-sm);
-	font-size: var(--text-base);
 }
 
 .actions {
@@ -80,7 +79,7 @@
 }
 
 .item-name {
-	font-size: var(--text-base);
+	font-size: var(--text-sm);
 	font-weight: 600;
 }
 

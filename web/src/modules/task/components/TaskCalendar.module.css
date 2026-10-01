@@ -30,7 +30,7 @@
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
 	cursor: pointer;
-	font-size: var(--text-base);
+	font-size: var(--text-sm);
 	transition:
 		background var(--t-transition-fast),
 		border-color var(--t-transition-fast),

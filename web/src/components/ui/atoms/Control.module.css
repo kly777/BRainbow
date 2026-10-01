@@ -13,6 +13,8 @@
  * 这正是 composes 方案栽过的地方（同特异度 + 顺序不可控，见
  * doc/frontend-ui-architecture.md §10.1），此处用 :where() 从根上避开。
  * 修饰类（.size-* / .tone-* / .invalid）保持正常特异度 (0,1,0)，故能覆盖基础类。
+ * **唯一例外是 font-size** —— 它得压过 global.css 里 normalize 的元素选择器，
+ * 见下方 .control 的说明。
  *
  * 焦点态**不在本文件声明**：tokens.css 的全局 input/textarea/select:focus
  * 规则已统一提供（accent 边框 + --t-ring-accent），见同文档 P1-4。 */
@@ -27,11 +29,25 @@
 	background: var(--t-color-surface);
 	color: var(--t-color-ink);
 	font-family: inherit;
-	font-size: var(--text-sm);
 	outline: none;
 	transition:
 		border-color var(--t-transition-fast),
 		box-shadow var(--t-transition-fast);
+}
+
+/* 字号**不能**留在 :where() 里：global.css 的 normalize 有一条
+ * `button, input, optgroup, select, textarea { font-size: 100% }`（特异度 (0,0,1)），
+ * 它压过 (0,0,0) —— 于是上面那行 font-size 从来没生效过，基于
+ * <Input>/<Select>/<Textarea> 的控件全部渲染成"继承来的" 16px，只有模块自写
+ * font-size 的才正常（实测 2026-10-01：/file 的搜索框与排序下拉、/task 的搜索框
+ * 都是 16px，而同页模块自写的输入框是 14px —— 这正是"控件偏大"的观感来源）。
+ * 单类选择器 (0,1,0) 压得过元素选择器；档位修饰类 .size-* 与它同权、在本文件内
+ * 后声明，照旧生效。
+ * 代价：**调用方要覆盖字号必须写 element + class**（如 `input.field`）—— 与基础类
+ * 同权时胜负取决于两个 CSS Module 在产物里的先后顺序，不可依赖。其余属性仍在
+ * :where() 里，调用方传入的类照旧必定覆盖。 */
+.control {
+	font-size: var(--text-sm);
 }
 
 :where(.control)::placeholder {

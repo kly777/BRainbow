@@ -60,7 +60,7 @@
 
 .card-name {
 	font-family: var(--t-font-display);
-	font-size: var(--text-base);
+	font-size: var(--text-sm);
 	font-weight: 600;
 	color: var(--t-color-ink);
 	margin-bottom: var(--space-xs);

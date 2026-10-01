@@ -30,6 +30,53 @@ use super::schema::create_tables;
 /// 程序支持的最新 schema 版本
 pub const LATEST_USER_VERSION: i64 = 20;
 
+/// 迁移链用 `ALTER TABLE … ADD COLUMN` 加过的列：(表, 列)。
+///
+/// **维护约定（「新增列/表」的收尾一步）：新增迁移加列时，把列登记到这里。**
+///
+/// 唯一消费者是 `db::tests::upgrade_path_reproduces_migrated_column_definitions`：
+/// 它先把这些列从基线库里删掉，逼迁移链**真的去执行**那些 ALTER，再与新建库逐列比对
+/// 类型 / NOT NULL / 默认值 / 生成列。为什么必须绕这一圈 ——
+/// `fresh_db_baseline_equals_the_full_migration_chain` 的两侧都要先跑 `create_tables`，
+/// 那时列已存在，ALTER 全被跳过；新库路径更是整条链都不跑。也就是说**迁移里的列定义
+/// 从来没被执行过一次**，它与基线漂移没有守卫（实测：把 v13 的 `DEFAULT 0` 改成
+/// `DEFAULT 7`，那条等价性测试照样绿）。漏登记 = 这条测试覆盖不到这一列。
+#[cfg(test)]
+pub(crate) const ADDED_COLUMNS: &[(&str, &str)] = &[
+    ("chat_tree", "kind"),                    // v3
+    ("chat_node", "reasoning"),               // v4
+    ("signifier_signified", "weight"),        // v5
+    ("signifier_signified", "relation_type"), // v5
+    ("reading_article", "notes"),             // v6
+    ("revlog", "duration_secs"),              // v7
+    ("chunk", "user_id"),                     // v11
+    ("mem", "user_id"),                       // v11
+    ("onto", "user_id"),                      // v11
+    ("signifier_signified", "user_id"),       // v11
+    ("text_note", "user_id"),                 // v11
+    ("bookmark", "user_id"),                  // v11
+    ("bookmark_tag", "user_id"),              // v11
+    ("reading_article", "user_id"),           // v11
+    ("reading_user_word", "user_id"),         // v11
+    ("conv_titles", "user_id"),               // v11
+    ("articles", "user_id"),                  // v11
+    ("bookmark", "visit_count"),              // v13
+    ("file", "content_hash"),                 // v16
+    ("file", "is_private"),                   // v18
+    ("file", "category"),                     // v19
+];
+
+/// [`ADDED_COLUMNS`] 里**无法靠删列验证**的列：被 AFTER 触发器引用，SQLite 拒绝
+/// `DROP COLUMN`（实测报 `no such column: NEW.created_at`）。
+///
+/// 这类列的默认值漂移无害：时间归一化触发器在写入时就把值改写成规范格式，
+/// 与基线默认值是否字面相同无关（覆盖完整性由 `time_columns_cover_all_timestamp_columns`
+/// 钉住）。等价性测试会断言这里的每一列**确实**在 `schema::TIME_COLUMNS` 里 ——
+/// 免得"删不掉"被当成万能借口。
+#[cfg(test)]
+pub(crate) const ADDED_COLUMNS_UNDROPPABLE: &[(&str, &str)] =
+    &[("signifier_signified", "created_at")]; // v5
+
 /// 迁移统一入口。
 ///
 /// - 新库（user_version = 0）：先建基线 schema，再逐版本走到最新；

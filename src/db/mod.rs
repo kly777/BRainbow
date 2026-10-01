@@ -26,8 +26,11 @@ pub use migrations::migrate;
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::helpers::column_exists;
-    use super::migrations::{LATEST_USER_VERSION, apply_full_chain_for_test, migrate};
-    use super::schema::create_tables;
+    use super::migrations::{
+        ADDED_COLUMNS, ADDED_COLUMNS_UNDROPPABLE, LATEST_USER_VERSION, apply_full_chain_for_test,
+        migrate,
+    };
+    use super::schema::{TIME_COLUMNS, create_tables};
     use sqlx::SqlitePool;
 
     /// `sqlite_master` 的结构快照（表 / 索引 / 触发器 / 视图 + 各自的 DDL），
@@ -91,6 +94,129 @@ mod tests {
             trigger_order(&chain),
             "触发器的创建顺序不一致（决定 AFTER 触发器的触发顺序）"
         );
+    }
+
+    /// **升级路径 ≡ 新建库**：迁移链里那些 `ALTER TABLE … ADD COLUMN` 的列定义，
+    /// 在此之前**从来没被执行过一次**（见 [`ADDED_COLUMNS`] 的说明）。
+    ///
+    /// 做法：把迁移加过的列从基线库里删掉（连引用它的索引），`user_version` 退回 1，
+    /// 让 `migrate()` 真的跑 v2…v20，再与「纯基线」的库逐列比对。
+    /// 它把「迁移里写的列定义 == 基线里的列定义」从人工约定变成可执行断言：
+    /// 类型、NOT NULL、默认值、生成列表达式，任何一项漂了都会红。
+    #[tokio::test]
+    async fn upgrade_path_reproduces_migrated_column_definitions() {
+        let fresh = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        create_tables(&fresh).await.unwrap();
+
+        let upgraded = SqlitePool::connect("sqlite::memory:").await.unwrap();
+        create_tables(&upgraded).await.unwrap();
+
+        for (table, column) in ADDED_COLUMNS {
+            drop_column(&upgraded, table, column).await;
+        }
+
+        // 例外清单只许装时间列：它们由归一化触发器兜底，默认值文本无关紧要。
+        for (table, column) in ADDED_COLUMNS_UNDROPPABLE {
+            assert!(
+                TIME_COLUMNS
+                    .iter()
+                    .any(|(t, _, cols)| t == table && cols.contains(column)),
+                "{table}.{column} 既不能删列验证、也不在 TIME_COLUMNS 里 —— 没有任何守卫覆盖它"
+            );
+        }
+
+        // v19 之前的老库里 file 是 `file_category` 普通列，v15 的索引 DDL 也引用它。
+        // 补回这一列，链就能在"老形状"上跑完（v19 会把它删掉换成生成列）。
+        sqlx::query("ALTER TABLE file ADD COLUMN file_category TEXT NOT NULL DEFAULT 'other'")
+            .execute(&upgraded)
+            .await
+            .unwrap();
+
+        sqlx::query("PRAGMA user_version = 1")
+            .execute(&upgraded)
+            .await
+            .unwrap();
+        migrate(&upgraded).await.unwrap();
+
+        let fresh_defs = column_defs(&fresh).await;
+        let upgraded_defs = column_defs(&upgraded).await;
+        assert!(
+            fresh_defs == upgraded_defs,
+            "老库升级后的列定义与新建库不一致（迁移里的 ALTER 与基线漂移了）\n\
+             只有新建库: {:?}\n只有升级库: {:?}",
+            only_in(&fresh_defs, &upgraded_defs),
+            only_in(&upgraded_defs, &fresh_defs)
+        );
+
+        // 对象清单（表/索引/触发器/视图）也要齐 —— 删列时连带删掉的索引必须被链重建
+        let fresh_objects = object_names(&fresh).await;
+        let upgraded_objects = object_names(&upgraded).await;
+        assert!(
+            fresh_objects == upgraded_objects,
+            "老库升级后的对象清单与新建库不一致\n\
+             只有新建库: {:?}\n只有升级库: {:?}",
+            only_in(&fresh_objects, &upgraded_objects),
+            only_in(&upgraded_objects, &fresh_objects)
+        );
+    }
+
+    /// 只报差异 —— 两边各 300+ 列，整份打出来没人看得下去。
+    fn only_in<'a>(left: &'a [String], right: &'a [String]) -> Vec<&'a String> {
+        left.iter().filter(|item| !right.contains(item)).collect()
+    }
+
+    /// 每列的定义快照（按 `表.列` 排序）。
+    ///
+    /// **不比列顺序**：老库的列是 `ALTER` 追加在末尾的（真实老库本来就如此），
+    /// 而代码一律按列名取值，顺序无关。
+    async fn column_defs(pool: &SqlitePool) -> Vec<String> {
+        sqlx::query_scalar(
+            "SELECT m.name || '.' || x.name || ' ' || x.type || ' nn=' || x.\"notnull\" \
+                    || ' dflt=' || COALESCE(x.dflt_value, '-') || ' hid=' || x.hidden \
+             FROM sqlite_master m JOIN pragma_table_xinfo(m.name) x \
+             WHERE m.type = 'table' AND m.name NOT LIKE 'sqlite_%' \
+             ORDER BY m.name, x.name",
+        )
+        .fetch_all(pool)
+        .await
+        .unwrap()
+    }
+
+    /// 对象清单（`类型 名字`，按类型+名字排序 —— 创建顺序由
+    /// `fresh_db_baseline_equals_the_full_migration_chain` 单独盯）。
+    async fn object_names(pool: &SqlitePool) -> Vec<String> {
+        sqlx::query_scalar(
+            "SELECT type || ' ' || name FROM sqlite_master \
+             WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name",
+        )
+        .fetch_all(pool)
+        .await
+        .unwrap()
+    }
+
+    /// 删列：SQLite 不允许删被索引引用的列，先把引用它的显式索引删掉
+    /// （链会把它们重建回来 —— 对象清单断言盯着这一点）。
+    async fn drop_column(pool: &SqlitePool, table: &str, column: &str) {
+        let indexes: Vec<String> = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+            "SELECT il.name FROM pragma_index_list('{table}') il \
+             JOIN pragma_index_info(il.name) ii \
+             WHERE ii.name = '{column}' AND il.origin = 'c'"
+        )))
+        .fetch_all(pool)
+        .await
+        .unwrap();
+        for index in indexes {
+            sqlx::query(sqlx::AssertSqlSafe(format!("DROP INDEX \"{index}\"")))
+                .execute(pool)
+                .await
+                .unwrap();
+        }
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "ALTER TABLE {table} DROP COLUMN {column}"
+        )))
+        .execute(pool)
+        .await
+        .unwrap();
     }
 
     async fn user_version(pool: &SqlitePool) -> i64 {

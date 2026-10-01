@@ -99,6 +99,12 @@ html {
 	   字号刻意不写死：所有 rem 相对根字号，
 	   字号档位（shared/styles/theme.ts 的 fontScales）靠改根字号实现 */
 	font-family: var(--t-font-body);
+
+	/* 汉字没有斜体面：`font-style: italic` 落到汉字上，浏览器只能把字形**机械倾斜**
+	   （伪斜体，笔画被拉斜）。这条关掉"合成倾斜"—— 汉字保持直立，拉丁照旧用真斜体。
+	   代价是中文的斜体强调就此失去视觉区分，补偿在 markdown.css 的 em（着重号）。
+	   chrome 97 / firefox 111 / safari 16.4 起支持，在基线之内。 */
+	font-synthesis-style: none;
 	text-size-adjust: 100%; /* iOS 横竖屏切换时不放大正文 */
 	tab-size: 4;
 }

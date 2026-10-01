@@ -75,9 +75,21 @@
 	color: var(--t-color-ink);
 }
 
+/* 强调：拉丁继续用真斜体；**汉字改用着重号**。
+ *
+ * 汉字没有斜体面，`font-style: italic` 对汉字只能是机械倾斜（伪斜体），
+ * 而全局已经关掉了这种合成（见 global.css 的 font-synthesis-style）——
+ * 于是汉字在 em 里会变得和正文一模一样，强调就没了。中文的强调体例本来是**着重号**
+ * （clreq「着重号」：横排标在字下方、直排标在右侧的圆点），正好补上这一条。
+ *
+ * 为什么不改成"加粗"：那样中文里 *强调* 与 **加粗** 会长得一模一样，
+ * 两个 Markdown 语义就分不开了。着重号与加粗是两种不同的记号。
+ * chrome 99 / firefox 46 / safari 7 起支持，在基线之内。 */
 .markdown-content em,
 .markdown-content i {
 	font-style: italic;
+	text-emphasis: dot;
+	text-emphasis-position: under right; /* 横排在下、直排在右 —— 着重号的体例 */
 }
 
 .markdown-content del {

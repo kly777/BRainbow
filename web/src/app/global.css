@@ -1,16 +1,18 @@
-/* Hallmark · genre: editorial · design-system: design.md · designed-as-app
+/* Swiss · 国际主义设计语言 · designed-as-app
  * ===== 布局常量令牌（不随主题；颜色令牌见 styles/tokens.css） =====
  * 全部使用 rem：跟随浏览器根字号（默认 1rem），用户放大默认字号时全局缩放，
  * 保障可访问性。 */
 :root {
-	/* ── 圆角令牌（xs < sm < md < lg < xl，语义与档位一致） ── */
-	--radius-2xs: 0.125rem;
-	--radius-xs: 0.25rem;
-	--radius-sm: 0.375rem;
-	--radius-md: 0.5rem;
-	--radius-lg: 0.75rem;
-	--radius-xl: 1rem;
-	--radius-2xl: 1.5rem;
+	/* ── 圆角令牌（零圆角世界：结构直角，只有控件 2px 倒角、状态点/胶囊是圆） ──
+	 * 除 --radius-sm / --radius-full 外的名字先归零（过渡期），模块清扫时逐处替换
+	 * 为 0 / --radius-sm 并删除多余名字 —— 值先行保证全站立刻直角。 */
+	--radius-2xs: 0;
+	--radius-xs: 0;
+	--radius-sm: 0.125rem;
+	--radius-md: 0;
+	--radius-lg: 0;
+	--radius-xl: 0;
+	--radius-2xl: 0;
 	--radius-full: 999px;
 
 	/* ── 控件高度三档（同行控件必须同档；几何门禁 e2e/specs/control-heights.spec.ts） ── */
@@ -31,6 +33,9 @@
 	--space-xl: 1.5rem;
 	--space-2xl: 2rem;
 	--space-3xl: 2.5rem;
+
+	/* 内容网格沟槽（12 列网格与卡片网格共用；窄屏在断点里换 --space-lg） */
+	--grid-gap: var(--space-xl);
 	--text-2xs: 0.625rem;
 	--text-xs: 0.75rem;
 	--text-sm: 0.875rem;
@@ -40,10 +45,11 @@
 	--text-2xl: 1.75rem;
 	--text-3xl: 2.125rem;
 
-	/* ── 过渡令牌（统一交互反馈；含时长与缓动，直接作 transition 值） ── */
-	--t-transition-fast: 120ms cubic-bezier(0.2, 0, 0, 1);
-	--t-transition-normal: 200ms cubic-bezier(0.2, 0, 0, 1);
-	--t-transition-slow: 300ms cubic-bezier(0.2, 0, 0, 1);
+	/* ── 过渡令牌（统一交互反馈；含时长与缓动，直接作 transition 值） ──
+	 * 瑞士语音：直出、无弹跳（90/140/220ms） */
+	--t-transition-fast: 90ms cubic-bezier(0.2, 0, 0, 1);
+	--t-transition-normal: 140ms cubic-bezier(0.2, 0, 0, 1);
+	--t-transition-slow: 220ms cubic-bezier(0.2, 0, 0, 1);
 
 	/* ── 层级令牌（新组件不再猜数字；顺序即堆叠优先级） ── */
 	--z-sticky: 10; /* sticky 头部 / 面板吸顶栏 */
@@ -59,11 +65,13 @@
 	--leading-normal: 1.6; /* 正文默认 */
 	--leading-relaxed: 1.8; /* 阅读长文 */
 
-	/* ── 动画令牌（入场统一缓动；motion-cut：无弹跳贝塞尔） ── */
+	/* ── 动画令牌（入场统一缓动；motion-cut：无弹跳贝塞尔） ──
+	 * 入场一律 ≤220ms 的轻微淡入；「上浮/缩放弹入」类演出在清扫阶段逐处摘除，
+	 * 这里先把时长压到瑞士档（名字过渡期保留）。 */
 	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-	--duration-fade-in: 400ms;
-	--duration-slide-up: 500ms;
-	--duration-scale-in: 350ms;
+	--duration-fade-in: 140ms;
+	--duration-slide-up: 180ms;
+	--duration-scale-in: 140ms;
 }
 
 /* ════════════════════════════════════════════════════════════════
@@ -124,13 +132,13 @@ body {
 	margin: 0;
 }
 
-/* ── 展示字体：标题层全局走 display 面（editorial 语音的核心载体） ── */
+/* ── 标题层：与正文同一个无衬线家族（display == body），强调靠字重与负字距 ── */
 h1,
 h2,
 h3 {
 	font-family: var(--t-font-display);
-	font-weight: 600;
-	letter-spacing: -0.01em;
+	font-weight: 700;
+	letter-spacing: -0.02em;
 }
 
 /* ── 表单控件：浏览器给的是 UA 字族字号，必须显式继承 ──
@@ -157,8 +165,7 @@ code,
 kbd,
 samp,
 pre {
-	font-family:
-		ui-monospace, sfmono-regular, consolas, "Liberation Mono", menlo, monospace;
+	font-family: var(--t-font-mono);
 	font-size: 1em;
 }
 

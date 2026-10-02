@@ -17,7 +17,7 @@ vi.mock("@shared/styles", () => ({
 	themes: {
 		paper: { swatches: ["#ffffff", "#f0f0f0"] },
 		midnight: { swatches: ["#000000", "#333333"] },
-		ocean: { swatches: ["#0077b6", "#00b4d8"] },
+		auto: { swatches: ["#ffffff", "#000000"] },
 	},
 }));
 
@@ -55,7 +55,7 @@ describe("color module", () => {
 		expect(themes).toBeDefined();
 		expect(themes.paper).toBeDefined();
 		expect(themes.midnight).toBeDefined();
-		expect(themes.ocean).toBeDefined();
+		expect(themes.auto).toBeDefined();
 
 		// 验证每个主题都有swatches属性
 		Object.values(themes).forEach((theme) => {

@@ -1,25 +1,21 @@
 /**
  * theme.ts — 主题切换逻辑（纯函数，localStorage 持久化）
  *
- * 主题通过 <html data-theme="paper|midnight|ocean"> 生效，
- * 变量定义见 styles/tokens.css。
+ * 主题通过 <html data-theme="paper|midnight"> 生效（两套实底 + auto），
+ * 变量定义见 styles/tokens.css。规格见 doc/design/swiss-design-language.md。
  */
 export const themes = {
 	paper: {
-		label: "暖纸 · 目录绿",
-		swatches: ["oklch(0.99 0.004 95)", "oklch(0.52 0.1 165)"],
+		label: "白纸 · 目录绿",
+		swatches: ["oklch(1 0 0)", "oklch(0.48 0.09 165)"],
 	},
 	midnight: {
-		label: "暗夜 · 墨绿",
-		swatches: ["oklch(0.21 0.014 260)", "oklch(0.68 0.12 165)"],
-	},
-	ocean: {
-		label: "冷蓝 · 晴空",
-		swatches: ["oklch(0.99 0.003 250)", "oklch(0.55 0.18 255)"],
+		label: "墨黑 · 目录绿",
+		swatches: ["oklch(0.15 0 0)", "oklch(0.72 0.1 165)"],
 	},
 	auto: {
 		label: "跟随系统",
-		swatches: ["oklch(0.99 0.004 95)", "oklch(0.21 0.014 260)"],
+		swatches: ["oklch(1 0 0)", "oklch(0.15 0 0)"],
 	},
 } as const;
 

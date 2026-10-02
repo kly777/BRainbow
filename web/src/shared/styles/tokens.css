@@ -1,8 +1,11 @@
-/* Hallmark · genre: editorial · design-system: design.md · designed-as-app
+/* Swiss · 国际主义设计语言 · designed-as-app
  * ===== 语义化设计令牌 =====
  *
  * --t-color-* / --t-font-*：组件契约（组件样式统一 var(--t-*) 引用）。
- * --space-* / --radius-* / --text-*：布局常量（global.css 定义，不随主题）。
+ * --space-* / --radius-* / --text-* / --control-h-*：布局常量（global.css 定义，不随主题）。
+ *
+ * 规格全文见 doc/design/swiss-design-language.md：白纸墨黑、零投影零圆角、
+ * 一个信号色（目录绿）、反相表达状态。尺度不随主题变（只换颜色）。
  *
  * 硬规则：语义色的阴影/描边/软底一律 color-mix 从实底令牌派生，
  * 组件内禁止内联 oklch/hex（防主题色相泄漏）。
@@ -10,33 +13,42 @@
 
 :root,
 :root[data-theme="paper"] {
-	/* ── 字体（三主题共用；自托管 @fontsource-variable，CSP 安全） ──
+	/* ── 字体（两主题共用；自托管 @fontsource-variable，CSP 安全） ──
 	 *
+	 * 一个无衬线家族（Inter）承担标题与正文：强调靠字重与字距，不靠换字体。
 	 * 正文栈里**三平台各自的中文面都要点名**：不点名，中文就落回浏览器的默认
 	 * 回退（Windows 上通常是宋体），而宋体在屏上笔画会被抗锯齿吃掉 —— 正文读不下去。
 	 * 拉丁面排在中文面之前是有意的：拉丁字体里没有汉字，浏览器自然会往后落到
-	 * 中文面，于是混排时拉丁用 system-ui、汉字用苹方/思源/雅黑，各取各的。 */
+	 * 中文面，于是混排时拉丁用 Inter、汉字用苹方/思源/雅黑，各取各的。
+	 *
+	 * --t-font-numeric 给"数字读数"（计数/统计/时长/日期列）：同一个 Inter 面 +
+	 * tabular-nums（数字等宽对齐是瑞士语音的一部分）；body 已全局开 tabular-nums，
+	 * 这里供需要显式声明字族的地方（表格数字列等）使用。 */
 	--t-font-display:
-		"Fraunces Variable", "Noto Serif SC Variable", georgia, "Songti SC",
-		"SimSun", serif;
+		"Inter Variable", "PingFang SC", "Noto Sans SC", "Microsoft YaHei",
+		system-ui, sans-serif;
+	--t-font-body:
+		"Inter Variable", system-ui, "Segoe UI", "Roboto", "Helvetica", "Arial",
+		"PingFang SC", "Noto Sans SC", "Microsoft YaHei", sans-serif,
+		"Apple Color Emoji", "Segoe UI Emoji";
 	--t-font-mono:
 		"JetBrains Mono Variable", ui-monospace, sfmono-regular, consolas,
 		"Liberation Mono", menlo, monospace;
-	--t-font-body:
-		system-ui, "Segoe UI", "Roboto", "Helvetica", "Arial", "PingFang SC",
-		"Noto Sans SC", "Microsoft YaHei", sans-serif, "Apple Color Emoji",
-		"Segoe UI Emoji";
+	--t-font-numeric:
+		"Inter Variable", system-ui, "Segoe UI", "Roboto", "Helvetica", "Arial",
+		sans-serif;
 
-	/* ── 模块识别色（品牌彩虹族；landing/home 共用，主题无关） ── */
+	/* ── 模块识别色（低彩度刻度色：统一明度 48%、彩度 ≤0.08，只作小面积刻度/图标；
+	     相邻色相在低彩度下会趋同，bookmark 由 80° 转到 45° 保持与 mem 可辨） ── */
 	--m-task: var(--t-color-accent);
-	--m-card: oklch(55% 0.13 160deg);
-	--m-mem: oklch(60% 0.12 85deg);
-	--m-onto: oklch(50% 0.14 255deg);
-	--m-search: oklch(55% 0.16 25deg);
-	--m-chat: oklch(55% 0.12 300deg);
-	--m-bookmark: oklch(55% 0.1 80deg);
-	--m-text: oklch(45% 0.1 200deg);
-	--m-image: oklch(50% 0.12 330deg);
+	--m-card: oklch(48% 0.07 160deg);
+	--m-mem: oklch(48% 0.08 80deg);
+	--m-onto: oklch(48% 0.08 255deg);
+	--m-search: oklch(48% 0.08 25deg);
+	--m-chat: oklch(48% 0.07 300deg);
+	--m-bookmark: oklch(48% 0.08 45deg);
+	--m-text: oklch(48% 0.06 200deg);
+	--m-image: oklch(48% 0.08 330deg);
 
 	/* ── 通用视觉令牌（不随主题） ── */
 	--t-mask-blur: blur(2px);
@@ -46,216 +58,170 @@
 	 * 输入类的消费点是本文件的全局 input/textarea/select:focus 规则。 */
 	--t-ring-accent: 0 0 0 3px var(--t-color-accent-ring);
 
-	/* ── 主题契约：paper（暖纸 · 目录绿，默认） ── */
-	--t-color-bg: oklch(97.2% 0.004 80deg);
-	--t-color-surface: oklch(99.5% 0.002 80deg);
-	--t-color-surface-raised: oklch(95.5% 0.006 80deg);
-	--t-color-ink: oklch(24% 0.008 80deg);
-	--t-color-ink-strong: oklch(16% 0.012 80deg);
-	--t-color-ink-muted: oklch(45% 0.008 80deg);
-	--t-color-ink-faint: oklch(60% 0.006 80deg);
-	--t-color-border: oklch(88.5% 0.006 80deg);
-	--t-color-border-strong: oklch(83% 0.008 80deg);
-	--t-color-accent: oklch(50% 0.08 165deg);
-	--t-color-accent-strong: oklch(42% 0.09 165deg);
-	--t-color-accent-soft: oklch(94% 0.02 165deg);
+	/* 浮层边界环（零投影世界：边界的表达只有 1px 细线） */
+	--ring-float: 0 0 0 1px var(--t-color-border-strong);
+	--ring-float-strong: 0 0 0 2px var(--t-color-border-strong);
+
+	/* ── 主题契约：paper（白纸 · 目录绿，默认） ──
+	 * 灰阶中性无偏色；信号色面积 ≤5%（链接/焦点/当前刻度/选中/信息条）。 */
+	--t-color-bg: oklch(100% 0 0deg);
+	--t-color-surface: oklch(100% 0 0deg);
+	--t-color-surface-raised: oklch(96.5% 0 0deg);
+	--t-color-ink: oklch(18% 0 0deg);
+	--t-color-ink-strong: oklch(12% 0 0deg);
+	--t-color-ink-muted: oklch(42% 0 0deg);
+	--t-color-ink-faint: oklch(58% 0 0deg);
+	--t-color-border: oklch(88% 0 0deg);
+	--t-color-border-strong: oklch(72% 0 0deg);
+	--t-color-accent: oklch(48% 0.09 165deg);
+	--t-color-accent-strong: oklch(40% 0.1 165deg);
+	--t-color-accent-soft: oklch(95% 0.03 165deg);
 	--t-color-white: oklch(100% 0 0deg);
 
 	/* 实底饱和色（accent/danger/warning/success）上的文字/图标 */
 	--t-color-on-solid: oklch(100% 0 0deg);
-	--t-color-accent-ring: oklch(52% 0.1 165deg / 25%);
-	--t-color-overlay: oklch(0% 0 0deg / 50%);
-	--t-color-badge-new-bg: oklch(94% 0.02 270deg);
-	--t-color-badge-new-text: oklch(45% 0.12 270deg);
-	--t-color-badge-learning-bg: oklch(94% 0.03 65deg);
-	--t-color-badge-learning-text: oklch(45% 0.1 60deg);
-	--t-color-badge-review-bg: oklch(94% 0.03 150deg);
-	--t-color-badge-review-text: oklch(40% 0.08 150deg);
-	--t-color-badge-suspended-bg: oklch(94% 0 0deg);
-	--t-color-badge-suspended-text: oklch(50% 0 0deg);
-	--t-color-badge-relearning-bg: oklch(94% 0.03 20deg);
-	--t-color-badge-relearning-text: oklch(42% 0.1 20deg);
-	--t-color-danger: oklch(55% 0.16 25deg);
-	--t-color-danger-subtle: oklch(96.5% 0.008 25deg);
-	--t-color-success: oklch(55% 0.13 160deg);
-	--t-color-success-subtle: oklch(95.5% 0.015 160deg);
-	--t-color-warning: oklch(60% 0.12 85deg);
+	--t-color-accent-ring: oklch(48% 0.09 165deg / 30%);
+	--t-color-overlay: oklch(0% 0 0deg / 55%);
+	--t-color-badge-new-bg: oklch(95% 0.02 270deg);
+	--t-color-badge-new-text: oklch(42% 0.08 270deg);
+	--t-color-badge-learning-bg: oklch(95% 0.03 65deg);
+	--t-color-badge-learning-text: oklch(44% 0.07 60deg);
+	--t-color-badge-review-bg: oklch(95% 0.03 150deg);
+	--t-color-badge-review-text: oklch(40% 0.06 150deg);
+	--t-color-badge-suspended-bg: oklch(95% 0 0deg);
+	--t-color-badge-suspended-text: oklch(48% 0 0deg);
+	--t-color-badge-relearning-bg: oklch(95% 0.03 20deg);
+	--t-color-badge-relearning-text: oklch(42% 0.08 20deg);
+	--t-color-danger: oklch(52% 0.15 25deg);
+	--t-color-danger-subtle: oklch(96% 0.01 25deg);
+	--t-color-success: oklch(50% 0.1 160deg);
+	--t-color-success-subtle: oklch(96% 0.012 160deg);
+	--t-color-warning: oklch(62% 0.1 85deg);
 	--t-color-warning-subtle: oklch(96.5% 0.015 85deg);
 
-	/* ── 阴影令牌（浅色主题） ── */
-	--shadow-sm: 0 1px 0.125rem oklch(0% 0 0deg / 5%);
-	--shadow-md: 0 0.25rem 1rem oklch(0% 0 0deg / 7%);
-	--shadow-lg: 0 0.75rem 2rem oklch(0% 0 0deg / 10%);
-	--shadow-lv3:
-		0 0 1px oklch(0% 0 0deg / 16%), 0 0 4px oklch(0% 0 0deg / 4%),
-		0 12px 32px oklch(0% 0 0deg / 10%);
+	/* ── 阴影令牌：零投影世界，全部为 none ──
+	 * 要边界用 --ring-float / 1px 细线；名字保留到清扫阶段（模块里 148 处
+	 * box-shadow: var(--shadow-*) 会随值一起失效，届时逐处删声明）。 */
+	--shadow-sm: none;
+	--shadow-md: none;
+	--shadow-lg: none;
+	--shadow-lv3: none;
 
-	/* ── 阅读标注语义色（不随主题：认识/不认识/推荐等标记） ── */
-	--t-color-mark-wrong: oklch(45% 0.22 30deg);
-	--t-color-mark-correct: oklch(50% 0.18 150deg);
-	--t-color-mark-teal: oklch(40% 0.1 170deg);
-	--t-color-mark-blue: oklch(50% 0.14 250deg);
-	--t-color-mark-blue-soft: oklch(95% 0.05 250deg / 50%);
-	--t-color-mark-blue-border: oklch(85% 0.08 250deg);
-	--t-color-mark-yellow: oklch(55% 0.16 80deg);
+	/* ── 阅读标注语义色（降彩度后的认识/不认识/推荐等标记） ── */
+	--t-color-mark-wrong: oklch(48% 0.16 30deg);
+	--t-color-mark-correct: oklch(48% 0.12 150deg);
+	--t-color-mark-teal: oklch(42% 0.08 170deg);
+	--t-color-mark-blue: oklch(48% 0.1 250deg);
+	--t-color-mark-blue-soft: oklch(95% 0.03 250deg / 50%);
+	--t-color-mark-blue-border: oklch(85% 0.05 250deg);
+	--t-color-mark-yellow: oklch(56% 0.12 80deg);
 	--toast-error-bg: var(--t-color-danger-subtle);
-	--toast-error-border: oklch(85% 0.06 25deg);
-	--toast-error-text: oklch(30% 0.09 25deg);
+	--toast-error-border: oklch(86% 0.04 25deg);
+	--toast-error-text: oklch(34% 0.07 25deg);
 	--toast-error-icon-bg: var(--t-color-danger);
 	--toast-warning-bg: var(--t-color-warning-subtle);
-	--toast-warning-border: oklch(88% 0.09 85deg);
+	--toast-warning-border: oklch(87% 0.06 85deg);
 	--toast-warning-icon-bg: var(--t-color-warning);
 	--toast-success-bg: var(--t-color-success-subtle);
 	--toast-success-icon-bg: var(--t-color-success);
 	--toast-info-bg: var(--t-color-accent-soft);
 	--toast-info-icon-bg: var(--t-color-accent);
-	--toast-error-code-bg: oklch(55% 0.2 25deg / 12%);
-	--toast-warning-text: oklch(35% 0.08 60deg);
-	--toast-warning-code-bg: oklch(60% 0.16 85deg / 12%);
-	--toast-success-border: oklch(85% 0.08 160deg);
-	--toast-success-text: oklch(30% 0.08 160deg);
-	--toast-success-code-bg: oklch(55% 0.17 160deg / 12%);
-	--toast-info-border: oklch(85% 0.08 165deg);
-	--toast-info-text: oklch(30% 0.07 165deg);
-	--toast-info-code-bg: oklch(52% 0.1 165deg / 12%);
-	--t-color-danger-strong: oklch(48% 0.18 25deg);
-	--t-color-warning-strong: oklch(52% 0.14 85deg);
+	--toast-error-code-bg: oklch(52% 0.15 25deg / 12%);
+	--toast-warning-text: oklch(38% 0.06 60deg);
+	--toast-warning-code-bg: oklch(62% 0.1 85deg / 12%);
+	--toast-success-border: oklch(86% 0.05 160deg);
+	--toast-success-text: oklch(34% 0.06 160deg);
+	--toast-success-code-bg: oklch(50% 0.1 160deg / 12%);
+	--toast-info-border: oklch(86% 0.05 165deg);
+	--toast-info-text: oklch(34% 0.05 165deg);
+	--toast-info-code-bg: oklch(48% 0.09 165deg / 12%);
+	--t-color-danger-strong: oklch(45% 0.16 25deg);
+	--t-color-warning-strong: oklch(52% 0.12 85deg);
 }
 
 :root[data-theme="midnight"] {
-	/* ── 主题契约：midnight（暗夜 · 墨绿） ── */
-	--t-color-bg: oklch(16.5% 0.008 260deg);
-	--t-color-surface: oklch(20.5% 0.01 260deg);
-	--t-color-surface-raised: oklch(26% 0.012 260deg);
-	--t-color-ink: oklch(93% 0.004 90deg);
-	--t-color-ink-strong: oklch(98% 0.003 90deg);
-	--t-color-ink-muted: oklch(75% 0.006 90deg);
-	--t-color-ink-faint: oklch(60% 0.005 90deg);
-	--t-color-border: oklch(32% 0.01 260deg);
-	--t-color-border-strong: oklch(40% 0.012 260deg);
-	--t-color-accent: oklch(68% 0.1 165deg);
-	--t-color-accent-strong: oklch(76% 0.1 165deg);
-	--t-color-accent-soft: oklch(30% 0.04 165deg);
+	/* ── 主题契约：midnight（墨黑 · 目录绿） ──
+	 * 中性灰阶（去掉旧世界的 260° 冷偏）；信号色为暗底上的亮绿。 */
+	--t-color-bg: oklch(15% 0 0deg);
+	--t-color-surface: oklch(19% 0 0deg);
+	--t-color-surface-raised: oklch(23% 0 0deg);
+	--t-color-ink: oklch(94% 0 0deg);
+	--t-color-ink-strong: oklch(99% 0 0deg);
+	--t-color-ink-muted: oklch(74% 0 0deg);
+	--t-color-ink-faint: oklch(56% 0 0deg);
+	--t-color-border: oklch(30% 0 0deg);
+	--t-color-border-strong: oklch(44% 0 0deg);
+	--t-color-accent: oklch(72% 0.1 165deg);
+	--t-color-accent-strong: oklch(80% 0.1 165deg);
+	--t-color-accent-soft: oklch(28% 0.03 165deg);
 	--t-color-white: oklch(100% 0 0deg);
 
-	/* 暗色主题实底均为亮色（L 68-78%），配深墨字保证对比度（≥6:1） */
-	--t-color-on-solid: oklch(20% 0.015 165deg);
-	--t-color-accent-ring: oklch(68% 0.12 165deg / 25%);
-	--t-color-overlay: oklch(0% 0 0deg / 50%);
-	--t-color-badge-new-bg: oklch(32% 0.03 270deg);
-	--t-color-badge-new-text: oklch(72% 0.09 270deg);
-	--t-color-badge-learning-bg: oklch(34% 0.04 65deg);
-	--t-color-badge-learning-text: oklch(76% 0.08 60deg);
-	--t-color-badge-review-bg: oklch(32% 0.03 150deg);
-	--t-color-badge-review-text: oklch(70% 0.07 150deg);
-	--t-color-badge-suspended-bg: oklch(30% 0 0deg);
-	--t-color-badge-suspended-text: oklch(65% 0 0deg);
-	--t-color-badge-relearning-bg: oklch(34% 0.04 20deg);
-	--t-color-badge-relearning-text: oklch(75% 0.08 20deg);
-	--t-color-danger: oklch(70% 0.12 25deg);
-	--t-color-danger-subtle: oklch(30% 0.02 25deg);
-	--t-color-success: oklch(72% 0.1 160deg);
-	--t-color-success-subtle: oklch(28% 0.02 160deg);
-	--t-color-warning: oklch(78% 0.1 85deg);
-	--t-color-warning-subtle: oklch(32% 0.025 85deg);
+	/* ── 模块识别色（暗底亮一档：统一明度 68%） ── */
+	--m-task: var(--t-color-accent);
+	--m-card: oklch(68% 0.07 160deg);
+	--m-mem: oklch(68% 0.08 80deg);
+	--m-onto: oklch(68% 0.08 255deg);
+	--m-search: oklch(68% 0.08 25deg);
+	--m-chat: oklch(68% 0.07 300deg);
+	--m-bookmark: oklch(68% 0.08 45deg);
+	--m-text: oklch(68% 0.06 200deg);
+	--m-image: oklch(68% 0.08 330deg);
 
-	/* ── 阴影令牌（暗色主题：更暗更扩散） ── */
-	--shadow-sm: 0 1px 0.1875rem oklch(0% 0 0deg / 40%);
-	--shadow-md: 0 0.25rem 1rem oklch(0% 0 0deg / 50%);
-	--shadow-lg: 0 0.75rem 2.5rem oklch(0% 0 0deg / 60%);
-	--shadow-lv3:
-		0 0 1px oklch(0% 0 0deg / 40%), 0 0 4px oklch(0% 0 0deg / 20%),
-		0 12px 32px oklch(0% 0 0deg / 50%);
+	/* 暗色主题实底均为亮色（L 68-80%），配深墨字保证对比度（≥6:1） */
+	--t-color-on-solid: oklch(16% 0.02 165deg);
+	--t-color-accent-ring: oklch(72% 0.1 165deg / 30%);
+	--t-color-overlay: oklch(0% 0 0deg / 60%);
+	--t-color-badge-new-bg: oklch(28% 0.02 270deg);
+	--t-color-badge-new-text: oklch(76% 0.06 270deg);
+	--t-color-badge-learning-bg: oklch(30% 0.03 65deg);
+	--t-color-badge-learning-text: oklch(78% 0.06 60deg);
+	--t-color-badge-review-bg: oklch(28% 0.02 150deg);
+	--t-color-badge-review-text: oklch(74% 0.05 150deg);
+	--t-color-badge-suspended-bg: oklch(26% 0 0deg);
+	--t-color-badge-suspended-text: oklch(68% 0 0deg);
+	--t-color-badge-relearning-bg: oklch(30% 0.03 20deg);
+	--t-color-badge-relearning-text: oklch(76% 0.06 20deg);
+	--t-color-danger: oklch(70% 0.12 25deg);
+	--t-color-danger-subtle: oklch(28% 0.02 25deg);
+	--t-color-success: oklch(72% 0.09 160deg);
+	--t-color-success-subtle: oklch(26% 0.02 160deg);
+	--t-color-warning: oklch(78% 0.09 85deg);
+	--t-color-warning-subtle: oklch(30% 0.02 85deg);
+
+	/* ── 阴影令牌：零投影世界，全部为 none（同 paper） ── */
+	--shadow-sm: none;
+	--shadow-md: none;
+	--shadow-lg: none;
+	--shadow-lv3: none;
+	--t-color-mark-wrong: oklch(66% 0.14 30deg);
+	--t-color-mark-correct: oklch(66% 0.1 150deg);
+	--t-color-mark-teal: oklch(62% 0.07 170deg);
+	--t-color-mark-blue: oklch(66% 0.09 250deg);
+	--t-color-mark-blue-soft: oklch(34% 0.04 250deg / 50%);
+	--t-color-mark-blue-border: oklch(46% 0.06 250deg);
+	--t-color-mark-yellow: oklch(72% 0.1 80deg);
 	--toast-error-bg: var(--t-color-danger-subtle);
-	--toast-error-border: oklch(48% 0.07 25deg);
+	--toast-error-border: oklch(44% 0.06 25deg);
 	--toast-error-text: oklch(90% 0.04 25deg);
 	--toast-error-icon-bg: var(--t-color-danger);
 	--toast-warning-bg: var(--t-color-warning-subtle);
-	--toast-warning-border: oklch(55% 0.09 85deg);
+	--toast-warning-border: oklch(50% 0.07 85deg);
 	--toast-warning-text: oklch(92% 0.05 85deg);
 	--toast-warning-icon-bg: var(--t-color-warning);
 	--toast-success-bg: var(--t-color-success-subtle);
-	--toast-success-border: oklch(50% 0.07 160deg);
+	--toast-success-border: oklch(44% 0.05 160deg);
 	--toast-success-text: oklch(90% 0.04 160deg);
 	--toast-success-icon-bg: var(--t-color-success);
 	--toast-info-bg: var(--t-color-accent-soft);
-	--toast-info-border: oklch(42% 0.05 165deg);
+	--toast-info-border: oklch(40% 0.04 165deg);
 	--toast-info-text: oklch(90% 0.04 165deg);
 	--toast-info-icon-bg: var(--t-color-accent);
 	--toast-error-code-bg: oklch(70% 0.12 25deg / 15%);
-	--toast-warning-code-bg: oklch(78% 0.1 85deg / 15%);
-	--toast-success-code-bg: oklch(72% 0.1 160deg / 15%);
-	--toast-info-code-bg: oklch(68% 0.1 165deg / 15%);
-	--t-color-danger-strong: oklch(60% 0.14 25deg);
-	--t-color-warning-strong: oklch(68% 0.12 85deg);
-}
-
-:root[data-theme="ocean"] {
-	/* ── 主题契约：ocean（冷蓝 · 晴空） ── */
-	--t-color-bg: oklch(97.2% 0.004 250deg);
-	--t-color-surface: oklch(99.5% 0.002 250deg);
-	--t-color-surface-raised: oklch(95.5% 0.006 250deg);
-	--t-color-ink: oklch(24% 0.01 250deg);
-	--t-color-ink-strong: oklch(16% 0.014 250deg);
-	--t-color-ink-muted: oklch(45% 0.01 250deg);
-	--t-color-ink-faint: oklch(60% 0.008 250deg);
-	--t-color-border: oklch(88.5% 0.006 250deg);
-	--t-color-border-strong: oklch(83% 0.008 250deg);
-	--t-color-accent: oklch(52% 0.14 255deg);
-	--t-color-accent-strong: oklch(44% 0.16 255deg);
-	--t-color-accent-soft: oklch(93.5% 0.02 255deg);
-	--t-color-white: oklch(100% 0 0deg);
-
-	/* 实底饱和色（accent/danger/warning/success）上的文字/图标 */
-	--t-color-on-solid: oklch(100% 0 0deg);
-	--t-color-accent-ring: oklch(55% 0.18 255deg / 25%);
-	--t-color-overlay: oklch(0% 0 0deg / 50%);
-	--t-color-badge-new-bg: oklch(94% 0.02 270deg);
-	--t-color-badge-new-text: oklch(45% 0.12 270deg);
-	--t-color-badge-learning-bg: oklch(94% 0.03 65deg);
-	--t-color-badge-learning-text: oklch(45% 0.1 60deg);
-	--t-color-badge-review-bg: oklch(94% 0.03 150deg);
-	--t-color-badge-review-text: oklch(40% 0.08 150deg);
-	--t-color-badge-suspended-bg: oklch(94% 0 0deg);
-	--t-color-badge-suspended-text: oklch(50% 0 0deg);
-	--t-color-badge-relearning-bg: oklch(94% 0.03 20deg);
-	--t-color-badge-relearning-text: oklch(42% 0.1 20deg);
-	--t-color-danger: oklch(55% 0.16 25deg);
-	--t-color-danger-subtle: oklch(96.5% 0.008 25deg);
-	--t-color-success: oklch(55% 0.13 160deg);
-	--t-color-success-subtle: oklch(95.5% 0.015 160deg);
-	--t-color-warning: oklch(60% 0.12 85deg);
-	--t-color-warning-subtle: oklch(96.5% 0.015 85deg);
-
-	/* ── 阴影令牌（浅色主题） ── */
-	--shadow-sm: 0 1px 0.125rem oklch(0% 0 0deg / 5%);
-	--shadow-md: 0 0.25rem 1rem oklch(0% 0 0deg / 7%);
-	--shadow-lg: 0 0.75rem 2rem oklch(0% 0 0deg / 10%);
-	--shadow-lv3:
-		0 0 1px oklch(0% 0 0deg / 16%), 0 0 4px oklch(0% 0 0deg / 4%),
-		0 12px 32px oklch(0% 0 0deg / 10%);
-	--toast-error-bg: var(--t-color-danger-subtle);
-	--toast-error-border: oklch(85% 0.06 25deg);
-	--toast-error-text: oklch(30% 0.09 25deg);
-	--toast-error-icon-bg: var(--t-color-danger);
-	--toast-warning-bg: var(--t-color-warning-subtle);
-	--toast-warning-border: oklch(88% 0.09 85deg);
-	--toast-warning-icon-bg: var(--t-color-warning);
-	--toast-success-bg: var(--t-color-success-subtle);
-	--toast-success-border: oklch(85% 0.08 160deg);
-	--toast-success-text: oklch(30% 0.08 160deg);
-	--toast-success-icon-bg: var(--t-color-success);
-	--toast-info-bg: var(--t-color-accent-soft);
-	--toast-info-border: oklch(85% 0.08 255deg);
-	--toast-info-text: oklch(30% 0.07 255deg);
-	--toast-info-icon-bg: var(--t-color-accent);
-	--toast-error-code-bg: oklch(55% 0.2 25deg / 12%);
-	--toast-warning-text: oklch(35% 0.08 60deg);
-	--toast-warning-code-bg: oklch(60% 0.16 85deg / 12%);
-	--toast-success-code-bg: oklch(55% 0.17 160deg / 12%);
-	--toast-info-code-bg: oklch(52% 0.14 255deg / 12%);
-	--t-color-danger-strong: oklch(48% 0.18 25deg);
-	--t-color-warning-strong: oklch(52% 0.14 85deg);
+	--toast-warning-code-bg: oklch(78% 0.09 85deg / 15%);
+	--toast-success-code-bg: oklch(72% 0.09 160deg / 15%);
+	--toast-info-code-bg: oklch(72% 0.1 165deg / 15%);
+	--t-color-danger-strong: oklch(78% 0.12 25deg);
+	--t-color-warning-strong: oklch(84% 0.09 85deg);
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -290,6 +256,8 @@
 		--t-color-warning-subtle: Canvas;
 		--t-color-overlay: Canvas;
 		--t-color-white: CanvasText;
+		--ring-float: 0 0 0 1px CanvasText;
+		--ring-float-strong: 0 0 0 2px CanvasText;
 		--t-color-badge-new-bg: Canvas;
 		--t-color-badge-new-text: CanvasText;
 		--t-color-badge-learning-bg: Canvas;
@@ -326,6 +294,10 @@
 body {
 	background: var(--t-color-bg);
 	color: var(--t-color-ink);
+
+	/* 数字等宽对齐（Swiss 语音）：计数/日期/统计在列表与表格里天然对齐；
+	   汉字与正文不受影响。要在 monospace 读数处覆盖时用 --t-font-mono。 */
+	font-variant-numeric: tabular-nums;
 	transition:
 		background-color 0.25s var(--ease-out-expo),
 		color 0.25s var(--ease-out-expo);
@@ -334,9 +306,10 @@ body {
 	-moz-osx-font-smoothing: grayscale;
 }
 
+/* 选中即反相（墨底纸字）—— 比彩色高亮更符合「反相表达状态」 */
 ::selection {
-	background: var(--t-color-accent-soft);
-	color: var(--t-color-accent);
+	background: var(--t-color-ink);
+	color: var(--t-color-bg);
 }
 
 /* 统一去掉浏览器原生 button 外观，避免自定义圆角/边框被原生样式干扰 */
@@ -398,8 +371,7 @@ button:not(:disabled, .no-hover-lift) {
 		background var(--t-transition-fast),
 		border-color var(--t-transition-fast),
 		color var(--t-transition-fast),
-		box-shadow var(--t-transition-fast),
-		transform var(--t-transition-fast);
+		box-shadow var(--t-transition-fast);
 }
 
 /* ── 动效偏好：用户要求减少动态时收敛所有过渡/动画 ── */

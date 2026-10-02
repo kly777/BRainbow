@@ -9,8 +9,10 @@
 // Feather icons (stroke style, 与 Lucide 视觉风格接近)
 export {
 	FiAlertTriangle as AlertTriangle,
+	FiArrowDown as ArrowDown,
 	FiArrowLeft as ArrowLeft,
 	FiArrowRight as ArrowRight,
+	FiArrowUp as ArrowUp,
 	FiCheck as Check,
 	FiCheckCircle as CheckCircle2,
 	FiChevronLeft as ChevronLeft,

@@ -1,4 +1,5 @@
-import { Button, SearchInput } from "@components/ui";
+import { SearchInput } from "@components/ui";
+import { ArrowDown, ArrowUp } from "@components/ui/icons";
 import type { Component } from "solid-js";
 import styles from "./CardFilter.module.css";
 
@@ -24,6 +25,9 @@ const CardFilter: Component<CardFilterProps> = (props) => {
 		);
 	};
 
+	const arrowIcon = () =>
+		props.sortOrder === "asc" ? <ArrowUp size={14} /> : <ArrowDown size={14} />;
+
 	return (
 		<div class={styles.filters}>
 			<div class={styles.filterRow}>
@@ -46,14 +50,15 @@ const CardFilter: Component<CardFilterProps> = (props) => {
 						<option value="updated">更新时间</option>
 						<option value="created">创建时间</option>
 					</select>
-					<Button
-						variant="icon"
+					<button
+						type="button"
+						class={styles.sortToggle}
 						onClick={toggleSortOrder}
 						title={props.sortOrder === "asc" ? "升序" : "降序"}
 						aria-label={props.sortOrder === "asc" ? "切换为降序" : "切换为升序"}
 					>
-						{props.sortOrder === "asc" ? "↑" : "↓"}
-					</Button>
+						{arrowIcon()}
+					</button>
 				</div>
 			</div>
 		</div>

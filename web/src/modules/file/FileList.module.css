@@ -184,6 +184,10 @@
 
 .sort-select {
 	padding: var(--space-xs) var(--space-sm);
+
+	/* 筛选行统一走 sm 档（芯片与视图键都是 28px）；全局 select 的 min-height 兜的是
+	   md 档，这里用 element+class 提权压回 sm —— 与 Control.module.css 字号那条同一手法 */
+	min-height: var(--control-h-sm);
 }
 
 .grid {

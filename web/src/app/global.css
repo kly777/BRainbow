@@ -13,6 +13,11 @@
 	--radius-2xl: 1.5rem;
 	--radius-full: 999px;
 
+	/* ── 控件高度三档（同行控件必须同档；几何门禁 e2e/specs/control-heights.spec.ts） ── */
+	--control-h-sm: 1.75rem; /* 28px：密集工具条、筛选行 */
+	--control-h-md: 2.25rem; /* 36px：默认（输入框 / 按钮 / 下拉） */
+	--control-h-lg: 2.75rem; /* 44px：触屏与主 CTA */
+
 	/* ── 页面宽度档位（统一页面容器节奏） ── */
 	--page-max: 1440px; /* 全幅工作台 */
 	--page-text-max: 900px; /* 长文阅读 / 会话 */

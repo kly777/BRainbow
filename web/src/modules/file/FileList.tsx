@@ -171,11 +171,7 @@ const FileListPage: Component = () => {
 							onChange={f.setTag}
 							options={tags() ?? []}
 						/>
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={() => setTagManagerOpen(true)}
-						>
+						<Button variant="ghost" onClick={() => setTagManagerOpen(true)}>
 							标签管理
 						</Button>
 						{/* 选择只为批量写操作（删除/加标签）：本页一个可编辑文件都没有时不给这个入口，
@@ -183,7 +179,6 @@ const FileListPage: Component = () => {
 						<Show when={f.items().some((it) => it.can_edit)}>
 							<Button
 								variant={f.selectMode() ? "secondary" : "ghost"}
-								size="sm"
 								onClick={() => f.setSelectMode(!f.selectMode())}
 							>
 								{f.selectMode() ? "退出选择" : "选择"}
@@ -191,7 +186,6 @@ const FileListPage: Component = () => {
 						</Show>
 						<Button
 							variant="primary"
-							size="sm"
 							disabled={f.uploading()}
 							onClick={openUploadPicker}
 						>
@@ -242,6 +236,7 @@ const FileListPage: Component = () => {
 								<span class={styles.sortText}>排序</span>
 								<Select
 									class={styles.sortSelect}
+									size="sm"
 									value={f.sort()}
 									onChange={(e) =>
 										f.setSort(e.currentTarget.value as SortOrder)

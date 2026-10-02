@@ -10,7 +10,10 @@
 	display: flex;
 	align-items: center;
 	gap: var(--space-xs);
-	padding: var(--space-xs) var(--space-md);
+
+	/* 工具条控件统一 md 档（36px）：与 SearchInput / Button 同行同档 */
+	height: var(--control-h-md);
+	padding: 0 var(--space-md);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
 	background: var(--t-color-surface);

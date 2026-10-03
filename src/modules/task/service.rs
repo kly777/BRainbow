@@ -272,7 +272,9 @@ impl TaskService {
 }
 
 fn validate_title(title: &str) -> Result<(), ServiceError> {
-    if title.is_empty() || title.len() > 255 {
+    // 先 trim 再判长度：纯空格标题没有信息，却会一路流到列表与看板占位
+    let trimmed = title.trim();
+    if trimmed.is_empty() || trimmed.len() > 255 {
         return Err(ServiceError::InvalidInput(
             "标题长度必须在1-255字符之间".into(),
         ));
@@ -365,9 +367,14 @@ mod tests {
 
     #[test]
     fn title_whitespace_only() {
-        // 空白字符串 trim 后为空——但 validate_title 不做 trim，
-        // 所以 "   " 不算 empty，长度 3，预期 ok
-        assert!(validate_title("   ").is_ok());
+        // 纯空白（空格/制表符/换行）trim 后为空 —— 必须拒绝
+        assert!(validate_title("   ").is_err());
+        assert!(validate_title("\t\n ").is_err());
+    }
+
+    #[test]
+    fn title_surrounding_whitespace_ok() {
+        assert!(validate_title("  写周报  ").is_ok());
     }
 
     // ── validate_effort ──

@@ -37,6 +37,7 @@ import {
 	DATE_HELPER,
 	formatDateInput,
 	parseDateInput,
+	toDateInputValue,
 } from "../lib/dateInput.ts";
 import styles from "./CaptureInput.module.css";
 
@@ -448,7 +449,7 @@ function DateField(props: DateFieldProps) {
 					type="datetime-local"
 					tabindex={-1}
 					aria-label={`${props.label}（日历选择）`}
-					value={toLocalInputValue(props.value)}
+					value={toDateInputValue(props.value)}
 					onChange={(e) => {
 						const picked = e.currentTarget.value;
 						const date = picked ? new Date(picked) : null;
@@ -465,13 +466,4 @@ function DateField(props: DateFieldProps) {
 			</span>
 		</div>
 	);
-}
-
-/** `<input type="datetime-local">` 要的是本地 `YYYY-MM-DDTHH:mm`（不带时区） */
-function toLocalInputValue(date: Date | null): string {
-	if (!date) {
-		return "";
-	}
-	const pad = (n: number) => String(n).padStart(2, "0");
-	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }

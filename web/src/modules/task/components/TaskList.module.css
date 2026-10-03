@@ -120,6 +120,77 @@
 	flex-shrink: 0;
 }
 
+/* ── 行内补属性（标签 / 截止时间） ──
+   默认透明：密集列表里不该全是图标；悬停或键盘聚焦（:focus-within）时显形。
+   用 opacity 而不是 display/visibility —— 后者会把它们踢出 Tab 序，
+   键盘用户就永远碰不到（那样"悬停显形"等于"只有鼠标能用"）。 */
+
+.inline-actions {
+	display: flex;
+	gap: var(--space-xs);
+	align-items: center;
+	opacity: 0;
+	transition: opacity var(--t-transition-fast);
+}
+
+.task-item:hover .inline-actions,
+.task-item:focus-within .inline-actions,
+.inline-actions-open {
+	opacity: 1;
+}
+
+.inline-button {
+	/* 触摸目标 24px（WCAG 2.5.8） */
+	min-width: 1.5rem;
+	min-height: 1.5rem;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	background: none;
+	border: none;
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+	font-size: var(--text-sm);
+	line-height: 1;
+}
+
+.inline-button:hover {
+	background: var(--t-color-surface-raised);
+}
+
+.inline-editor {
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+	padding: var(--space-sm) 0;
+}
+
+.inline-date-input {
+	padding: var(--space-xs) var(--space-sm);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	background: var(--t-color-surface);
+	color: var(--t-color-ink);
+	font: inherit;
+	font-size: var(--text-sm);
+}
+
+.inline-editor-clear {
+	padding: var(--space-xs) var(--space-sm);
+	background: none;
+	border: none;
+	border-radius: var(--radius-sm);
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-xs);
+	cursor: pointer;
+}
+
+.inline-editor-clear:hover {
+	color: var(--t-color-ink);
+	text-decoration: underline;
+}
+
 .status-select {
 	padding: var(--space-xs) var(--space-xl) var(--space-xs) var(--space-md);
 	background: var(--t-color-surface)

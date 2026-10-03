@@ -1,9 +1,16 @@
 import { Input, Select, Tooltip } from "@components/ui";
 import { Pencil, Trash2 } from "@components/ui/icons";
+// TagInput 不走 barrel（见 @components/ui 顶部说明：它会把首屏撑大）
+import TagInput, {
+	type TagOption,
+} from "@components/ui/molecules/TagInput.tsx";
 import { fmtFull } from "@shared/utils";
 import { type Component, createSignal, For, Show } from "solid-js";
 import type { Task } from "../api.ts";
+import { getTagsE } from "../api.ts";
 import { TaskStatus, type TaskStatusType, toTaskStatus } from "../api-types.ts";
+import { fromIso, toDateInputValue } from "../lib/dateInput.ts";
+import { tagsFromNames } from "../lib/task-payload.ts";
 import styles from "./TaskList.module.css";
 
 interface TaskItemProps {
@@ -13,6 +20,8 @@ interface TaskItemProps {
 	onEdit: () => void;
 	children: Task[];
 	onAddSubTask?: (parentId: number, title: string) => Promise<void>;
+	/** 行内补属性（标签 / 截止时间）用；不给就只有 [+子任务] 那条路径 */
+	onUpdate?: (taskId: number, updates: Partial<Task>) => void;
 }
 
 const TaskTitle: Component<{ title: string; isSubTask: boolean }> = (props) => (
@@ -33,6 +42,36 @@ const DateBadge: Component<{ createdAt?: string }> = (props) => (
 function TaskItem(props: TaskItemProps) {
 	const [showSubTaskInput, setShowSubTaskInput] = createSignal(false);
 	const [subTaskTitle, setSubTaskTitle] = createSignal("");
+	// 行内补属性：默认收起，鼠标悬停/聚焦到本行时才显形（避免密集列表里全是图标）
+	const [tagEditorOpen, setTagEditorOpen] = createSignal(false);
+	const [dateEditorOpen, setDateEditorOpen] = createSignal(false);
+
+	const tagNames = () => props.task.tags.map((tag) => tag.name);
+
+	/** 标签候选：与录入框同一套（去抖 200ms 再问后端） */
+	let tagSearchTimer: ReturnType<typeof setTimeout> | undefined;
+	const searchTags = (query: string): Promise<TagOption[]> =>
+		new Promise((resolve) => {
+			clearTimeout(tagSearchTimer);
+			tagSearchTimer = setTimeout(async () => {
+				try {
+					resolve(await getTagsE(query));
+				} catch {
+					resolve([]);
+				}
+			}, 200);
+		});
+
+	const setTags = (names: string[]) => {
+		props.onUpdate?.(props.task.id, { tags: tagsFromNames(names) });
+	};
+
+	const setDue = (value: string) => {
+		// 原生 datetime-local 给的是本地时间，转成 ISO(UTC) 再发；空串 = 清空
+		props.onUpdate?.(props.task.id, {
+			due_at: value ? new Date(value).toISOString() : null,
+		});
+	};
 
 	return (
 		<div class={styles.taskItem}>
@@ -50,6 +89,44 @@ function TaskItem(props: TaskItemProps) {
 					</div>
 				</div>
 				<div class={styles.taskActions}>
+					{/* 行内补属性（§6）：悬停/聚焦时显形，标签与日期各一个入口 */}
+					<Show when={props.onUpdate}>
+						<div
+							class={styles.inlineActions}
+							classList={{
+								[styles.inlineActionsOpen]: tagEditorOpen() || dateEditorOpen(),
+							}}
+						>
+							<Tooltip label="标签">
+								<button
+									type="button"
+									class={styles.inlineButton}
+									aria-expanded={tagEditorOpen()}
+									aria-label={`标签：${props.task.title}`}
+									onClick={() => {
+										setTagEditorOpen(!tagEditorOpen());
+										setDateEditorOpen(false);
+									}}
+								>
+									🏷
+								</button>
+							</Tooltip>
+							<Tooltip label="截止时间">
+								<button
+									type="button"
+									class={styles.inlineButton}
+									aria-expanded={dateEditorOpen()}
+									aria-label={`截止时间：${props.task.title}`}
+									onClick={() => {
+										setDateEditorOpen(!dateEditorOpen());
+										setTagEditorOpen(false);
+									}}
+								>
+									🗓
+								</button>
+							</Tooltip>
+						</div>
+					</Show>
 					<Select
 						value={props.task.status || TaskStatus.BACKLOG}
 						onChange={(e) =>
@@ -95,6 +172,47 @@ function TaskItem(props: TaskItemProps) {
 					</Tooltip>
 				</div>
 			</div>
+			{/* 行内标签编辑器：整体替换语义（加一个/删一个都发全量标签集） */}
+			<Show when={tagEditorOpen()}>
+				<div class={styles.inlineEditor}>
+					<TagInput
+						selected={tagNames()}
+						onAdd={(name) => setTags([...tagNames(), name])}
+						onRemove={(name) =>
+							setTags(tagNames().filter((existing) => existing !== name))
+						}
+						search={searchTags}
+						placeholder="加标签（Enter 确认）"
+						ariaLabel={`给「${props.task.title}」加标签`}
+					/>
+				</div>
+			</Show>
+			{/* 行内截止时间：原生 datetime-local（设计文档 §6 的口径），空 = 清除 */}
+			<Show when={dateEditorOpen()}>
+				<div class={styles.inlineEditor}>
+					<input
+						type="datetime-local"
+						class={styles.inlineDateInput}
+						value={toDateInputValue(fromIso(props.task.due_at))}
+						aria-label={`截止时间：${props.task.title}`}
+						onChange={(e) => setDue(e.currentTarget.value)}
+					/>
+					<button
+						type="button"
+						class={styles.inlineEditorClear}
+						onClick={() => setDue("")}
+					>
+						清除
+					</button>
+					<button
+						type="button"
+						class={styles.inlineEditorClear}
+						onClick={() => setDateEditorOpen(false)}
+					>
+						完成
+					</button>
+				</div>
+			</Show>
 			{/* 子任务输入表单 */}
 			<Show when={showSubTaskInput()}>
 				<div class={styles.subTaskForm}>

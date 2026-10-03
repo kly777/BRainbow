@@ -82,3 +82,25 @@ export function formatDateInput(date: Date): string {
 
 /** 控件的 helper 文案（MD3：格式要写在 helper 里，不是 placeholder） */
 export const DATE_HELPER = `格式 2026-10-03 15:00，可省时间（按 ${DEFAULT_HOUR}:00）`;
+
+/**
+ * 本地时间 → `<input type="datetime-local">` 的 value（`2026-10-03T15:00`，不带时区）。
+ *
+ * 与 [`formatDateInput`] 的区别只是分隔符：文本控件给人看，原生控件给浏览器读。
+ */
+export function toDateInputValue(date: Date | null): string {
+	if (!date) {
+		return "";
+	}
+	const pad = (n: number) => String(n).padStart(2, "0");
+	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** 服务端的 ISO 串（UTC）→ 本地 `Date`；空值/坏值返回 null */
+export function fromIso(iso: string | null | undefined): Date | null {
+	if (!iso) {
+		return null;
+	}
+	const date = new Date(iso);
+	return Number.isNaN(date.getTime()) ? null : date;
+}

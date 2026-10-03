@@ -6,6 +6,7 @@
 
 import type {
 	CreateTaskRequest,
+	Tag,
 	Task,
 	UpdateTaskRequest,
 } from "../api-types.ts";
@@ -14,6 +15,16 @@ import type {
 export function toUpdatePayload(updates: Partial<Task>): UpdateTaskRequest {
 	const { tags, ...rest } = updates;
 	return tags ? { ...rest, tags: tags.map((tag) => tag.name) } : rest;
+}
+
+/**
+ * 标签名数组 → `Task["tags"]`（行内编辑器做乐观更新用）。
+ *
+ * id 用负数占位：它只活在"服务端响应回来之前"的本地态里（真 id 由响应整体替换），
+ * 而且 PATCH 只发名字 —— 负数保证它不可能与真 id 撞上。
+ */
+export function tagsFromNames(names: readonly string[]): Tag[] {
+	return names.map((name, index) => ({ id: -1 - index, name }));
 }
 
 /** 录入框的提交载荷 → 创建请求（第 2 层说的日期/父任务在这里换成 API 的字段名） */

@@ -26,6 +26,7 @@ interface TaskStatusSectionProps {
 	childrenMap: Map<number, Task[]>;
 	onStatusChange: (taskId: number, status: TaskStatusKey) => void;
 	onDelete: (taskId: number) => void;
+	onUpdate: (taskId: number, updates: Partial<Task>) => void;
 	onAddSubTask?: (parentId: number, title: string) => Promise<void>;
 	onEdit: (task: Task) => void;
 }
@@ -50,6 +51,7 @@ function TaskStatusSection(props: TaskStatusSectionProps) {
 								onEdit={() => props.onEdit(task)}
 								children={props.childrenMap.get(task.id) || []}
 								onAddSubTask={props.onAddSubTask}
+								onUpdate={props.onUpdate}
 							/>
 						)}
 					</For>
@@ -103,6 +105,7 @@ export default function TaskList(props: TaskListProps) {
 						childrenMap={childrenMap()}
 						onStatusChange={props.onStatusChange}
 						onDelete={props.onDelete}
+						onUpdate={props.onUpdate}
 						onAddSubTask={props.onAddSubTask}
 						onEdit={openEdit}
 					/>

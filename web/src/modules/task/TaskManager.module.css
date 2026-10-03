@@ -30,21 +30,6 @@
 	flex-shrink: 0;
 }
 
-.quick-add-input {
-	padding: var(--space-xs) var(--space-md);
-	border: 1px dashed var(--t-color-border);
-	border-radius: var(--radius-md);
-	font-size: var(--text-sm);
-	outline: none;
-	color: var(--t-color-ink-muted);
-	background: none;
-	width: 8.75rem;
-	box-sizing: border-box;
-	transition:
-		border-color var(--t-transition-fast),
-		color var(--t-transition-fast);
-}
-
 .split-view {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr) 21rem;
@@ -71,10 +56,6 @@
 
 	.toolbar {
 		flex-wrap: wrap;
-	}
-
-	.quick-add-input {
-		width: 6.875rem;
 	}
 
 	.split-view {

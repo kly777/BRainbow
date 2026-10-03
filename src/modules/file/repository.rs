@@ -598,7 +598,9 @@ impl FileRepository {
         qb.push(")) ORDER BY rank, f.created_at DESC LIMIT ")
             .push_bind(limit);
 
-        qb.build_query_as::<FileSearchHit>().fetch_all(&*self.db).await
+        qb.build_query_as::<FileSearchHit>()
+            .fetch_all(&*self.db)
+            .await
     }
 
     // ── 标签操作 ──
@@ -2055,11 +2057,19 @@ mod tests {
 
         // 两个词分别在名字与正文里 → 命中
         let hits = repo
-            .search_by_name_or_text("会议 调休", Some(&Actor::user(7)), 10, 0, SortOrder::default())
+            .search_by_name_or_text(
+                "会议 调休",
+                Some(&Actor::user(7)),
+                10,
+                0,
+                SortOrder::default(),
+            )
             .await
             .unwrap();
         assert_eq!(
-            hits.iter().map(|h| h.file.stored_id.as_str()).collect::<Vec<_>>(),
+            hits.iter()
+                .map(|h| h.file.stored_id.as_str())
+                .collect::<Vec<_>>(),
             vec!["m1"],
             "「会议纪要」只有第一个词、正文也没第二个词，不该命中"
         );
@@ -2076,7 +2086,13 @@ mod tests {
 
         // 词全在文件名里：不捎正文（标题已经说明白了）
         let name_only = repo
-            .search_by_name_or_text("会议 记录", Some(&Actor::user(7)), 10, 0, SortOrder::default())
+            .search_by_name_or_text(
+                "会议 记录",
+                Some(&Actor::user(7)),
+                10,
+                0,
+                SortOrder::default(),
+            )
             .await
             .unwrap();
         assert_eq!(name_only.len(), 1);

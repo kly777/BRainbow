@@ -305,7 +305,10 @@ mod tests {
 
     #[test]
     fn like_terms_splits_escapes_and_keeps_order() {
-        assert_eq!(like_terms("types programming"), vec!["%types%", "%programming%"]);
+        assert_eq!(
+            like_terms("types programming"),
+            vec!["%types%", "%programming%"]
+        );
         // 通配符照样转义（与单关键词一条口径）
         assert_eq!(like_terms("  50%  _x "), vec!["%50\\%%", "%\\_x%"]);
         assert!(like_terms("   ").is_empty());
@@ -314,10 +317,7 @@ mod tests {
     #[test]
     fn anchor_term_prefers_the_earliest_hit_in_text() {
         // 两个词都在文本里：取出现更早的那个（片段围着它展开）
-        assert_eq!(
-            anchor_term("先有调休，后有报销的规则", "报销 调休"),
-            "调休"
-        );
+        assert_eq!(anchor_term("先有调休，后有报销的规则", "报销 调休"), "调休");
         // 只有一个词在文本里：用它
         assert_eq!(anchor_term("只有报销", "报销 调休"), "报销");
         // 一个都没出现（命中来自标签/元信息）：退回第一个词

@@ -27,7 +27,12 @@ export function buildChildrenMap(tasks: readonly Task[]): Map<number, Task[]> {
 	return map;
 }
 
-/** 按状态分组：`status` 缺省归 backlog，未知状态不进任何分组（与改造前一致） */
+/**
+ * 按状态分组：`status` 缺省归 backlog，**未知状态也归 backlog**。
+ *
+ * 未知值不丢弃是有意的：正常路径下后端不会产生枚举外的状态，但库里若有历史脏值，
+ * 丢弃等于把整条任务从界面上抹掉（静默丢数据），归入 backlog 至少还看得见。
+ */
 export function groupByStatus(
 	tasks: readonly Task[],
 ): Record<TaskStatusKey, Task[]> {
@@ -38,8 +43,9 @@ export function groupByStatus(
 		archived: [],
 	};
 	for (const task of tasks) {
-		const status = (task.status || "backlog") as TaskStatusKey;
-		if (status in grouped) grouped[status].push(task);
+		const status = task.status as TaskStatusKey | undefined;
+		const bucket = status && status in grouped ? status : "backlog";
+		grouped[bucket].push(task);
 	}
 	return grouped;
 }

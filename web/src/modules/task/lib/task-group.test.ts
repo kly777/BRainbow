@@ -54,10 +54,13 @@ describe("groupByStatus", () => {
 		expect(grouped.backlog.map((t) => t.id)).toEqual([1]);
 	});
 
-	it("未知状态不进任何分组（不新造分组）", () => {
-		const grouped = groupByStatus([task(1, { status: "someday" })]);
-		const all = Object.values(grouped).flat();
-		expect(all).toEqual([]);
+	it("未知状态归 backlog（不丢弃、不新造分组）", () => {
+		const grouped = groupByStatus([
+			task(1, { status: "someday" }),
+			task(2, { status: "active" }),
+		]);
+		expect(grouped.backlog.map((t) => t.id)).toEqual([1]);
+		expect(Object.values(grouped).flat().map((t) => t.id)).toEqual([1, 2]);
 	});
 
 	it("组内保持传入顺序", () => {

@@ -22,6 +22,11 @@ pub(crate) const INDEXES: &[&str] = &[
 pub(crate) const TABLES: &[&str] = &[
     "conv",  // v2：并入 chat_tree / chat_node
     "media", // v15：由 file 家族接管
+    // v24：两张死表 —— 全仓无任何代码读写（声明之外只在 `migrate_fixture_db` 前后核对过
+    // 行数，都是 0）。`task_time_allocation` 那种"任务×时窗分摊时长"的想法要回来时，
+    // 先回答"为什么 duration 要单独存，而不是从区间算"
+    "task_decomposition",
+    "task_time_allocation",
 ];
 
 /// 废弃列：(表, 列)

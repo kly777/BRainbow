@@ -142,31 +142,44 @@ pub(crate) const DECLS: &[Decl] = &[
         )
         "#,
     ),
+    // 任务↔标签关联（v24）：形状照 `mem_tag` —— 复合主键、两个级联。
+    // 标签**复用 `tag` 表**（不新造第四套）：它是 `UNIQUE(name, user_id)` 的按用户唯一，
+    // 正是任务标签要的隔离；`file_tag` 是全局唯一，复用会让跨用户标签串味
     Decl::table(
-        "task_decomposition",
+        "task_tag_rel",
         r#"
-        CREATE TABLE IF NOT EXISTS task_decomposition (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            parent_task_id INTEGER NOT NULL,
-            child_task_id INTEGER NOT NULL,
-            FOREIGN KEY (parent_task_id) REFERENCES task(id),
-            FOREIGN KEY (child_task_id) REFERENCES task(id)
-        )
-        "#,
-    ),
-    Decl::table(
-        "task_time_allocation",
-        r#"
-        CREATE TABLE IF NOT EXISTS task_time_allocation (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+        CREATE TABLE IF NOT EXISTS task_tag_rel (
             task_id INTEGER NOT NULL,
-            time_window_id INTEGER NOT NULL,
-            duration_minutes INTEGER NOT NULL,
-            FOREIGN KEY (task_id) REFERENCES task(id),
-            FOREIGN KEY (time_window_id) REFERENCES time_window(id)
+            tag_id  INTEGER NOT NULL,
+            PRIMARY KEY (task_id, tag_id),
+            FOREIGN KEY (task_id) REFERENCES task(id) ON DELETE CASCADE,
+            FOREIGN KEY (tag_id)  REFERENCES tag(id)  ON DELETE CASCADE
         )
         "#,
     ),
+    Decl::index(
+        "idx_task_tag_rel_tag",
+        "CREATE INDEX IF NOT EXISTS idx_task_tag_rel_tag ON task_tag_rel(tag_id)",
+    ),
+    // v24：`task` 从来没有索引，而列表/搜索/建议全都要按 user_id 过滤（现状是全表扫）。
+    // `priority` 不建索引：它是打分输入而不是过滤条件（低基数 + NULL，建索引是反模式）
+    Decl::index(
+        "idx_task_user",
+        "CREATE INDEX IF NOT EXISTS idx_task_user ON task(user_id)",
+    ),
+    Decl::index(
+        "idx_task_user_due",
+        "CREATE INDEX IF NOT EXISTS idx_task_user_due ON task(user_id, due_at)",
+    ),
+    Decl::index(
+        "idx_task_user_status",
+        "CREATE INDEX IF NOT EXISTS idx_task_user_status ON task(user_id, status)",
+    ),
+    Decl::index(
+        "idx_task_user_created",
+        "CREATE INDEX IF NOT EXISTS idx_task_user_created ON task(user_id, created_at DESC)",
+    ),
+    // ── 时间窗口 ──
     Decl::table(
         "time_window",
         r#"
@@ -195,6 +208,11 @@ pub(crate) const DECLS: &[Decl] = &[
             CHECK (recurrence_interval IS NULL OR recurrence_interval >= 1)
         )
         "#,
+    ),
+    // v24：建议算法按「用户 + 类型」取未完成的时段
+    Decl::index(
+        "idx_time_window_user_type",
+        "CREATE INDEX IF NOT EXISTS idx_time_window_user_type ON time_window(user_id, type)",
     ),
     // ── 通用文件服务 ──
     Decl::table(
@@ -689,6 +707,9 @@ pub(crate) const DECLS: &[Decl] = &[
     user_id_index!("reading_user_word"),
     user_id_index!("conv_titles"),
     user_id_index!("articles"),
+    // v24 补入：`tag` 是任务标签复用的那张表，"按用户查标签"是三处（mem/file/task？）
+    // 共用的主查询路径，之前一直缺索引
+    user_id_index!("tag"),
     // 访问频率排序用的索引（v13 引入 visit_count 时一并建的）
     Decl::index_requiring(
         "idx_bookmark_visit_count",

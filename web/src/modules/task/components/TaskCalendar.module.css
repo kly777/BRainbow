@@ -131,6 +131,15 @@
 	background: var(--t-color-bg);
 }
 
+/* 周末列：只靠表头弱化不够（那是 7 格里的一格），这里再给极轻的底色区分 */
+.weekend {
+	background: color-mix(
+		in oklch,
+		var(--t-color-ink-faint) 4%,
+		var(--t-color-surface)
+	);
+}
+
 .day-header-row {
 	display: flex;
 	align-items: center;

@@ -13,13 +13,27 @@ use crate::shared::error_types as error;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
 
 /// `GET /tasks` 的查询参数：分页 + 排序
+///
+/// 不套 `Pagination` 再用 `#[serde(flatten)]`：`serde_urlencoded`（axum 的 `Query`）
+/// 对 flatten 支持不全，会整条查询反序列化失败 → 400「请求不合法」（实测踩到）。
+/// 分页字段就地写全，语义与 `Pagination` 一致（缺省 1 / 20）。
 #[derive(Debug, serde::Deserialize)]
 pub struct ListQuery {
-    #[serde(flatten)]
-    pub pagination: Pagination,
+    #[serde(default = "default_page")]
+    pub page: i64,
+    #[serde(default = "default_page_size")]
+    pub page_size: i64,
     /// 排序口径：smart（默认）| due | created | priority | effort
     #[serde(default)]
     pub sort: crate::modules::task::model::TaskSort,
+}
+
+fn default_page() -> i64 {
+    1
+}
+
+fn default_page_size() -> i64 {
+    20
 }
 
 pub async fn get_tasks_handler(
@@ -27,13 +41,13 @@ pub async fn get_tasks_handler(
     State(query_service): State<TaskQueryService>,
     Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
-    let pagination = &query.pagination;
+    let pagination = Pagination::from_options(Some(query.page), Some(query.page_size));
     match query_service
         .list_sorted(&actor, query.sort, pagination.limit(), pagination.offset())
         .await
     {
         Ok((tasks, total, ranked)) => match query_service.ranked_responses(tasks, ranked).await {
-            Ok(items) => Json(PaginatedResponse::new(items, total, pagination)).into_response(),
+            Ok(items) => Json(PaginatedResponse::new(items, total, &pagination)).into_response(),
             Err(e) => e.into_response(),
         },
         Err(e) => e.into_response(),

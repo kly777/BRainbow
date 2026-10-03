@@ -1,0 +1,144 @@
+/* 「筛选 ⚙」面板与活动条件 chip */
+
+/* fieldset/legend 是语义元素（group 的正确形态），但浏览器给了默认边框与
+   min-inline-size —— 这里收成面板自己的样子 */
+.panel {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-sm);
+	margin: 0;
+	min-inline-size: 0;
+	padding: var(--space-md);
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-md);
+}
+
+.legend {
+	padding: 0 var(--space-2xs);
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}
+
+.group {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2xs);
+}
+
+.group-label {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}
+
+.chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-2xs);
+}
+
+.option-chip {
+	padding: var(--space-3xs, 0.25rem) var(--space-sm);
+	background: none;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-full);
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-xs);
+	cursor: pointer;
+}
+
+/* 选中态靠填充 + 边框加粗（形状与文字都在，不只靠颜色） */
+.option-chip[aria-pressed="true"] {
+	background: var(--t-color-accent-soft);
+	border-color: var(--t-color-accent);
+	border-width: 2px;
+	color: var(--t-color-ink);
+	font-weight: 600;
+}
+
+.due-row {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2xs);
+}
+
+.due-input {
+	padding: var(--space-3xs, 0.25rem) var(--space-2xs);
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	color: var(--t-color-ink);
+	font: inherit;
+	font-size: var(--text-xs);
+}
+
+.due-sep {
+	color: var(--t-color-ink-faint);
+}
+
+.footer {
+	display: flex;
+	justify-content: flex-end;
+	min-height: 1.5rem;
+}
+
+.empty-hint {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-faint);
+}
+
+.clear-all {
+	padding: var(--space-3xs, 0.25rem) var(--space-sm);
+	background: none;
+	border: none;
+	border-radius: var(--radius-sm);
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-xs);
+	cursor: pointer;
+}
+
+.clear-all:hover {
+	color: var(--t-color-ink);
+	text-decoration: underline;
+}
+
+/* ── 活动条件 chip（常驻在 ⚙ 按钮旁） ── */
+
+.active-chips {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--space-2xs);
+
+	/* ul 的默认缩进与列表标记在这里都不要 */
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.active-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-3xs, 0.25rem);
+	padding: 0 var(--space-2xs);
+	background: var(--t-color-accent-soft);
+	border-radius: var(--radius-2xs);
+	color: var(--t-color-ink);
+	font-size: var(--text-xs);
+	white-space: nowrap;
+}
+
+.active-chip-remove {
+	padding: 0;
+	background: none;
+	border: none;
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-sm);
+	line-height: 1;
+	cursor: pointer;
+}
+
+.active-chip-remove:hover {
+	color: var(--t-color-ink);
+}

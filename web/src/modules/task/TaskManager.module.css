@@ -14,6 +14,9 @@
 .toolbar {
 	display: flex;
 	align-items: center;
+
+	/* 能换行：筛选面板整块落下来（flex-basis:100%）时不把同行控件挤变形 */
+	flex-wrap: wrap;
 	gap: var(--space-sm);
 	padding: var(--space-xs) 0;
 	flex-shrink: 0;
@@ -28,6 +31,29 @@
 
 .quick-add-box {
 	flex-shrink: 0;
+}
+
+/* 筛选按钮：常驻控件之一（与排序同级） */
+.filter-button {
+	flex-shrink: 0;
+	padding: var(--space-xs) var(--space-sm);
+	background: none;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-sm);
+	cursor: pointer;
+}
+
+.filter-button:hover {
+	color: var(--t-color-ink);
+	border-color: var(--t-color-accent);
+}
+
+/* 筛选面板挂在工具条下方占一行，不做浮层（不遮内容） */
+.filter-panel-slot {
+	flex-basis: 100%;
+	min-width: 0;
 }
 
 .split-view {

@@ -5,13 +5,15 @@
 // 与全局浮窗共用同一套解析规则（lib/capture.ts）。
 
 import { FilterGroup, SearchInput, Select } from "@components/ui";
+import type { TagOption } from "@components/ui/molecules/TagInput.tsx";
 import { notifySuccess } from "@shared/utils";
-import { For } from "solid-js";
-import type { CreateTaskRequest, TaskSortKey } from "../api.ts";
+import { createSignal, For, Show } from "solid-js";
+import { type CreateTaskRequest, getTagsE, type TaskSortKey } from "../api.ts";
 import { captureToCreateRequest } from "../lib/task-payload.ts";
 import styles from "../TaskManager.module.css";
 import type { CaptureSubmit } from "./CaptureInput.tsx";
 import CaptureInput from "./CaptureInput.tsx";
+import TaskFilterPanel, { ActiveFilterChips } from "./TaskFilterPanel.tsx";
 import { useTasks } from "./TaskProvider.tsx";
 
 export interface TaskToolbarProps {
@@ -31,7 +33,23 @@ const SORT_OPTIONS: readonly { value: TaskSortKey; label: string }[] = [
 ];
 
 export default function TaskToolbar(props: TaskToolbarProps) {
-	const { add, search, reload, tasks, sort, setSort } = useTasks();
+	const { add, search, reload, tasks, sort, setSort, filter, setFilter } =
+		useTasks();
+	const [filterOpen, setFilterOpen] = createSignal(false);
+
+	// 筛选面板里的标签补全与录入框共用同一套端点与去抖
+	let tagSearchTimer: ReturnType<typeof setTimeout> | undefined;
+	const searchTags = (query: string): Promise<TagOption[]> =>
+		new Promise((resolve) => {
+			clearTimeout(tagSearchTimer);
+			tagSearchTimer = setTimeout(async () => {
+				try {
+					resolve(await getTagsE(query));
+				} catch {
+					resolve([]);
+				}
+			}, 200);
+		});
 
 	const doSearch = (q: string) => {
 		if (q) search(q);
@@ -67,6 +85,18 @@ export default function TaskToolbar(props: TaskToolbarProps) {
 				/>
 			</div>
 
+			{/* 状态/标签/优先级/截止合并进这一个按钮（常驻控件预算 ≤5） */}
+			<button
+				type="button"
+				class={styles.filterButton}
+				aria-expanded={filterOpen()}
+				aria-controls="task-filter-panel"
+				onClick={() => setFilterOpen(!filterOpen())}
+			>
+				筛选 ⚙
+			</button>
+			<ActiveFilterChips filter={filter()} onChange={setFilter} />
+
 			<Select
 				class={styles.sortSelect}
 				value={sort()}
@@ -87,6 +117,17 @@ export default function TaskToolbar(props: TaskToolbarProps) {
 					onSubmit={submit}
 				/>
 			</div>
+
+			{/* 面板挂在工具条下方而非浮层：不遮内容，Esc / 点外面即可收起 */}
+			<Show when={filterOpen()}>
+				<div class={styles.filterPanelSlot} id="task-filter-panel">
+					<TaskFilterPanel
+						filter={filter()}
+						onChange={setFilter}
+						searchTags={searchTags}
+					/>
+				</div>
+			</Show>
 		</div>
 	);
 }

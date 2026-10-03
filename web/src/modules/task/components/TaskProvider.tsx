@@ -26,6 +26,11 @@ import {
 	getTasksE,
 	searchTasksE,
 } from "../api.ts";
+import {
+	applyFilter,
+	EMPTY_FILTER,
+	type TaskFilter,
+} from "../lib/task-filter.ts";
 import { toUpdatePayload } from "../lib/task-payload.ts";
 import { makeTemp, STATUS_API } from "../lib/task-provider-utils.ts";
 
@@ -43,6 +48,9 @@ interface TaskCtxValue {
 	/** 排序口径（默认 smart）：列表视图的分组方式也跟着它走 */
 	sort: () => TaskSortKey;
 	setSort: (sort: TaskSortKey) => void;
+	/** 筛选条件 + 改写；`tasks()` 返回的已是筛过的结果 */
+	filter: () => TaskFilter;
+	setFilter: (filter: TaskFilter) => void;
 	add(req: CreateTaskRequest): Promise<Task | null>;
 	reload(): Promise<void>;
 	reloadStats(): Promise<void>;
@@ -56,16 +64,22 @@ interface TaskCtxValue {
 const TaskCtx = createContext<TaskCtxValue>();
 
 export function TaskProvider(props: { children: JSX.Element }) {
-	const [tasks, setTasks] = createSignal<Task[]>([]);
+	// `allTasks` 是原样载入的全量（写路径的乐观更新落在它上面），
+	// `tasks` 是**筛过**的结果 —— 界面一律读后者
+	const [allTasks, setTasks] = createSignal<Task[]>([]);
 	const [loading, setLoading] = createSignal(true);
 	// 排序口径：默认 smart（系统算"先做哪件"），用户可在工具条切换
 	const [sort, setSortSignal] = createSignal<TaskSortKey>("smart");
+	// 筛选条件（客户端筛：全量已在内存里，见 lib/task-filter.ts 的说明）
+	const [filter, setFilter] = createSignal<TaskFilter>(EMPTY_FILTER);
 	const [stats, setStats] = createSignal<Stats>({
 		backlog: 0,
 		active: 0,
 		completed: 0,
 		archived: 0,
 	});
+
+	const tasks = () => applyFilter(allTasks(), filter());
 
 	const setSort = (next: TaskSortKey) => {
 		if (next === sort()) {
@@ -215,6 +229,8 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		stats,
 		sort,
 		setSort,
+		filter,
+		setFilter,
 		add,
 		reload,
 		reloadStats,
@@ -240,6 +256,8 @@ export function useTasks() {
 			stats: () => zero,
 			sort: () => "smart" as TaskSortKey,
 			setSort: () => {},
+			filter: () => EMPTY_FILTER,
+			setFilter: () => {},
 			add: async () => null,
 			reload: async () => {},
 			reloadStats: async () => {},

@@ -4,12 +4,16 @@ import type { Task } from "../api.ts";
 import type { TaskStatusKey } from "../lib/status-colors.ts";
 import {
 	buildChildrenMap,
+	DUE_BUCKET_TITLES,
+	DUE_BUCKETS,
+	groupByDue,
 	groupByStatus,
 	TASK_STATUS_KEYS,
 } from "../lib/task-group.ts";
 import EditTaskModal from "./EditTaskModal.tsx";
 import TaskItem from "./TaskItem.tsx";
 import styles from "./TaskList.module.css";
+import { useTasks } from "./TaskProvider.tsx";
 
 interface TaskListProps {
 	tasks: Task[];
@@ -72,6 +76,9 @@ const SECTION_TITLES: Record<TaskStatusKey, string> = {
 export default function TaskList(props: TaskListProps) {
 	const [editingTask, setEditingTask] = createSignal<Task | null>(null);
 	const editModal = useModal();
+	// smart 排序的默认视图按"今天 / 即将到期 / 收件箱"分组（设计文档 03 §4、08 S3-8）；
+	// 换成显式排序时按状态分组（那时用户要的是"按我选的维度看全部"）
+	const { sort } = useTasks();
 
 	const openEdit = (task: Task) => {
 		setEditingTask(task);
@@ -81,6 +88,7 @@ export default function TaskList(props: TaskListProps) {
 	// 父子映射与按状态分组：规则在 lib/（纯函数、有单测），这里只做响应式包装
 	const childrenMap = createMemo(() => buildChildrenMap(props.tasks));
 	const groupedTasks = createMemo(() => groupByStatus(props.tasks));
+	const dueGroups = createMemo(() => groupByDue(props.tasks));
 
 	// 状态指示器颜色映射
 	const statusColors: Record<string, string> = {
@@ -96,21 +104,45 @@ export default function TaskList(props: TaskListProps) {
 
 	return (
 		<div class={styles.taskListPanel}>
-			<For each={TASK_STATUS_KEYS}>
-				{(status) => (
-					<TaskStatusSection
-						tasks={groupedTasks()[status]}
-						title={SECTION_TITLES[status]}
-						statusColorClass={getStatusColorClass(status)}
-						childrenMap={childrenMap()}
-						onStatusChange={props.onStatusChange}
-						onDelete={props.onDelete}
-						onUpdate={props.onUpdate}
-						onAddSubTask={props.onAddSubTask}
-						onEdit={openEdit}
-					/>
-				)}
-			</For>
+			<Show
+				when={sort() === "smart"}
+				fallback={
+					<For each={TASK_STATUS_KEYS}>
+						{(status) => (
+							<TaskStatusSection
+								tasks={groupedTasks()[status]}
+								title={SECTION_TITLES[status]}
+								statusColorClass={getStatusColorClass(status)}
+								childrenMap={childrenMap()}
+								onStatusChange={props.onStatusChange}
+								onDelete={props.onDelete}
+								onUpdate={props.onUpdate}
+								onAddSubTask={props.onAddSubTask}
+								onEdit={openEdit}
+							/>
+						)}
+					</For>
+				}
+			>
+				{/* 默认视图：今天 / 即将到期 / 收件箱 / 以后 —— 组内顺序即服务端的排序结果 */}
+				<For each={DUE_BUCKETS}>
+					{(bucket) => (
+						<Show when={dueGroups()[bucket].length > 0}>
+							<TaskStatusSection
+								tasks={dueGroups()[bucket]}
+								title={DUE_BUCKET_TITLES[bucket]}
+								statusColorClass={getStatusColorClass("active")}
+								childrenMap={childrenMap()}
+								onStatusChange={props.onStatusChange}
+								onDelete={props.onDelete}
+								onUpdate={props.onUpdate}
+								onAddSubTask={props.onAddSubTask}
+								onEdit={openEdit}
+							/>
+						</Show>
+					)}
+				</For>
+			</Show>
 
 			{/* 编辑任务模态框 */}
 			<EditTaskModal

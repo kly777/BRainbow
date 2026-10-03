@@ -1,6 +1,12 @@
 import type { Task, TaskStatusType } from "@modules/task";
 import { describe, expect, it } from "vitest";
-import { buildChildrenMap, groupByStatus } from "./task-group.ts";
+import {
+	bucketOfDue,
+	buildChildrenMap,
+	formatDue,
+	groupByDue,
+	groupByStatus,
+} from "./task-group.ts";
 
 /** 只给关心的字段，其余走默认（Task 的必填字段较多） */
 const task = (id: number, over: Partial<Task> = {}): Task =>
@@ -76,5 +82,97 @@ describe("groupByStatus", () => {
 		]);
 		expect(grouped.active.map((t) => t.id)).toEqual([1, 3]);
 		expect(grouped.completed.map((t) => t.id)).toEqual([2]);
+	});
+});
+
+describe("bucketOfDue：默认视图的四档", () => {
+	const now = new Date(2026, 9, 3, 12, 0); // 2026-10-03 12:00 本地
+
+	it("今天（含今天已过点）", () => {
+		expect(bucketOfDue(new Date(2026, 9, 3, 15, 0).toISOString(), now)).toBe(
+			"today",
+		);
+		expect(bucketOfDue(new Date(2026, 9, 3, 9, 0).toISOString(), now)).toBe(
+			"today",
+		);
+	});
+
+	it("逾期也进今天（今天就该处理它）", () => {
+		expect(bucketOfDue(new Date(2026, 9, 1, 9, 0).toISOString(), now)).toBe(
+			"today",
+		);
+	});
+
+	it("1–7 天内 → 即将到期", () => {
+		expect(bucketOfDue(new Date(2026, 9, 4, 9, 0).toISOString(), now)).toBe(
+			"soon",
+		);
+		expect(bucketOfDue(new Date(2026, 9, 10, 12, 0).toISOString(), now)).toBe(
+			"soon",
+		);
+	});
+
+	it("8 天以上 → 以后", () => {
+		expect(bucketOfDue(new Date(2026, 9, 20, 9, 0).toISOString(), now)).toBe(
+			"later",
+		);
+	});
+
+	it("无 due → 收件箱", () => {
+		expect(bucketOfDue(null, now)).toBe("inbox");
+		expect(bucketOfDue("不是日期", now)).toBe("inbox");
+	});
+});
+
+describe("groupByDue", () => {
+	it("组内保持传入顺序（顺序是服务端的事）", () => {
+		const now = new Date(2026, 9, 3, 12, 0);
+		const grouped = groupByDue(
+			[
+				task(1, { due_at: new Date(2026, 9, 3, 15, 0).toISOString() }),
+				task(2, { due_at: null }),
+				task(3, { due_at: new Date(2026, 9, 3, 18, 0).toISOString() }),
+			],
+			now,
+		);
+		expect(grouped.today.map((t) => t.id)).toEqual([1, 3]);
+		expect(grouped.inbox.map((t) => t.id)).toEqual([2]);
+	});
+});
+
+describe("formatDue", () => {
+	const now = new Date(2026, 9, 3, 12, 0);
+
+	it("今天带钟点", () => {
+		expect(formatDue(new Date(2026, 9, 3, 15, 5).toISOString(), now)).toEqual({
+			text: "今天 15:05",
+			overdue: false,
+		});
+	});
+
+	it("逾期给天数与标记", () => {
+		expect(formatDue(new Date(2026, 9, 1, 12, 0).toISOString(), now)).toEqual({
+			text: "逾期 2 天",
+			overdue: true,
+		});
+	});
+
+	it("一周内给剩余天数", () => {
+		expect(formatDue(new Date(2026, 9, 5, 12, 0).toISOString(), now)).toEqual({
+			text: "还剩 2 天",
+			overdue: false,
+		});
+	});
+
+	it("更远的给月-日", () => {
+		expect(formatDue(new Date(2026, 9, 20, 9, 0).toISOString(), now)).toEqual({
+			text: "10-20",
+			overdue: false,
+		});
+	});
+
+	it("无 due / 坏值 → null（不编一个日期出来）", () => {
+		expect(formatDue(null, now)).toBeNull();
+		expect(formatDue("xx", now)).toBeNull();
 	});
 });

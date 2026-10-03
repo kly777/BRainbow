@@ -10,6 +10,7 @@ import type { Task } from "../api.ts";
 import { getTagsE } from "../api.ts";
 import { TaskStatus, type TaskStatusType, toTaskStatus } from "../api-types.ts";
 import { fromIso, toDateInputValue } from "../lib/dateInput.ts";
+import { formatDue } from "../lib/task-group.ts";
 import { tagsFromNames } from "../lib/task-payload.ts";
 import styles from "./TaskList.module.css";
 
@@ -36,6 +37,30 @@ const TaskTitle: Component<{ title: string; isSubTask: boolean }> = (props) => (
 const DateBadge: Component<{ createdAt?: string }> = (props) => (
 	<Show when={props.createdAt}>
 		<span class={styles.dateBadge}>📅 {fmtFull(props.createdAt || "")}</span>
+	</Show>
+);
+
+/** 截止时间徽章：相对时间 + 逾期标记（**不靠颜色单独承载信息**，WCAG 1.4.1） */
+const DueBadge: Component<{ dueAt: string | null }> = (props) => (
+	<Show when={formatDue(props.dueAt)}>
+		{(due) => (
+			<span
+				class={styles.dueBadge}
+				classList={{ [styles.dueOverdue]: due().overdue }}
+			>
+				{due().overdue ? "⚠ " : "⏰ "}
+				{due().text}
+			</span>
+		)}
+	</Show>
+);
+
+/** 优先级角标：文字（P1…P4）——形状与文字都携带信息，不是只有颜色 */
+const PriorityBadge: Component<{ priority: Task["priority"] }> = (props) => (
+	<Show when={props.priority}>
+		{(priority) => (
+			<span class={styles.priorityBadge}>{priority().toUpperCase()}</span>
+		)}
 	</Show>
 );
 
@@ -85,8 +110,22 @@ function TaskItem(props: TaskItemProps) {
 						<p class={styles.taskDescription}>{props.task.description}</p>
 					</Show>
 					<div class={styles.taskMeta}>
+						<PriorityBadge priority={props.task.priority} />
+						<DueBadge dueAt={props.task.due_at} />
+						<Show when={props.task.effort_estimate_minutes}>
+							{(minutes) => (
+								<span class={styles.effortBadge}>⏱ {minutes()}m</span>
+							)}
+						</Show>
+						<For each={props.task.tags}>
+							{(tag) => <span class={styles.tagChip}>#{tag.name}</span>}
+						</For>
 						<DateBadge createdAt={props.task.created_at} />
 					</div>
+					{/* 排序理由（P8）：常驻可见，不藏进 tooltip —— 它是"为什么排这儿"的唯一解释 */}
+					<Show when={props.task.reason}>
+						{(reason) => <p class={styles.reasonLine}>{reason()}</p>}
+					</Show>
 				</div>
 				<div class={styles.taskActions}>
 					{/* 行内补属性（§6）：悬停/聚焦时显形，标签与日期各一个入口 */}

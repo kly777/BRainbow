@@ -9,6 +9,14 @@ export type TaskStatusType = "backlog" | "active" | "completed" | "archived";
 /** 优先级：p1 最急；`null` = 用户没表达过（与显式 p3 不同） */
 export type TaskPriority = "p1" | "p2" | "p3" | "p4";
 
+/**
+ * 列表排序口径。**默认 smart**：系统算"先做哪件"，每条带理由。
+ *
+ * `created` 仍在选项里（"我就想按录入时间看"是正当需求），但它不再是系统兜底 ——
+ * 排序算崩了要修排序，不是退回旧口径。
+ */
+export type TaskSortKey = "smart" | "due" | "created" | "priority" | "effort";
+
 export interface Tag {
 	id: number;
 	name: string;
@@ -29,6 +37,10 @@ export interface Task {
 	due_at: string | null;
 	priority: TaskPriority | null;
 	tags: Tag[];
+	/** 排序理由（人话，一行）；只有 `sort=smart` 的列表会带 */
+	reason?: string;
+	/** 理由的分项；smart 排序下恒非空（P8） */
+	reasons?: string[];
 	created_at: string;
 	updated_at: string;
 }

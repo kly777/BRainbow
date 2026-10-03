@@ -4,9 +4,10 @@
 // 第 2 层由 `[+]` 唤出六个可选控件；`!p1` / `#标签` / `~60m` / `@提及` 的符号
 // 与全局浮窗共用同一套解析规则（lib/capture.ts）。
 
-import { FilterGroup, SearchInput } from "@components/ui";
+import { FilterGroup, SearchInput, Select } from "@components/ui";
 import { notifySuccess } from "@shared/utils";
-import type { CreateTaskRequest } from "../api.ts";
+import { For } from "solid-js";
+import type { CreateTaskRequest, TaskSortKey } from "../api.ts";
 import { captureToCreateRequest } from "../lib/task-payload.ts";
 import styles from "../TaskManager.module.css";
 import type { CaptureSubmit } from "./CaptureInput.tsx";
@@ -20,8 +21,17 @@ export interface TaskToolbarProps {
 	onSearchChange: (q: string) => void;
 }
 
+/** 排序下拉的选项：smart 是默认（系统算"先做哪件"），其余是用户可选的显式口径 */
+const SORT_OPTIONS: readonly { value: TaskSortKey; label: string }[] = [
+	{ value: "smart", label: "智能" },
+	{ value: "due", label: "截止时间" },
+	{ value: "priority", label: "优先级" },
+	{ value: "effort", label: "工时" },
+	{ value: "created", label: "创建时间" },
+];
+
 export default function TaskToolbar(props: TaskToolbarProps) {
-	const { add, search, reload, tasks } = useTasks();
+	const { add, search, reload, tasks, sort, setSort } = useTasks();
 
 	const doSearch = (q: string) => {
 		if (q) search(q);
@@ -56,6 +66,18 @@ export default function TaskToolbar(props: TaskToolbarProps) {
 					placeholder="搜索任务…"
 				/>
 			</div>
+
+			<Select
+				class={styles.sortSelect}
+				value={sort()}
+				onChange={(e) => setSort(e.currentTarget.value as TaskSortKey)}
+				aria-label="排序方式"
+				title="排序方式"
+			>
+				<For each={SORT_OPTIONS}>
+					{(option) => <option value={option.value}>{option.label}</option>}
+				</For>
+			</Select>
 
 			<div class={styles.quickAddBox}>
 				{/* 父任务候选给的是当前列表（含层级）：够常用，又不为下拉多打一次请求 */}

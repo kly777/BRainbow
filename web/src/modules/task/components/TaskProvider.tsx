@@ -11,13 +11,19 @@ import {
 	onMount,
 	useContext,
 } from "solid-js";
-import type { CreateTaskRequest, Task, TaskStatusType } from "../api.ts";
+import type {
+	CreateTaskRequest,
+	Task,
+	TaskSortKey,
+	TaskStatusType,
+} from "../api.ts";
 import {
 	createTaskE as apiCreateTask,
 	deleteTaskE as apiDeleteTask,
 	updateTaskE as apiUpdateTask,
 	fetchAllTasks,
 	getTaskStatsE,
+	getTasksE,
 	searchTasksE,
 } from "../api.ts";
 import { toUpdatePayload } from "../lib/task-payload.ts";
@@ -34,6 +40,9 @@ interface TaskCtxValue {
 	tasks: () => Task[];
 	loading: () => boolean;
 	stats: () => Stats;
+	/** 排序口径（默认 smart）：列表视图的分组方式也跟着它走 */
+	sort: () => TaskSortKey;
+	setSort: (sort: TaskSortKey) => void;
 	add(req: CreateTaskRequest): Promise<Task | null>;
 	reload(): Promise<void>;
 	reloadStats(): Promise<void>;
@@ -49,6 +58,8 @@ const TaskCtx = createContext<TaskCtxValue>();
 export function TaskProvider(props: { children: JSX.Element }) {
 	const [tasks, setTasks] = createSignal<Task[]>([]);
 	const [loading, setLoading] = createSignal(true);
+	// 排序口径：默认 smart（系统算"先做哪件"），用户可在工具条切换
+	const [sort, setSortSignal] = createSignal<TaskSortKey>("smart");
 	const [stats, setStats] = createSignal<Stats>({
 		backlog: 0,
 		active: 0,
@@ -56,10 +67,20 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		archived: 0,
 	});
 
+	const setSort = (next: TaskSortKey) => {
+		if (next === sort()) {
+			return;
+		}
+		setSortSignal(next);
+		void reload();
+	};
+
 	const reload = async () => {
 		setLoading(true);
 		// 拉全量（后端分页缺省 20 条，只取第一页会让第 21 条起在界面上消失）
-		const result = await tryAsync(() => fetchAllTasks());
+		const result = await tryAsync(() =>
+			fetchAllTasks((page, size) => getTasksE(page, size, sort())),
+		);
 		if (result.ok) {
 			setTasks(result.value.items);
 			if (result.value.truncated) {
@@ -192,6 +213,8 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		tasks,
 		loading,
 		stats,
+		sort,
+		setSort,
 		add,
 		reload,
 		reloadStats,
@@ -215,6 +238,8 @@ export function useTasks() {
 			tasks: () => empty,
 			loading: () => false,
 			stats: () => zero,
+			sort: () => "smart" as TaskSortKey,
+			setSort: () => {},
 			add: async () => null,
 			reload: async () => {},
 			reloadStats: async () => {},

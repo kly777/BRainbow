@@ -346,3 +346,52 @@
 .child-list > .task-item {
 	padding: var(--space-md) 0;
 }
+
+/* ── S3：截止/优先级/标签/理由（默认视图的信息层） ── */
+
+.priority-badge {
+	padding: 0 var(--space-2xs);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-2xs);
+	font-size: var(--text-xs);
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+	color: var(--t-color-ink-muted);
+}
+
+.due-badge {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+/* 逾期：⚠ 图标 + 描边（不是只换个颜色 —— WCAG 1.4.1 要求不能只有颜色通道） */
+.due-overdue {
+	color: var(--t-color-danger);
+	font-weight: 600;
+	text-decoration: underline dotted;
+	text-underline-offset: 0.2em;
+}
+
+.effort-badge {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}
+
+.tag-chip {
+	padding: 0 var(--space-2xs);
+	border-radius: var(--radius-2xs);
+	background: var(--t-color-accent-soft);
+	font-size: var(--text-xs);
+}
+
+.reason-line {
+	margin: var(--space-2xs) 0 0;
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-faint);
+}
+
+.sort-select {
+	flex-shrink: 0;
+	font-size: var(--text-sm);
+}

@@ -2,7 +2,7 @@
 
 import type { PaginatedResponse } from "@shared/api";
 import { buildQuery, cachedRequest } from "@shared/api";
-import type { CalendarEvent, Task } from "./api-types.ts";
+import type { CalendarEvent, Task, TaskSortKey } from "./api-types.ts";
 
 // ==================== Task API Functions ====================
 
@@ -23,8 +23,9 @@ export const getCalendarEventsE = (
 export const getTasksE = (
 	page = 1,
 	pageSize = MAX_PAGE_SIZE,
+	sort: TaskSortKey = "smart",
 ): Promise<PaginatedResponse<Task>> =>
-	cachedRequest(`/tasks${buildQuery({ page, page_size: pageSize })}`);
+	cachedRequest(`/tasks${buildQuery({ page, page_size: pageSize, sort })}`);
 
 export const getAllTasksE = (
 	page = 1,

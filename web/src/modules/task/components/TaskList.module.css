@@ -390,8 +390,3 @@
 	font-size: var(--text-xs);
 	color: var(--t-color-ink-faint);
 }
-
-.sort-select {
-	flex-shrink: 0;
-	font-size: var(--text-sm);
-}

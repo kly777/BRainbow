@@ -62,3 +62,9 @@
 		grid-template-columns: 1fr;
 	}
 }
+
+/* 排序下拉（工具条）：宽度跟着内容走，不占满 */
+.sort-select {
+	flex-shrink: 0;
+	font-size: var(--text-sm);
+}

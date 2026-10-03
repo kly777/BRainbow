@@ -8,8 +8,8 @@ use sqlx::{SqliteConnection, SqlitePool};
 use tracing::{info, warn};
 
 use super::{
-    Decl, DeclKind, columns_exist, fts, legacy, repairs, same_ddl, schema_error, stored_sql,
-    tables, time,
+    Decl, DeclKind, columns_exist, fts, legacy, rebuild, repairs, same_ddl, schema_error,
+    stored_sql, tables, time,
 };
 
 /// 一次 reconcile 里做过的动作（日志与测试用）
@@ -17,11 +17,14 @@ pub(crate) type Actions = Vec<String>;
 
 /// 按形状把库补齐到声明的样子，并跑一遍数据修复。
 ///
-/// `from_version` 是库的当前 `PRAGMA user_version`：只用来决定哪些**数据修复**要跑
-/// （结构同步永远按形状做，与版本无关）。
+/// `from_version` 是库的当前 `PRAGMA user_version`：用来决定哪些**数据修复**与
+/// **表重建**要跑（结构同步永远按形状做，与版本无关）。
 ///
 /// ## 阶段顺序（每一步的次序都有理由，别随手调）
 ///
+/// 0. **表级约束** —— SQLite 加不上（`ALTER` 只能加列），只能按声明重建表；要在事务外
+///    关外键、且必须早于第 ④⑤⑥ 阶段（重建会把索引/触发器带走，那三步负责建回来），
+///    详见 [`rebuild`]
 /// 1. **废弃表/索引** —— 索引先删：可能引用着第 7 步要删的旧列，也可能与声明里的新形态
 ///    冲突（`idx_file_category` 就是从 `file_category` 挪到生成列 `category` 上的）
 /// 2. **表与列** —— 建缺表、补缺列（列定义取自声明文本，与新建库同源）
@@ -35,8 +38,11 @@ pub(crate) async fn reconcile(
     pool: &SqlitePool,
     from_version: i64,
 ) -> Result<Actions, sqlx::Error> {
-    let mut tx = pool.begin().await?;
+    // 第 ⓪ 步在事务外（要关外键），它自己管自己的原子性
     let mut actions = Actions::new();
+    actions.extend(rebuild::run(pool, from_version).await?);
+
+    let mut tx = pool.begin().await?;
 
     actions.extend(phase("① 废弃对象", drop_legacy_objects(&mut tx).await)?);
     actions.extend(phase("② 表与列", sync_structure(&mut tx).await)?);
@@ -290,11 +296,11 @@ async fn declared_columns(
         .collect())
 }
 
-/// 把声明的 DDL 换成临时表名。
+/// 把声明的 DDL 换成临时表名（`rebuild` 用同一套换名法建新表）。
 ///
 /// 只换 `CREATE TABLE … <名>` 这一处 —— 全局替换会把 `file_id` 这类**列名**一起改掉，
 /// 于是临时表的列名与真表对不上，补列逻辑会照着错的名单补。
-fn scratch_ddl(decl: &Decl, scratch: &str) -> Result<String, sqlx::Error> {
+pub(crate) fn scratch_ddl(decl: &Decl, scratch: &str) -> Result<String, sqlx::Error> {
     let header = format!("CREATE TABLE IF NOT EXISTS {}", decl.name);
     if !decl.ddl.contains(&header) {
         return Err(schema_error(format!(

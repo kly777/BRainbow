@@ -110,12 +110,22 @@ pub(crate) const DECLS: &[Decl] = &[
             created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
             updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
 
+            -- 时间承诺（v24）：start 是软偏好、due 是承诺，缺省含义不同，所以分成两列。
+            -- priority 存 'p1'…'p4' 字符串（可读、将来插得进 p0；NULL = 用户没表达过，
+            -- 与显式 'p3' 不同，打分时要区别对待）
+            start_at TIMESTAMP,
+            due_at TIMESTAMP,
+            priority TEXT,
+
             -- 外键约束
             FOREIGN KEY (parent_task_id) REFERENCES task(id),
             FOREIGN KEY (user_id) REFERENCES user(id),
 
             -- 检查约束
-            CHECK (effort_estimate_minutes IS NULL OR effort_estimate_minutes >= 0)
+            CHECK (effort_estimate_minutes IS NULL OR effort_estimate_minutes >= 0),
+            CHECK (priority IS NULL OR priority IN ('p1','p2','p3','p4')),
+            -- 前半段让"只填 start 不填 due"合法（常见情况）：反了必然是录入错误
+            CHECK (due_at IS NULL OR start_at IS NULL OR start_at <= due_at)
         )
         "#,
     ),

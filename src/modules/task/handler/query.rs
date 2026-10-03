@@ -91,6 +91,8 @@ pub async fn get_calendar_handler(
                     end: tw.end_time,
                     window_type: tw.window_type.as_str().to_string(),
                     status: task.status,
+                    priority: task.priority,
+                    due_at: task.due_at,
                 })
                 .collect();
             Json(events).into_response()

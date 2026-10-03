@@ -99,7 +99,11 @@ export interface CalendarEvent {
 	start: string;
 	end: string;
 	window_type: string;
-	status: string;
+	status: TaskStatusType;
+	/** 优先级（日历按 type/status/priority 三通道上色 —— 形状与文字也承载信息，不只靠颜色） */
+	priority: TaskPriority | null;
+	/** 截止时间（与这条时段的 planned 窗口是两回事：`⚠` 逾期徽标靠它算） */
+	due_at: string | null;
 }
 
 // ── DAG 依赖图 ──

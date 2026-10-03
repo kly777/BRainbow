@@ -86,6 +86,10 @@ pub struct CalendarEvent {
     pub end: DateTime<Utc>,
     pub window_type: String,
     pub status: TaskStatus,
+    /// 优先级（日历要按 type/status/priority 三通道上色，见 06-日历视图 §5.2）
+    pub priority: Option<TaskPriority>,
+    /// 截止时间（日历上的 `⚠` 逾期徽标靠它算；时间承诺与这条时段的 planned 窗口是两回事）
+    pub due_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -157,10 +161,15 @@ mod tests {
             end: chrono::Utc::now(),
             window_type: "planned".into(),
             status: crate::modules::task::model::TaskStatus::Active,
+            priority: Some(crate::modules::task::model::TaskPriority::P1),
+            due_at: Some(chrono::Utc::now()),
         };
         let json = serde_json::to_string(&ev).unwrap();
         assert!(json.contains("\"task_id\":1"));
         assert!(json.contains("\"window_type\":\"planned\""));
+        // 三通道要用 priority 与 due_at（06-日历视图 §5.2）
+        assert!(json.contains("\"priority\":\"p1\""));
+        assert!(json.contains("\"due_at\":"));
     }
 
     #[test]

@@ -13,7 +13,7 @@ import styles from "./TaskList.module.css";
 
 interface TaskListProps {
 	tasks: Task[];
-	onStatusChange: (taskId: number, status: string) => void;
+	onStatusChange: (taskId: number, status: TaskStatusKey) => void;
 	onDelete: (taskId: number) => void;
 	onUpdate: (taskId: number, updates: Partial<Task>) => void;
 	onAddSubTask?: (parentId: number, title: string) => Promise<void>;
@@ -24,7 +24,7 @@ interface TaskStatusSectionProps {
 	title: string;
 	statusColorClass: string;
 	childrenMap: Map<number, Task[]>;
-	onStatusChange: (taskId: number, status: string) => void;
+	onStatusChange: (taskId: number, status: TaskStatusKey) => void;
 	onDelete: (taskId: number) => void;
 	onAddSubTask?: (parentId: number, title: string) => Promise<void>;
 	onEdit: (task: Task) => void;

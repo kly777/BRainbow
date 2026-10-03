@@ -82,6 +82,10 @@ fn mk(title: &str) -> CreateTaskRequest {
         description: None,
         parent_task_id: None,
         effort_estimate_minutes: None,
+        start_at: None,
+        due_at: None,
+        priority: None,
+        tags: None,
     }
 }
 
@@ -92,6 +96,10 @@ fn rename(title: &str) -> UpdateTaskRequest {
         parent_task_id: None,
         status: None,
         effort_estimate_minutes: None,
+        start_at: None,
+        due_at: None,
+        priority: None,
+        tags: None,
     }
 }
 

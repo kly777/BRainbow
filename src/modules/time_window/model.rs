@@ -285,6 +285,9 @@ pub struct CreateTimeWindowRequest {
 }
 
 /// 更新时间窗口请求（部分更新）
+///
+/// 可空字段是**双层 `Option`**（见 `shared::serde_utils::double_option`）：
+/// `None` = 不改，`Some(None)` = 清空。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdateTimeWindowRequest {
     /// 开始时间（可选）
@@ -299,12 +302,12 @@ pub struct UpdateTimeWindowRequest {
     #[serde(default)]
     pub window_type: Option<TimeWindowType>,
 
-    /// 用户ID（可选）
-    #[serde(default)]
+    /// 用户ID（可选；`null` = 清空）
+    #[serde(default, deserialize_with = "crate::shared::serde_utils::double_option")]
     pub user_id: Option<Option<i32>>,
 
-    /// 循环规则（可选）
-    #[serde(default)]
+    /// 循环规则（可选；`null` = 清空）
+    #[serde(default, deserialize_with = "crate::shared::serde_utils::double_option")]
     pub recurrence_rule: Option<Option<RecurrenceRule>>,
 }
 

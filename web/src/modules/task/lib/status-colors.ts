@@ -16,8 +16,10 @@
 // `--t-color-border` 表达"未激活"，属另一套视觉，未纳入本表。
 
 import type { TokenName } from "@shared/styles";
+import type { TaskStatusType } from "../api-types.ts";
 
-export type TaskStatusKey = "backlog" | "active" | "completed" | "archived";
+/** 状态键 = 后端 `TaskStatus` 的联合类型（定义在 api-types，别在这儿再写一份） */
+export type TaskStatusKey = TaskStatusType;
 
 export const STATUS_TOKENS: Record<TaskStatusKey, TokenName> = {
 	backlog: "--t-color-ink-muted",

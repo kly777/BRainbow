@@ -3,18 +3,12 @@ import { Pencil, Trash2 } from "@components/ui/icons";
 import { fmtFull } from "@shared/utils";
 import { type Component, createSignal, For, Show } from "solid-js";
 import type { Task } from "../api.ts";
+import { TaskStatus, type TaskStatusType, toTaskStatus } from "../api-types.ts";
 import styles from "./TaskList.module.css";
-
-const TaskStatus = {
-	BACKLOG: "backlog",
-	ACTIVE: "active",
-	COMPLETED: "completed",
-	ARCHIVED: "archived",
-} as const;
 
 interface TaskItemProps {
 	task: Task;
-	onStatusChange: (taskId: number, status: string) => void;
+	onStatusChange: (taskId: number, status: TaskStatusType) => void;
 	onDelete: (taskId: number) => void;
 	onEdit: () => void;
 	children: Task[];
@@ -59,7 +53,10 @@ function TaskItem(props: TaskItemProps) {
 					<Select
 						value={props.task.status || TaskStatus.BACKLOG}
 						onChange={(e) =>
-							props.onStatusChange(props.task.id, e.currentTarget.value)
+							props.onStatusChange(
+								props.task.id,
+								toTaskStatus(e.currentTarget.value),
+							)
 						}
 						class={styles.statusSelect}
 						aria-label={`任务状态：${props.task.title}`}

@@ -2,6 +2,7 @@ import { Modal } from "@components/ui";
 import { notifyError, tryAsync } from "@shared/utils";
 import { type Component, createEffect, createSignal, Show } from "solid-js";
 import type { Task, TimeWindow } from "../api.ts";
+import { type TaskStatusType, toTaskStatus } from "../api-types.ts";
 import { getTimeWindowsE } from "../timeWindowApi.ts";
 import BasicInfoTab from "./BasicInfoTab.tsx";
 import DependenciesTab from "./DependenciesTab.tsx";
@@ -32,7 +33,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 	// ── 基本信息 ──
 	const [title, setTitle] = createSignal("");
 	const [description, setDescription] = createSignal("");
-	const [status, setStatus] = createSignal("backlog");
+	const [status, setStatus] = createSignal<TaskStatusType>("backlog");
 	const [effort, setEffort] = createSignal<number | undefined>();
 	const [parentTaskId, setParentTaskId] = createSignal<number | undefined>();
 
@@ -62,7 +63,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 		if (props.isOpen && props.task) {
 			setTitle(props.task.title);
 			setDescription(props.task.description || "");
-			setStatus(props.task.status || "backlog");
+			setStatus(toTaskStatus(props.task.status));
 			setEffort(props.task.effort_estimate_minutes ?? undefined);
 			setParentTaskId(props.task.parent_task_id ?? undefined);
 			loadTimeWindows(props.task.id);

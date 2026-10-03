@@ -86,6 +86,66 @@ impl Type<Sqlite> for TaskStatus {
     }
 }
 
+/// 任务优先级（p1 最急）——存字符串 `'p1'`…`'p4'`，`NULL` = 用户没表达过。
+///
+/// 形状照 [`TaskStatus`]，但**不抄它那个"未知值回落默认"的 `From<String>`** ——
+/// 优先级回落成 p3 会让"库里是坏数据"与"用户选了 p3"再也分不开，而 CHECK 约束
+/// 已经在 DB 层拦住了非法值。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TaskPriority {
+    P1,
+    P2,
+    P3,
+    P4,
+}
+
+impl TaskPriority {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            TaskPriority::P1 => "p1",
+            TaskPriority::P2 => "p2",
+            TaskPriority::P3 => "p3",
+            TaskPriority::P4 => "p4",
+        }
+    }
+}
+
+impl std::fmt::Display for TaskPriority {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl FromStr for TaskPriority {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "p1" => Ok(TaskPriority::P1),
+            "p2" => Ok(TaskPriority::P2),
+            "p3" => Ok(TaskPriority::P3),
+            "p4" => Ok(TaskPriority::P4),
+            _ => Err(format!("无效的任务优先级: {s}")),
+        }
+    }
+}
+
+impl<'r> Decode<'r, Sqlite> for TaskPriority {
+    fn decode(value: SqliteValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
+        let s = <&str as Decode<'r, Sqlite>>::decode(value)?;
+        <TaskPriority as std::str::FromStr>::from_str(s).map_err(|_| {
+            Box::new(sqlx::error::Error::Decode("Invalid task priority".into())) as _
+        })
+    }
+}
+
+impl Type<Sqlite> for TaskPriority {
+    fn type_info() -> <Sqlite as sqlx::Database>::TypeInfo {
+        <str as Type<Sqlite>>::type_info()
+    }
+}
+
 /// 任务实体 - 根据new_task.md设计
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, FromRow)]
 pub struct Task {
@@ -109,6 +169,15 @@ pub struct Task {
 
     /// 精力估算（分钟数，可选）
     pub effort_estimate_minutes: Option<i32>,
+
+    /// 开始时间（软偏好："我大概从这时候开始"；NULL = 随时可以开始）
+    pub start_at: Option<DateTime<Utc>>,
+
+    /// 截止时间（承诺："这个时间之前要做完"；NULL = 没有时间压力）
+    pub due_at: Option<DateTime<Utc>>,
+
+    /// 优先级（NULL = 用户没表达过，与显式 p3 不同）
+    pub priority: Option<TaskPriority>,
 
     /// 创建时间
     pub created_at: DateTime<Utc>,
@@ -176,6 +245,9 @@ mod tests {
             status: TaskStatus::Completed,
             completed_at: None,
             effort_estimate_minutes: None,
+            start_at: None,
+            due_at: None,
+            priority: None,
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
         };

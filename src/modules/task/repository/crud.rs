@@ -28,6 +28,9 @@ impl TaskRepository {
                       COALESCE(status, 'backlog') AS "status!: crate::modules::task::model::TaskStatus",
                       completed_at AS "completed_at?: chrono::DateTime<chrono::Utc>",
                       effort_estimate_minutes AS "effort_estimate_minutes?: i32",
+                      start_at AS "start_at?: chrono::DateTime<chrono::Utc>",
+                      due_at AS "due_at?: chrono::DateTime<chrono::Utc>",
+                      priority AS "priority?: crate::modules::task::model::TaskPriority",
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
                FROM task WHERE (?1 IS NULL OR user_id = ?1)
@@ -61,6 +64,9 @@ impl TaskRepository {
                       COALESCE(status, 'backlog') AS "status!: crate::modules::task::model::TaskStatus",
                       completed_at AS "completed_at?: chrono::DateTime<chrono::Utc>",
                       effort_estimate_minutes AS "effort_estimate_minutes?: i32",
+                      start_at AS "start_at?: chrono::DateTime<chrono::Utc>",
+                      due_at AS "due_at?: chrono::DateTime<chrono::Utc>",
+                      priority AS "priority?: crate::modules::task::model::TaskPriority",
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
                FROM task WHERE status != 'archived' AND (?1 IS NULL OR user_id = ?1)
@@ -82,6 +88,9 @@ impl TaskRepository {
                       COALESCE(status, 'backlog') AS "status!: crate::modules::task::model::TaskStatus",
                       completed_at AS "completed_at?: chrono::DateTime<chrono::Utc>",
                       effort_estimate_minutes AS "effort_estimate_minutes?: i32",
+                      start_at AS "start_at?: chrono::DateTime<chrono::Utc>",
+                      due_at AS "due_at?: chrono::DateTime<chrono::Utc>",
+                      priority AS "priority?: crate::modules::task::model::TaskPriority",
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
                FROM task WHERE id = ?1 AND (?2 IS NULL OR user_id = ?2)"#,
@@ -114,13 +123,17 @@ impl TaskRepository {
             Task,
             r#"INSERT INTO task (
                    title, description, parent_task_id, status, completed_at,
-                   effort_estimate_minutes, user_id, created_at, updated_at
-               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                   effort_estimate_minutes, user_id, created_at, updated_at,
+                   start_at, due_at, priority
+               ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                RETURNING id AS "id: i32", title, description,
                          parent_task_id AS "parent_task_id?: i32",
                          COALESCE(status, 'backlog') AS "status!: crate::modules::task::model::TaskStatus",
                          completed_at AS "completed_at?: chrono::DateTime<chrono::Utc>",
                          effort_estimate_minutes AS "effort_estimate_minutes?: i32",
+                         start_at AS "start_at?: chrono::DateTime<chrono::Utc>",
+                         due_at AS "due_at?: chrono::DateTime<chrono::Utc>",
+                         priority AS "priority?: crate::modules::task::model::TaskPriority",
                          COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                          COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>""#,
             request.title,
@@ -131,7 +144,10 @@ impl TaskRepository {
             request.effort_estimate_minutes,
             actor.user_id(),
             now,
-            now
+            now,
+            request.start_at,
+            request.due_at,
+            request.priority.map(|p| p.to_string())
         )
         .fetch_one(&*self.db)
         .await?;
@@ -156,6 +172,9 @@ impl TaskRepository {
                          COALESCE(status, 'backlog') AS "status!: crate::modules::task::model::TaskStatus",
                          completed_at AS "completed_at?: chrono::DateTime<chrono::Utc>",
                          effort_estimate_minutes AS "effort_estimate_minutes?: i32",
+                         start_at AS "start_at?: chrono::DateTime<chrono::Utc>",
+                         due_at AS "due_at?: chrono::DateTime<chrono::Utc>",
+                         priority AS "priority?: crate::modules::task::model::TaskPriority",
                          COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                          COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>""#,
             request.title,
@@ -266,6 +285,54 @@ impl TaskRepository {
             }
         }
 
+        if let Some(start_at) = &request.start_at {
+            if !first {
+                qb.push(", ");
+            }
+            first = false;
+            match start_at {
+                Some(at) => {
+                    qb.push("start_at = ");
+                    qb.push_bind(at);
+                }
+                None => {
+                    qb.push("start_at = NULL");
+                }
+            }
+        }
+
+        if let Some(due_at) = &request.due_at {
+            if !first {
+                qb.push(", ");
+            }
+            first = false;
+            match due_at {
+                Some(at) => {
+                    qb.push("due_at = ");
+                    qb.push_bind(at);
+                }
+                None => {
+                    qb.push("due_at = NULL");
+                }
+            }
+        }
+
+        if let Some(priority) = &request.priority {
+            if !first {
+                qb.push(", ");
+            }
+            first = false;
+            match priority {
+                Some(p) => {
+                    qb.push("priority = ");
+                    qb.push_bind(p.to_string());
+                }
+                None => {
+                    qb.push("priority = NULL");
+                }
+            }
+        }
+
         if !first {
             qb.push(", ");
         }
@@ -277,7 +344,7 @@ impl TaskRepository {
         push_owner_scope(&mut qb, actor, "user_id");
 
         let result = qb
-            .push(" RETURNING id, title, description, parent_task_id, status, completed_at, effort_estimate_minutes, created_at, updated_at")
+            .push(" RETURNING id, title, description, parent_task_id, status, completed_at, effort_estimate_minutes, start_at, due_at, priority, created_at, updated_at")
             .build_query_as::<Task>()
             .fetch_one(&*self.db)
             .await?;

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { TaskStatusType } from "../api-types.ts";
 import { makeTemp, STATUS_API } from "./task-provider-utils.ts";
 
 describe("makeTemp", () => {
@@ -48,7 +49,7 @@ describe("STATUS_API", () => {
 	});
 
 	it("each entry returns a Task with the given id on success", async () => {
-		for (const key of Object.keys(STATUS_API)) {
+		for (const key of Object.keys(STATUS_API) as TaskStatusType[]) {
 			expect(typeof STATUS_API[key]).toBe("function");
 		}
 	});

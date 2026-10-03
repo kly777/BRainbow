@@ -59,6 +59,37 @@ impl TaskQueryService {
             .map_err(ServiceError::Db)
     }
 
+    /// 列表/单条响应的**统一出口**：`Task` → `TaskResponse` 并挂上标签。
+    pub async fn responses(
+        &self,
+        tasks: Vec<Task>,
+    ) -> Result<Vec<super::response::TaskResponse>, ServiceError> {
+        let mut items: Vec<super::response::TaskResponse> =
+            tasks.into_iter().map(super::response::TaskResponse::from).collect();
+        self.attach_tags(&mut items).await?;
+        Ok(items)
+    }
+
+    /// 给一批响应挂上标签：**一次**批量查询（列表不做 N+1），按 id 回填。
+    ///
+    /// 读不到标签就让整个请求失败 —— 标签不是"有则更好"的装饰，界面按它显示 chip，
+    /// 静默空掉等于骗人。
+    pub async fn attach_tags(
+        &self,
+        responses: &mut [super::response::TaskResponse],
+    ) -> Result<(), ServiceError> {
+        let ids: Vec<i32> = responses.iter().map(|response| response.id).collect();
+        let mut tags = self
+            .repo
+            .tags_for_tasks(&ids)
+            .await
+            .map_err(ServiceError::Db)?;
+        for response in responses.iter_mut() {
+            response.tags = tags.remove(&response.id).unwrap_or_default();
+        }
+        Ok(())
+    }
+
     pub async fn detail(
         &self,
         actor: &Actor,

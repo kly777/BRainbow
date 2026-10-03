@@ -15,6 +15,7 @@ import type {
 	DagView,
 	Task,
 	TaskDetail,
+	TaskStatusType,
 	UpdateTaskRequest,
 } from "./api-types.ts";
 
@@ -76,36 +77,13 @@ export const removeTaskDependencyE = (
 		{ entity: `/tasks/${taskId}` },
 	);
 
-export const addTaskDecompositionE = (
-	parentTaskId: number,
-	childTaskId: number,
-): Promise<void> =>
-	domains.tasks.invalidate(
-		request<void>(`/tasks/${parentTaskId}/decomposition/${childTaskId}`, {
-			method: "POST",
-		}),
-		{ entity: `/tasks/${parentTaskId}` },
-	);
-
-export const addTaskTimeAllocationE = (
-	taskId: number,
-	timeWindowId: number,
-	durationMinutes: number,
-): Promise<void> =>
-	domains.tasks.invalidate(
-		request<void>(
-			`/tasks/${taskId}/time-allocation/${timeWindowId}/${durationMinutes}`,
-			{
-				method: "POST",
-			},
-		),
-		{ entity: `/tasks/${taskId}` },
-	);
-
 export const getUserTasksE = (userId: number): Promise<readonly Task[]> =>
 	cachedRequest(`/tasks/user/${userId}`);
 
-export const updateTaskStatusE = (id: number, status: string): Promise<Task> =>
+export const updateTaskStatusE = (
+	id: number,
+	status: TaskStatusType,
+): Promise<Task> =>
 	domains.tasks.invalidate(patch<Task>(`/tasks/${id}`, { status }), {
 		entity: `/tasks/${id}`,
 	});

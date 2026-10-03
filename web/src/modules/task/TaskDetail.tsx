@@ -26,6 +26,7 @@ import {
 	updateTaskE,
 } from "./api.ts";
 import EditTaskModal from "./components/EditTaskModal.tsx";
+import { toUpdatePayload } from "./lib/task-payload.ts";
 import styles from "./TaskDetail.module.css";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -112,7 +113,7 @@ export default function TaskDetail() {
 
 	const save = async (taskId: number, updates: Partial<Task>) => {
 		const ok = await tryOrNotify(
-			() => updateTaskE(taskId, updates),
+			() => updateTaskE(taskId, toUpdatePayload(updates)),
 			"保存任务",
 		);
 		if (ok) {

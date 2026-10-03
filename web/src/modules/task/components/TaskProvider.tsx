@@ -11,7 +11,7 @@ import {
 	onMount,
 	useContext,
 } from "solid-js";
-import type { CreateTaskRequest, Task } from "../api.ts";
+import type { CreateTaskRequest, Task, TaskStatusType } from "../api.ts";
 import {
 	createTaskE as apiCreateTask,
 	deleteTaskE as apiDeleteTask,
@@ -20,6 +20,7 @@ import {
 	getTaskStatsE,
 	searchTasksE,
 } from "../api.ts";
+import { toUpdatePayload } from "../lib/task-payload.ts";
 import { makeTemp, STATUS_API } from "../lib/task-provider-utils.ts";
 
 interface Stats {
@@ -36,7 +37,7 @@ interface TaskCtxValue {
 	add(req: CreateTaskRequest): Promise<Task | null>;
 	reload(): Promise<void>;
 	reloadStats(): Promise<void>;
-	updateStatus(id: number, status: string): Promise<void>;
+	updateStatus(id: number, status: TaskStatusType): Promise<void>;
 	removeTask(id: number): Promise<void>;
 	updateTaskE(id: number, updates: Partial<Task>): Promise<void>;
 	addSubTask(parentId: number, title: string): Promise<void>;
@@ -100,7 +101,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		return null;
 	};
 
-	const updateStatus = async (id: number, newStatus: string) => {
+	const updateStatus = async (id: number, newStatus: TaskStatusType) => {
 		const prev = tasks();
 		const idx = prev.findIndex((t) => t.id === id);
 		if (idx === -1) return;
@@ -109,16 +110,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		// 乐观更新
 		setTasks(prev.map((t, i) => (i === idx ? { ...t, status: newStatus } : t)));
 
-		const apiFn = STATUS_API[newStatus];
-		if (!apiFn) {
-			// 非法状态：回滚
-			setTasks((c) =>
-				c.map((t) => (t.id === id ? { ...t, status: orig.status } : t)),
-			);
-			return;
-		}
-
-		const result = await tryAsync(() => apiFn(id));
+		const result = await tryAsync(() => STATUS_API[newStatus](id));
 		if (result.ok) {
 			setTasks((c) => c.map((t) => (t.id === id ? result.value : t)));
 			await reloadStats();
@@ -150,7 +142,11 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		// 乐观更新
 		setTasks(prev.map((t, i) => (i === idx ? { ...t, ...updates } : t)));
 
-		const result = await tryAsync(() => apiUpdateTask(id, updates));
+		// `Task.tags` 是对象数组、PATCH 要的是名字数组（整体替换语义）——
+		// 转换走 lib/task-payload 的单点实现
+		const result = await tryAsync(() =>
+			apiUpdateTask(id, toUpdatePayload(updates)),
+		);
 		if (result.ok) {
 			setTasks((c) => c.map((t) => (t.id === id ? result.value : t)));
 			await reloadStats();

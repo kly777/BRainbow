@@ -4,14 +4,31 @@
 
 // ── Task 基础 ──
 
+export type TaskStatusType = "backlog" | "active" | "completed" | "archived";
+
+/** 优先级：p1 最急；`null` = 用户没表达过（与显式 p3 不同） */
+export type TaskPriority = "p1" | "p2" | "p3" | "p4";
+
+export interface Tag {
+	id: number;
+	name: string;
+}
+
 export interface Task {
 	id: number;
 	title: string;
 	description: string | null;
 	parent_task_id: number | null;
-	status: string;
+	/** 联合类型而非裸 string：链路上的 switch 漏分支会在编译期报出来 */
+	status: TaskStatusType;
 	completed_at: string | null;
 	effort_estimate_minutes: number | null;
+	/** 开始时间（软偏好）；"2026-10-03T15:00:00+00:00" */
+	start_at: string | null;
+	/** 截止时间（承诺） */
+	due_at: string | null;
+	priority: TaskPriority | null;
+	tags: Tag[];
 	created_at: string;
 	updated_at: string;
 }
@@ -21,14 +38,26 @@ export interface CreateTaskRequest {
 	description?: string | null;
 	parent_task_id?: number | null;
 	effort_estimate_minutes?: number | null;
+	start_at?: string | null;
+	due_at?: string | null;
+	priority?: TaskPriority | null;
+	tags?: string[];
 }
 
+/**
+ * 部分更新。可空字段是**双层语义**：字段缺席 = 不改，显式 `null` = 清空
+ * （后端用 `double_option` 反序列化，两种写法含义不同）。
+ */
 export interface UpdateTaskRequest {
 	title?: string;
 	description?: string | null;
 	parent_task_id?: number | null;
-	status?: string | null;
+	status?: TaskStatusType | null;
 	effort_estimate_minutes?: number | null;
+	start_at?: string | null;
+	due_at?: string | null;
+	priority?: TaskPriority | null;
+	tags?: string[];
 }
 
 // ── 依赖 & 分解 ──
@@ -37,19 +66,6 @@ export interface TaskDependency {
 	id: number;
 	task_id: number;
 	depends_on_task_id: number;
-}
-
-export interface TaskDecomposition {
-	id: number;
-	parent_task_id: number;
-	child_task_id: number;
-}
-
-export interface TaskTimeAllocation {
-	id: number;
-	task_id: number;
-	time_window_id: number;
-	duration_minutes: number;
 }
 
 // ── TaskDetail ──
@@ -113,14 +129,30 @@ export interface CreateTimeWindowRequest {
 
 // ── 常量 & 展示 ──
 
+/** 状态常量（值即联合类型的成员，改一处两处一起走） */
 export const TaskStatus = {
 	BACKLOG: "backlog",
 	ACTIVE: "active",
 	COMPLETED: "completed",
 	ARCHIVED: "archived",
-} as const;
+} as const satisfies Record<string, TaskStatusType>;
 
-export type TaskStatusType = (typeof TaskStatus)[keyof typeof TaskStatus];
+/**
+ * 运行期把关：DOM 控件给的 value 是裸字符串，非成员值回落到 backlog。
+ *
+ * 编译期收紧（联合类型）与运行期兜底（这里）是两件事，都要有：前者挡新代码漏分支，
+ * 后者挡库里的脏值（历史数据里的未知 status 不该让一条任务从界面上消失）。
+ */
+export function toTaskStatus(value: string): TaskStatusType {
+	switch (value) {
+		case "active":
+		case "completed":
+		case "archived":
+			return value;
+		default:
+			return "backlog";
+	}
+}
 
 export function getStatusText(status: string): string {
 	switch (status) {

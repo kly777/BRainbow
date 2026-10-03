@@ -2,6 +2,7 @@ import { Button, FilterGroup, Input, Modal } from "@components/ui";
 import { fmtLocal } from "@shared/utils";
 import { createMemo, createSignal, For, Show } from "solid-js";
 import type { Task } from "../api.ts";
+import type { TaskStatusType } from "../api-types.ts";
 import { statusToken } from "../lib/status-colors.ts";
 import styles from "./TaskKanban.module.css";
 import { useTasks } from "./TaskProvider.tsx";
@@ -67,7 +68,7 @@ interface ColumnProps {
 	col: (typeof COLUMNS)[number];
 	tasks: Task[];
 	onEdit: (task: Task) => void;
-	onDrop: (taskId: number, newStatus: string) => void;
+	onDrop: (taskId: number, newStatus: TaskStatusType) => void;
 }
 
 function Column(props: ColumnProps) {
@@ -142,7 +143,7 @@ export default function TaskKanban() {
 		return map;
 	});
 
-	const handleDrop = async (taskId: number, newStatus: string) => {
+	const handleDrop = async (taskId: number, newStatus: TaskStatusType) => {
 		const task = tasks().find((t) => t.id === taskId);
 		if (!task || task.status === newStatus) return;
 		await updateStatus(taskId, newStatus);

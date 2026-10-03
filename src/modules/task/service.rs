@@ -55,12 +55,22 @@ impl TaskService {
     ) -> Result<Task, ServiceError> {
         validate_title(&req.title)?;
         validate_effort(req.effort_estimate_minutes)?;
+        validate_time_range(req.start_at, req.due_at)?;
+        let tags = req.tags.clone();
         if let Some(parent_id) = req.parent_task_id {
             // 父任务得是自己的：否则等于往别人的树上挂节点（读路径会过滤掉，见 find_tree）
             self.ensure_task_owned(actor, parent_id).await?;
             check_circular_parent(&self.repo, actor, 0, parent_id).await?;
         }
-        self.repo.create(actor, req).await.map_err(ServiceError::Db)
+        let task = self.repo.create(actor, req).await.map_err(ServiceError::Db)?;
+        if let Some(names) = tags {
+            // 任务已经建成：标签写失败不该把任务回滚掉（重试一次即可，标签不是必填项）
+            self.repo
+                .set_tags(task.id, actor.user_id(), &names)
+                .await
+                .map_err(ServiceError::Db)?;
+        }
+        Ok(task)
     }
 
     pub async fn quick_create(
@@ -87,6 +97,17 @@ impl TaskService {
         if let Some(Some(minutes)) = req.effort_estimate_minutes {
             validate_effort(Some(minutes))?;
         }
+        // 区间校验看的是**改完之后**的组合：只改一边时另一边取库里的现值
+        if req.start_at.is_some() || req.due_at.is_some() {
+            let Some(current) = self.repo.find_by_id(actor, id).await.map_err(ServiceError::Db)?
+            else {
+                return Err(ServiceError::NotFound("任务不存在".into()));
+            };
+            let start = req.start_at.unwrap_or(current.start_at);
+            let due = req.due_at.unwrap_or(current.due_at);
+            validate_time_range(start, due)?;
+        }
+        let tags = req.tags.clone();
         if let Some(Some(parent_id)) = req.parent_task_id {
             if parent_id == id {
                 return Err(ServiceError::InvalidInput("不能设置自己为父任务".into()));
@@ -94,10 +115,17 @@ impl TaskService {
             self.ensure_task_owned(actor, parent_id).await?;
             check_circular_parent(&self.repo, actor, id, parent_id).await?;
         }
-        self.repo.update(actor, id, req).await.map_err(|e| match e {
+        let task = self.repo.update(actor, id, req).await.map_err(|e| match e {
             sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
             other => ServiceError::from(other),
-        })
+        })?;
+        if let Some(names) = tags {
+            self.repo
+                .set_tags(id, actor.user_id(), &names)
+                .await
+                .map_err(ServiceError::Db)?;
+        }
+        Ok(task)
     }
 
     pub async fn complete(&self, actor: &Actor, id: i32) -> Result<Task, ServiceError> {
@@ -291,6 +319,23 @@ fn validate_effort(minutes: Option<i32>) -> Result<(), ServiceError> {
     Ok(())
 }
 
+/// `start_at` 与 `due_at` 是两种语义（软偏好 / 承诺），但反过来的区间必然是录入错误。
+///
+/// DB 的 `CHECK`（`due_at IS NULL OR start_at IS NULL OR start_at <= due_at`）才是绕不过去
+/// 的那一道；service 这一层是为了**给用户可读的即时反馈** —— CHECK 失败会变成一条 500
+/// 或一句难懂的 DB 错误。与 `validate_title` / `validate_effort` 同一个模式。
+fn validate_time_range(
+    start: Option<DateTime<Utc>>,
+    due: Option<DateTime<Utc>>,
+) -> Result<(), ServiceError> {
+    if let (Some(s), Some(d)) = (start, due)
+        && s > d
+    {
+        return Err(ServiceError::InvalidInput("开始时间不能晚于截止时间".into()));
+    }
+    Ok(())
+}
+
 #[async_trait]
 impl TaskTimeWindowValidator for TaskService {
     async fn validate_time_windows(
@@ -404,6 +449,36 @@ mod tests {
         assert!(matches!(err2, ServiceError::InvalidInput(_)));
     }
 
+    // ── validate_time_range ──
+
+    fn ts(hours: i64) -> DateTime<Utc> {
+        DateTime::from_timestamp(1_767_225_600 + hours * 3600, 0).unwrap()
+    }
+
+    #[test]
+    fn time_range_one_sided_is_valid() {
+        // 只填一边是常见情况（只填 start 不填 due 尤其常见）
+        assert!(validate_time_range(Some(ts(1)), None).is_ok());
+        assert!(validate_time_range(None, Some(ts(1))).is_ok());
+        assert!(validate_time_range(None, None).is_ok());
+    }
+
+    #[test]
+    fn time_range_ordered_is_valid() {
+        assert!(validate_time_range(Some(ts(1)), Some(ts(2))).is_ok());
+        // 同一时刻不算"晚于"
+        assert!(validate_time_range(Some(ts(2)), Some(ts(2))).is_ok());
+    }
+
+    #[test]
+    fn time_range_reversed_is_invalid() {
+        let err = validate_time_range(Some(ts(2)), Some(ts(1))).unwrap_err();
+        match err {
+            ServiceError::InvalidInput(msg) => assert!(msg.contains("开始时间")),
+            other => panic!("期望 InvalidInput，得到 {other:?}"),
+        }
+    }
+
     // ── ServiceError display ──
 
     #[test]
@@ -491,6 +566,117 @@ mod tests {
             description: None,
             parent_task_id: None,
             effort_estimate_minutes: None,
+            start_at: None,
+            due_at: None,
+            priority: None,
+            tags: None,
+        }
+    }
+
+    /// 什么也不改的 PATCH（测试里只覆盖关心的那几项）
+    fn mk_patch() -> UpdateTaskRequest {
+        UpdateTaskRequest {
+            title: None,
+            description: None,
+            parent_task_id: None,
+            status: None,
+            effort_estimate_minutes: None,
+            start_at: None,
+            due_at: None,
+            priority: None,
+            tags: None,
+        }
+    }
+
+    /// 新字段与标签的读写：create 落库 → update 整体替换 → 清空
+    #[tokio::test]
+    async fn time_fields_and_tags_roundtrip() {
+        let svc = task_svc().await;
+        let owner = Actor::user(1);
+
+        let mut req = mk_req("写周报");
+        req.start_at = Some(ts(1));
+        req.due_at = Some(ts(2));
+        req.priority = Some(crate::modules::task::model::TaskPriority::P1);
+        req.tags = Some(vec!["工作".into(), "  急 ".into(), "工作".into()]);
+        let task = svc.create(&owner, req).await.unwrap();
+
+        assert_eq!(task.priority.map(|p| p.to_string()), Some("p1".into()));
+        assert_eq!(task.start_at, Some(ts(1)));
+        assert_eq!(task.due_at, Some(ts(2)));
+
+        // 标签去重 + trim（"工作" 重复、"  急 " 两侧空白）。顺序按库里的 `ORDER BY name`
+        // （SQLite 是逐字节比较，不是拼音），所以这里排序后比对
+        let tags = svc.repo.tags_for_tasks(&[task.id]).await.unwrap();
+        let mut names: Vec<String> = tags[&task.id].iter().map(|t| t.name.clone()).collect();
+        names.sort();
+        assert_eq!(names, vec!["工作", "急"], "标签去重、trim，且不含重复项");
+
+        // update 整体替换：给什么就是什么
+        let mut patch = UpdateTaskRequest {
+            title: None,
+            description: None,
+            parent_task_id: None,
+            status: None,
+            effort_estimate_minutes: None,
+            start_at: None,
+            due_at: None,
+            priority: None,
+            tags: Some(vec!["家".into()]),
+        };
+        svc.update(&owner, task.id, patch.clone()).await.unwrap();
+        let replaced = svc.repo.tags_for_tasks(&[task.id]).await.unwrap();
+        assert_eq!(replaced[&task.id].len(), 1);
+        assert_eq!(replaced[&task.id][0].name, "家");
+
+        // 空数组 = 清空
+        patch.tags = Some(vec![]);
+        svc.update(&owner, task.id, patch).await.unwrap();
+        let cleared = svc.repo.tags_for_tasks(&[task.id]).await.unwrap();
+        assert!(!cleared.contains_key(&task.id), "空数组应清空标签");
+
+        // 清空 due（双层 Option：Some(None)）
+        let mut clear_due = mk_patch();
+        clear_due.due_at = Some(None);
+        let updated = svc.update(&owner, task.id, clear_due).await.unwrap();
+        assert!(updated.due_at.is_none());
+        assert_eq!(updated.start_at, Some(ts(1)), "只清 due，start 不受影响");
+    }
+
+    /// 只改一边时，区间校验要看改完之后的组合
+    #[tokio::test]
+    async fn update_validates_resulting_range() {
+        let svc = task_svc().await;
+        let owner = Actor::user(1);
+        let mut req = mk_req("区间");
+        req.due_at = Some(ts(2));
+        let task = svc.create(&owner, req).await.unwrap();
+
+        // 把 start 设到 due 之后 → 拒
+        let mut patch = mk_patch();
+        patch.start_at = Some(Some(ts(3)));
+        assert!(matches!(
+            svc.update(&owner, task.id, patch).await,
+            Err(ServiceError::InvalidInput(_))
+        ));
+
+        // 合法范围内的 start 通过
+        let mut ok = mk_patch();
+        ok.start_at = Some(Some(ts(1)));
+        assert!(svc.update(&owner, task.id, ok).await.is_ok());
+    }
+
+    /// 反向区间在建任务时就被拒（service 层，给的是可读文案）
+    #[tokio::test]
+    async fn create_rejects_reversed_range() {
+        let svc = task_svc().await;
+        let mut req = mk_req("反了");
+        req.start_at = Some(ts(5));
+        req.due_at = Some(ts(1));
+        let err = svc.create(&Actor::user(1), req).await.unwrap_err();
+        match err {
+            ServiceError::InvalidInput(msg) => assert!(msg.contains("开始时间不能晚于截止时间")),
+            other => panic!("期望 InvalidInput，得到 {other:?}"),
         }
     }
 

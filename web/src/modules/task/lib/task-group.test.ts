@@ -1,4 +1,4 @@
-import type { Task } from "@modules/task";
+import type { Task, TaskStatusType } from "@modules/task";
 import { describe, expect, it } from "vitest";
 import { buildChildrenMap, groupByStatus } from "./task-group.ts";
 
@@ -50,17 +50,22 @@ describe("groupByStatus", () => {
 	});
 
 	it("status 缺省（空串）归 backlog", () => {
-		const grouped = groupByStatus([task(1, { status: "" })]);
+		// 库里可能有历史脏值，运行期兜底要经得起（类型上是联合类型，这里刻意越界）
+		const grouped = groupByStatus([task(1, { status: "" as TaskStatusType })]);
 		expect(grouped.backlog.map((t) => t.id)).toEqual([1]);
 	});
 
 	it("未知状态归 backlog（不丢弃、不新造分组）", () => {
 		const grouped = groupByStatus([
-			task(1, { status: "someday" }),
+			task(1, { status: "someday" as TaskStatusType }),
 			task(2, { status: "active" }),
 		]);
 		expect(grouped.backlog.map((t) => t.id)).toEqual([1]);
-		expect(Object.values(grouped).flat().map((t) => t.id)).toEqual([1, 2]);
+		expect(
+			Object.values(grouped)
+				.flat()
+				.map((t) => t.id),
+		).toEqual([1, 2]);
 	});
 
 	it("组内保持传入顺序", () => {

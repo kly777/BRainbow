@@ -1,6 +1,7 @@
 import { Input, Select, Textarea } from "@components/ui";
 import { For } from "solid-js";
 import type { Task } from "../api.ts";
+import { type TaskStatusType, toTaskStatus } from "../api-types.ts";
 import styles from "./EditTaskModal.module.css";
 
 interface BasicInfoTabProps {
@@ -8,8 +9,8 @@ interface BasicInfoTabProps {
 	setTitle: (v: string) => void;
 	description: () => string;
 	setDescription: (v: string) => void;
-	status: () => string;
-	setStatus: (v: string) => void;
+	status: () => TaskStatusType;
+	setStatus: (v: TaskStatusType) => void;
 	effort: () => number | undefined;
 	setEffort: (v: number | undefined) => void;
 	parentTaskId: () => number | undefined;
@@ -56,7 +57,9 @@ export default function BasicInfoTab(props: BasicInfoTabProps) {
 					<Select
 						id="task-status"
 						value={props.status()}
-						onChange={(e) => props.setStatus(e.currentTarget.value)}
+						onChange={(e) =>
+							props.setStatus(toTaskStatus(e.currentTarget.value))
+						}
 					>
 						<option value="backlog">待办</option>
 						<option value="active">进行中</option>

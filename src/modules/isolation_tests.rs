@@ -103,6 +103,10 @@ async fn task_isolation_between_users() {
                 description: None,
                 parent_task_id: None,
                 effort_estimate_minutes: None,
+                start_at: None,
+                due_at: None,
+                priority: None,
+                tags: None,
             },
         )
         .await
@@ -373,6 +377,10 @@ async fn time_window_follows_its_parent_task() {
                 description: None,
                 parent_task_id: None,
                 effort_estimate_minutes: None,
+                start_at: None,
+                due_at: None,
+                priority: None,
+                tags: None,
             },
         )
         .await

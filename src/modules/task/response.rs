@@ -1,9 +1,16 @@
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-use super::model::{Task, TaskStatus};
+use super::model::{Task, TaskPriority, TaskStatus};
 
-#[derive(Debug, Serialize)]
+/// 标签（任务标签复用 `tag` 表，按用户唯一）
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Tag {
+    pub id: i32,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskResponse {
     pub id: i32,
     pub title: String,
@@ -12,6 +19,11 @@ pub struct TaskResponse {
     pub status: TaskStatus,
     pub completed_at: Option<DateTime<Utc>>,
     pub effort_estimate_minutes: Option<i32>,
+    pub start_at: Option<DateTime<Utc>>,
+    pub due_at: Option<DateTime<Utc>>,
+    pub priority: Option<TaskPriority>,
+    /// 标签（列表出口一次批量查询挂上，见 `TaskQueryService::responses`）
+    pub tags: Vec<Tag>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -26,9 +38,21 @@ impl From<Task> for TaskResponse {
             status: task.status,
             completed_at: task.completed_at,
             effort_estimate_minutes: task.effort_estimate_minutes,
+            start_at: task.start_at,
+            due_at: task.due_at,
+            priority: task.priority,
+            tags: Vec::new(),
             created_at: task.created_at,
             updated_at: task.updated_at,
         }
+    }
+}
+
+impl TaskResponse {
+    /// 挂上标签（写路径已经知道结果，读路径用一次批量查询，两条都不做 N+1）
+    pub fn with_tags(mut self, tags: Vec<Tag>) -> Self {
+        self.tags = tags;
+        self
     }
 }
 
@@ -90,6 +114,9 @@ mod tests {
             status: TaskStatus::Active,
             completed_at: None,
             effort_estimate_minutes: Some(60),
+            start_at: None,
+            due_at: Some(chrono::Utc::now()),
+            priority: Some(crate::modules::task::model::TaskPriority::P2),
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
         };
@@ -97,6 +124,12 @@ mod tests {
         assert_eq!(resp.id, 42);
         assert_eq!(resp.title, "Test");
         assert_eq!(resp.status, crate::modules::task::model::TaskStatus::Active);
+        assert!(resp.due_at.is_some());
+        assert_eq!(
+            resp.priority,
+            Some(crate::modules::task::model::TaskPriority::P2)
+        );
+        assert!(resp.tags.is_empty(), "标签由调用方按需挂上");
     }
 
     #[test]
@@ -152,6 +185,10 @@ mod tests {
                 status: crate::modules::task::model::TaskStatus::Active,
                 completed_at: None,
                 effort_estimate_minutes: None,
+                start_at: None,
+                due_at: None,
+                priority: None,
+                tags: vec![],
                 created_at: chrono::Utc::now(),
                 updated_at: chrono::Utc::now(),
             },

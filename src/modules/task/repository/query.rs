@@ -7,6 +7,7 @@ use crate::shared::db_query::{like_contains, push_owner_scope};
 
 use super::super::dto::TaskDetailResponse;
 use super::super::model::{Task, TaskStatus};
+use super::super::response::TaskResponse;
 use super::TaskRepository;
 
 #[derive(FromRow)]
@@ -32,6 +33,9 @@ struct CalendarRow {
     status: TaskStatus,
     completed_at: Option<DateTime<Utc>>,
     effort_estimate_minutes: Option<i32>,
+    start_at: Option<DateTime<Utc>>,
+    due_at: Option<DateTime<Utc>>,
+    priority: Option<crate::modules::task::model::TaskPriority>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
     tw_id: i32,
@@ -60,7 +64,7 @@ impl TaskRepository {
         let mut builder = QueryBuilder::new(
             "WITH RECURSIVE task_tree AS (
                 SELECT id, title, description, parent_task_id, status, completed_at,
-                       effort_estimate_minutes, created_at, updated_at
+                       effort_estimate_minutes, start_at, due_at, priority, created_at, updated_at
                 FROM task
                 WHERE 1 = 1",
         );
@@ -80,7 +84,8 @@ impl TaskRepository {
             "
             UNION ALL
             SELECT t.id, t.title, t.description, t.parent_task_id, t.status, t.completed_at,
-                   t.effort_estimate_minutes, t.created_at, t.updated_at
+                   t.effort_estimate_minutes, t.start_at, t.due_at, t.priority,
+                   t.created_at, t.updated_at
             FROM task t
             INNER JOIN task_tree tt ON t.parent_task_id = tt.id
             WHERE 1 = 1",
@@ -129,6 +134,9 @@ impl TaskRepository {
                       COALESCE(status, 'backlog') AS "status!: crate::modules::task::model::TaskStatus",
                       completed_at AS "completed_at?: chrono::DateTime<chrono::Utc>",
                       effort_estimate_minutes AS "effort_estimate_minutes?: i32",
+                      start_at AS "start_at?: chrono::DateTime<chrono::Utc>",
+                      due_at AS "due_at?: chrono::DateTime<chrono::Utc>",
+                      priority AS "priority?: crate::modules::task::model::TaskPriority",
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
                FROM task WHERE parent_task_id = ?1 AND (?2 IS NULL OR user_id = ?2)
@@ -170,9 +178,9 @@ impl TaskRepository {
         }
 
         Ok(Some(TaskDetailResponse {
-            task,
+            task: TaskResponse::from(task),
             depends_on: dependencies,
-            children,
+            children: children.into_iter().map(TaskResponse::from).collect(),
             available_slots,
             planned_slots,
             actual_slots,
@@ -251,6 +259,9 @@ impl TaskRepository {
                       COALESCE(status, 'backlog') AS "status!: crate::modules::task::model::TaskStatus",
                       completed_at AS "completed_at?: chrono::DateTime<chrono::Utc>",
                       effort_estimate_minutes AS "effort_estimate_minutes?: i32",
+                      start_at AS "start_at?: chrono::DateTime<chrono::Utc>",
+                      due_at AS "due_at?: chrono::DateTime<chrono::Utc>",
+                      priority AS "priority?: crate::modules::task::model::TaskPriority",
                       COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                       COALESCE(updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>"
                FROM task WHERE title LIKE ?1 ESCAPE '\' AND (?2 IS NULL OR user_id = ?2)
@@ -286,6 +297,9 @@ impl TaskRepository {
                           COALESCE(t.status, 'backlog') AS "status!: crate::modules::task::model::TaskStatus",
                           t.completed_at AS "completed_at?: chrono::DateTime<chrono::Utc>",
                           t.effort_estimate_minutes AS "effort_estimate_minutes?: i32",
+                          t.start_at AS "start_at?: chrono::DateTime<chrono::Utc>",
+                          t.due_at AS "due_at?: chrono::DateTime<chrono::Utc>",
+                          t.priority AS "priority?: crate::modules::task::model::TaskPriority",
                           COALESCE(t.created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                           COALESCE(t.updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>",
                           tw.id AS "tw_id: i32",
@@ -320,6 +334,9 @@ impl TaskRepository {
                           COALESCE(t.status, 'backlog') AS "status!: crate::modules::task::model::TaskStatus",
                           t.completed_at AS "completed_at?: chrono::DateTime<chrono::Utc>",
                           t.effort_estimate_minutes AS "effort_estimate_minutes?: i32",
+                          t.start_at AS "start_at?: chrono::DateTime<chrono::Utc>",
+                          t.due_at AS "due_at?: chrono::DateTime<chrono::Utc>",
+                          t.priority AS "priority?: crate::modules::task::model::TaskPriority",
                           COALESCE(t.created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
                           COALESCE(t.updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>",
                           tw.id AS "tw_id: i32",
@@ -357,6 +374,9 @@ impl TaskRepository {
                 status: row.status,
                 completed_at: row.completed_at,
                 effort_estimate_minutes: row.effort_estimate_minutes,
+                start_at: row.start_at,
+                due_at: row.due_at,
+                priority: row.priority,
                 created_at: row.created_at,
                 updated_at: row.updated_at,
             };

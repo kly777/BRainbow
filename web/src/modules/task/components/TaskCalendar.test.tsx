@@ -3,9 +3,11 @@
 // 这里只测**渲染契约**（三通道的 class、徽标、折叠数、a11y 结构）；
 // 跨日切分与周起始日的算法在 lib/calendar.test.ts。
 
+import { createRoot } from "solid-js";
 import { render } from "solid-js/web";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CalendarEvent } from "../api-types.ts";
+import { useTaskCalendar } from "../hooks/useTaskCalendar.ts";
 import TaskCalendar from "./TaskCalendar.tsx";
 
 const getCalendarEventsE = vi.fn();
@@ -35,9 +37,18 @@ function mount() {
 	document.body.innerHTML = "";
 	const host = document.createElement("div");
 	document.body.appendChild(host);
-	render(() => <TaskCalendar />, host);
+	// 日历状态由调用方持有（TaskPanel 建一份传下来），测试里用 createRoot 建一个
+	const dispose = createRoot((disposeFn) => {
+		const calendar = useTaskCalendar();
+		render(() => <TaskCalendar calendar={calendar} />, host);
+		return disposeFn;
+	});
+	calendars.push(dispose);
 	return host;
 }
+
+/** 每次 mount 一个 root；afterEach 统一收掉（否则 jsdom 里跨用例泄漏） */
+const calendars: Array<() => void> = [];
 
 /**
  * 等 resource 把数据取回来并渲染。
@@ -58,6 +69,9 @@ describe("TaskCalendar：结构与 a11y（S4-j）", () => {
 		getCalendarEventsE.mockResolvedValue([]);
 	});
 	afterEach(() => {
+		while (calendars.length > 0) {
+			calendars.pop()?.();
+		}
 		vi.useRealTimers();
 	});
 
@@ -125,6 +139,9 @@ describe("TaskCalendar：事件条与徽标", () => {
 		vi.setSystemTime(new Date(2024, 0, 15));
 	});
 	afterEach(() => {
+		while (calendars.length > 0) {
+			calendars.pop()?.();
+		}
 		vi.useRealTimers();
 	});
 

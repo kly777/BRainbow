@@ -17,7 +17,7 @@ import {
 	Show,
 } from "solid-js";
 import type { CalendarEvent } from "../api.ts";
-import { useTaskCalendar } from "../hooks/useTaskCalendar.ts";
+import type { TaskCalendarApi } from "../hooks/useTaskCalendar.ts";
 import {
 	type DaySegment,
 	dayKey,
@@ -202,12 +202,19 @@ function dateAriaLabel(date: Date): string {
 const WEEKDAY_NAMES = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
 
 export interface TaskCalendarProps {
+	/**
+	 * 日历状态由调用方建好后传进来（TaskPanel 持有唯一一份）。
+	 * 不在这里自己 `useTaskCalendar()`：每个实例各持一份状态、各发一次请求，
+	 * 设置条与网格就会各改各的。
+	 */
+	calendar: TaskCalendarApi;
 	/** 点事件 → 打开任务详情（抽屉在调用方，不在日历里，避免遮住网格） */
 	onOpenTask?: (taskId: number) => void;
 }
 
 export default function TaskCalendar(props: TaskCalendarProps) {
-	const m = useTaskCalendar();
+	// 调用方建一次、整个生命周期不变，所以这里直接取出来用（不必每次 props.calendar）
+	const m = props.calendar;
 	// roving tabindex：整个网格只占一个 Tab 停靠点，方向键在格间移动（APG Grid）
 	const [focusedIndex, setFocusedIndex] = createSignal(0);
 	const cellRefs: HTMLTableCellElement[] = [];

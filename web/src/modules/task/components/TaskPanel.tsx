@@ -2,7 +2,9 @@
 
 import { FilterGroup, LoadingSkeleton } from "@components/ui";
 import { createSignal, Show } from "solid-js";
+import { useTaskCalendar } from "../hooks/useTaskCalendar.ts";
 import styles from "../TaskManager.module.css";
+import CalendarSettings from "./CalendarSettings.tsx";
 import TaskCalendar from "./TaskCalendar.tsx";
 import TaskDag from "./TaskDag.tsx";
 import TaskDrawer from "./TaskDrawer.tsx";
@@ -21,6 +23,8 @@ export default function TaskPanel(props: TaskPanelProps) {
 		useTasks();
 	// 点日历事件 → 抽屉。抽屉与日历**并排**而非叠放（S4-e：模态会盖掉日历这个参照物）
 	const [openTaskId, setOpenTaskId] = createSignal<number | null>(null);
+	// 日历状态建**一份**再传下去：网格与设置条共享，否则各自一份状态、各发一次请求
+	const calendar = useTaskCalendar();
 
 	return (
 		<Show
@@ -48,7 +52,12 @@ export default function TaskPanel(props: TaskPanelProps) {
 									}
 								/>
 								<Show when={props.rightTab === "calendar"}>
-									<TaskCalendar onOpenTask={setOpenTaskId} />
+									{/* 设置条放在日历自己上方，不占主工具条的常驻控件预算 */}
+									<CalendarSettings calendar={calendar} />
+									<TaskCalendar
+										calendar={calendar}
+										onOpenTask={setOpenTaskId}
+									/>
 									<TaskDrawer
 										taskId={openTaskId()}
 										onClose={() => setOpenTaskId(null)}

@@ -32,6 +32,8 @@ export interface TaskCalendarApi {
 	isWeekendCol: (col: number) => boolean;
 	/** 周起始日（设置项存的是 `Weekday`，不是 CLDR 编号） */
 	firstDay: () => Weekday;
+	/** 用户**显式选过**的起始日；null = 跟随区域设置。设置条靠它区分这两种状态 */
+	weekStartSetting: () => Weekday | null;
 	setFirstDay: (value: Weekday | null) => void;
 	/** 密度档与"每格显示几条" */
 	density: () => CalendarDensity;
@@ -141,6 +143,7 @@ export function useTaskCalendar(weekParam?: () => string | undefined) {
 		isWeekendCol: (col: number) =>
 			weekendDays().has(columnWeekday(firstDay(), col)),
 		firstDay,
+		weekStartSetting: weekStartOverride,
 		setFirstDay,
 		density,
 		collapsedCount: () => DENSITY_COLLAPSED_COUNT[density()],

@@ -6,6 +6,9 @@
 
 use std::collections::HashMap;
 
+use crate::shared::actor::Actor;
+use crate::shared::db_query::push_owner_scope;
+
 use super::super::response::Tag;
 use super::TaskRepository;
 
@@ -108,5 +111,127 @@ impl TaskRepository {
             map.entry(task_id).or_default().push(Tag { id, name });
         }
         Ok(map)
+    }
+
+    /// 这个用户有哪些标签（录入框自动补全用：前缀过滤、按名取前 `limit` 条）。
+    ///
+    /// 前缀按小写匹配（`LIKE` 对 ASCII 不区分大小写，但中文没有大小写，所以直接
+    /// `lower(name) LIKE lower(prefix)%` 两边都降下来更可控）；`%`/`_` 要转义，
+    /// 否则用户打一个 `%` 就把全部标签都捞出来。
+    pub async fn tags_with_prefix(
+        &self,
+        actor: &Actor,
+        prefix: &str,
+        limit: i64,
+    ) -> Result<Vec<Tag>, sqlx::Error> {
+        let like = format!(
+            "{}%",
+            crate::shared::db_query::escape_like(&prefix.to_lowercase())
+        );
+        let mut qb = sqlx::QueryBuilder::new("SELECT id, name FROM tag WHERE lower(name) LIKE ");
+        qb.push_bind(like);
+        qb.push(" ESCAPE '\\'");
+        push_owner_scope(&mut qb, actor, "user_id");
+        qb.push(" ORDER BY name LIMIT ");
+        qb.push_bind(limit);
+        Ok(qb
+            .build_query_as::<(i32, String)>()
+            .fetch_all(&*self.db)
+            .await?
+            .into_iter()
+            .map(|(id, name)| Tag { id, name })
+            .collect())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+    use crate::db;
+
+    async fn repo_with_tags() -> TaskRepository {
+        let pool = std::sync::Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap());
+        db::migrate(&pool).await.unwrap();
+        for (id, name) in [(1, "alice"), (2, "bob")] {
+            sqlx::query("INSERT INTO user (id, name, password_hash) VALUES (?, ?, 'x')")
+                .bind(id)
+                .bind(name)
+                .execute(&*pool)
+                .await
+                .unwrap();
+        }
+        for (name, owner) in [
+            ("工作", 1),
+            ("工作台", 1),
+            ("家务", 1),
+            ("100%完成", 1),
+            ("别人的标签", 2),
+        ] {
+            sqlx::query("INSERT INTO tag (name, user_id) VALUES (?, ?)")
+                .bind(name)
+                .bind(owner)
+                .execute(&*pool)
+                .await
+                .unwrap();
+        }
+        TaskRepository::new(pool)
+    }
+
+    #[tokio::test]
+    async fn prefix_matches_only_own_tags() {
+        let repo = repo_with_tags().await;
+        let names: Vec<String> = repo
+            .tags_with_prefix(&Actor::user(1), "工作", 8)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|tag| tag.name)
+            .collect();
+        assert_eq!(names, vec!["工作", "工作台"]);
+    }
+
+    /// `%` / `_` 是 LIKE 的通配符，必须转义 —— 否则打一个 `%` 就把全部标签捞出来
+    #[tokio::test]
+    async fn like_wildcards_are_escaped() {
+        let repo = repo_with_tags().await;
+        let names: Vec<String> = repo
+            .tags_with_prefix(&Actor::user(1), "100%", 8)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|tag| tag.name)
+            .collect();
+        assert_eq!(names, vec!["100%完成"]);
+
+        // 单独的 `%` 不是"全部"，而是"以 % 开头"（没有这样的标签）
+        assert!(
+            repo.tags_with_prefix(&Actor::user(1), "%", 8)
+                .await
+                .unwrap()
+                .is_empty()
+        );
+    }
+
+    #[tokio::test]
+    async fn empty_prefix_returns_all_of_mine_up_to_limit() {
+        let repo = repo_with_tags().await;
+        let mine = repo.tags_with_prefix(&Actor::user(1), "", 8).await.unwrap();
+        assert_eq!(mine.len(), 4, "只数自己的（别人的标签不算）");
+
+        let limited = repo.tags_with_prefix(&Actor::user(1), "", 2).await.unwrap();
+        assert_eq!(limited.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn admin_sees_everyones_tags() {
+        let repo = repo_with_tags().await;
+        assert_eq!(
+            repo.tags_with_prefix(&Actor::admin(1), "", 8)
+                .await
+                .unwrap()
+                .len(),
+            5
+        );
     }
 }

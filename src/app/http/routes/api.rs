@@ -48,6 +48,9 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
         .nest("/search", search::routes::<AppState>())
         .nest("/bookmarks", bookmark::routes::<AppState>())
         .nest("/tasks", task::routes::<AppState>())
+        // 标签是 `tag` 表（任务与 mem 共用），补全问的是"我有哪些标签"，
+        // 与具体任务无关，所以挂在自己的路径下（设计文档 04 §7.4）
+        .route("/tags", get(task::get_tags_handler))
         .nest("/text", text::routes::<AppState>())
         .nest("/chat", chat::routes::<AppState>())
         .nest(

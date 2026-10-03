@@ -90,6 +90,19 @@ impl TaskQueryService {
         Ok(())
     }
 
+    /// 标签自动补全：前缀查询，最多 8 条（录入框的输入去抖后调它）
+    pub async fn tags_with_prefix(
+        &self,
+        actor: &Actor,
+        prefix: &str,
+    ) -> Result<Vec<super::response::Tag>, ServiceError> {
+        const LIMIT: i64 = 8;
+        self.repo
+            .tags_with_prefix(actor, prefix, LIMIT)
+            .await
+            .map_err(ServiceError::Db)
+    }
+
     pub async fn detail(
         &self,
         actor: &Actor,

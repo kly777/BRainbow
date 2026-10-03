@@ -1,11 +1,12 @@
 use axum::{
-    extract::{Extension, Json, Path, State},
+    extract::{Extension, Json, Path, Query, State},
     response::IntoResponse,
 };
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
 use super::super::model::TaskStatus;
+use super::super::query::TaskQueryService;
 use super::super::service::TaskService;
 use crate::shared::actor::Actor;
 use crate::shared::error_types as error;
@@ -36,6 +37,24 @@ pub struct DependencyRequest {
     pub depends_on_task_id: i32,
 }
 
+/// 标签自动补全的查询参数（`GET /api/tags?prefix=`）
+#[derive(Debug, Deserialize)]
+pub struct TagsQuery {
+    #[serde(default)]
+    pub prefix: String,
+}
+
+/// `GET /api/tags?prefix=` —— 录入框的标签补全（前缀查询，最多 8 条）
+pub async fn get_tags_handler(
+    Query(query): Query<TagsQuery>,
+    State(qsvc): State<TaskQueryService>,
+    Extension(actor): Extension<Actor>,
+) -> impl IntoResponse {
+    match qsvc.tags_with_prefix(&actor, &query.prefix).await {
+        Ok(items) => Json(items).into_response(),
+        Err(e) => e.into_response(),
+    }
+}
 pub async fn add_dependency_handler(
     Path(task_id): Path<i32>,
     State(service): State<TaskService>,

@@ -40,6 +40,82 @@ impl TaskQueryService {
             .map_err(ServiceError::Db)
     }
 
+    /// 排序后的列表（`?sort=`）：`smart` 在应用层打分排序，其余四种走 SQL。
+    ///
+    /// 返回的 `Ranked` 只给 smart 用（其余排序没有"理由"可言）—— 由调用方挂到响应上。
+    pub async fn list_sorted(
+        &self,
+        actor: &Actor,
+        sort: super::model::TaskSort,
+        limit: i64,
+        offset: i64,
+    ) -> Result<
+        (
+            Vec<Task>,
+            i64,
+            std::collections::HashMap<i32, super::ranking::Ranked>,
+        ),
+        ServiceError,
+    > {
+        use super::model::TaskSort;
+        if sort != TaskSort::Smart {
+            let (tasks, total) = self
+                .repo
+                .find_sorted_paginated(actor, sort, limit, offset)
+                .await
+                .map_err(ServiceError::Db)?;
+            return Ok((tasks, total, std::collections::HashMap::new()));
+        }
+
+        // smart：取候选集 + 依赖边，在内存里打分排序（理由要逐项构造，SQL 表达不出来）
+        let candidates = self
+            .repo
+            .find_open_candidates(actor)
+            .await
+            .map_err(ServiceError::Db)?;
+        let edges = self
+            .repo
+            .dependency_edges(actor)
+            .await
+            .map_err(ServiceError::Db)?;
+        let ctx = super::ranking::RankContext::new(edges);
+        let now = chrono::Utc::now();
+
+        let mut scored: Vec<(Task, super::ranking::Ranked)> = candidates
+            .into_iter()
+            .map(|task| {
+                let ranked = super::ranking::task_score(&task, now, &ctx);
+                (task, ranked)
+            })
+            .collect();
+        // 先按分数排（次级键在 `sort_ranked` 里，保证全序），再翻页 —— 页内稳定、翻页不重不漏
+        let mut ordered: Vec<super::ranking::Ranked> =
+            scored.iter().map(|(_, ranked)| ranked.clone()).collect();
+        super::ranking::sort_ranked(&mut ordered);
+        let order: std::collections::HashMap<i32, usize> = ordered
+            .iter()
+            .enumerate()
+            .map(|(index, ranked)| (ranked.task_id, index))
+            .collect();
+        scored.sort_by_key(|(task, _)| order.get(&task.id).copied().unwrap_or(usize::MAX));
+
+        let total = scored.len() as i64;
+        let page: Vec<(Task, super::ranking::Ranked)> = scored
+            .into_iter()
+            .skip(offset.max(0) as usize)
+            .take(limit.max(0) as usize)
+            .collect();
+        let (tasks, ranked): (Vec<Task>, Vec<super::ranking::Ranked>) = page.into_iter().unzip();
+        Ok((
+            tasks,
+            total,
+            ranked
+                .into_iter()
+                .map(|ranked| (ranked.task_id, ranked))
+                .collect(),
+        ))
+    }
+
     pub async fn list_all(
         &self,
         actor: &Actor,
@@ -88,6 +164,29 @@ impl TaskQueryService {
             response.tags = tags.remove(&response.id).unwrap_or_default();
         }
         Ok(())
+    }
+
+    /// 列表出口（带排序与理由）：`Task` → `TaskResponse`，挂标签与排序理由。
+    ///
+    /// 理由与标签一样是"读得到就一定有"的字段：smart 排序下 `reasons` 恒非空
+    /// （P8：没有理由的排序不允许上线）。
+    pub async fn ranked_responses(
+        &self,
+        tasks: Vec<Task>,
+        ranked: std::collections::HashMap<i32, super::ranking::Ranked>,
+    ) -> Result<Vec<super::response::TaskResponse>, ServiceError> {
+        let mut items: Vec<super::response::TaskResponse> = tasks
+            .into_iter()
+            .map(|task| {
+                let response = super::response::TaskResponse::from(task);
+                match ranked.get(&response.id) {
+                    Some(ranked) => response.with_ranking(ranked),
+                    None => response,
+                }
+            })
+            .collect();
+        self.attach_tags(&mut items).await?;
+        Ok(items)
     }
 
     /// 标签自动补全：前缀查询，最多 8 条（录入框的输入去抖后调它）
@@ -282,5 +381,147 @@ impl SearchPort for TaskQueryService {
                 score: if is_fts { 1.0 } else { r.title_hit as f64 },
             })
             .collect())
+    }
+}
+
+#[cfg(test)]
+mod sorted_tests {
+    #![allow(clippy::unwrap_used)]
+    use super::*;
+    use crate::modules::task::dto::CreateTaskRequest;
+    use crate::modules::task::model::{TaskPriority, TaskSort};
+    use crate::modules::task::service::TaskService;
+    use chrono::{Duration, Utc};
+
+    struct Ctx {
+        svc: TaskService,
+        qsvc: TaskQueryService,
+    }
+
+    async fn setup() -> Ctx {
+        let pool = Arc::new(sqlx::SqlitePool::connect("sqlite::memory:").await.unwrap());
+        crate::db::migrate(&pool).await.unwrap();
+        sqlx::query("INSERT INTO user (id, name, password_hash) VALUES (1, 'u', 'x')")
+            .execute(&*pool)
+            .await
+            .unwrap();
+        Ctx {
+            svc: TaskService::new(pool.clone()),
+            qsvc: TaskQueryService::new(pool),
+        }
+    }
+
+    fn req(title: &str) -> CreateTaskRequest {
+        CreateTaskRequest {
+            title: title.into(),
+            description: None,
+            parent_task_id: None,
+            effort_estimate_minutes: None,
+            start_at: None,
+            due_at: None,
+            priority: None,
+            tags: None,
+        }
+    }
+
+    fn titles(tasks: &[Task]) -> Vec<String> {
+        tasks.iter().map(|task| task.title.clone()).collect()
+    }
+
+    /// smart 排序的候选集只含未完成（已完成的不该出现在"先做哪件"里），
+    /// 且逾期压过无信息的
+    #[tokio::test]
+    async fn smart_ranks_open_tasks_and_excludes_completed() {
+        let ctx = setup().await;
+        let actor = Actor::user(1);
+
+        let mut overdue = req("逾期的事");
+        overdue.due_at = Some(Utc::now() - Duration::days(3));
+        let overdue = ctx.svc.create(&actor, overdue).await.unwrap();
+
+        let _plain = ctx.svc.create(&actor, req("收件箱里的事")).await.unwrap();
+
+        let done = ctx.svc.create(&actor, req("已经做完的")).await.unwrap();
+        ctx.svc.complete(&actor, done.id).await.unwrap();
+
+        let (tasks, total, ranked) = ctx
+            .qsvc
+            .list_sorted(&actor, TaskSort::Smart, 50, 0)
+            .await
+            .unwrap();
+
+        assert_eq!(total, 2, "完成的不进 smart 候选集");
+        assert_eq!(titles(&tasks), vec!["逾期的事", "收件箱里的事"]);
+
+        // 每条都有理由（P8：无理由的排序不允许上线）
+        for task in &tasks {
+            let ranked = ranked.get(&task.id).unwrap();
+            assert!(!ranked.reasons.is_empty());
+            assert!(!ranked.summary().is_empty());
+        }
+        assert!(
+            ranked[&overdue.id].summary().contains("逾期"),
+            "理由要说人话：{}",
+            ranked[&overdue.id].summary()
+        );
+    }
+
+    /// 页内稳定：翻页不重不漏（次级键保证全序）
+    #[tokio::test]
+    async fn smart_pagination_is_stable() {
+        let ctx = setup().await;
+        let actor = Actor::user(1);
+        for i in 1..=5 {
+            ctx.svc.create(&actor, req(&format!("任务 {i}"))).await.unwrap();
+        }
+
+        let mut collected = Vec::new();
+        for page in 0..3 {
+            let (tasks, _, _) = ctx.qsvc.list_sorted(&actor, TaskSort::Smart, 2, page * 2).await.unwrap();
+            collected.extend(titles(&tasks));
+        }
+        assert_eq!(collected.len(), 5);
+        let unique: std::collections::HashSet<&String> = collected.iter().collect();
+        assert_eq!(unique.len(), 5, "翻页不该重复：{collected:?}");
+    }
+
+    /// 显式排序：due / created / priority / effort 各按自己的口径，NULL 排最后
+    #[tokio::test]
+    async fn explicit_sorts_follow_their_own_null_last_rules() {
+        let ctx = setup().await;
+        let actor = Actor::user(1);
+
+        let mut soon = req("先到期");
+        soon.due_at = Some(Utc::now() + Duration::days(1));
+        soon.effort_estimate_minutes = Some(30);
+        soon.priority = Some(TaskPriority::P3);
+        ctx.svc.create(&actor, soon).await.unwrap();
+
+        let mut late = req("后到期");
+        late.due_at = Some(Utc::now() + Duration::days(5));
+        late.effort_estimate_minutes = Some(10);
+        late.priority = Some(TaskPriority::P1);
+        ctx.svc.create(&actor, late).await.unwrap();
+
+        ctx.svc.create(&actor, req("什么都没填")).await.unwrap();
+
+        let names = |tasks: &[Task]| titles(tasks);
+
+        let (by_due, _, _) = ctx.qsvc.list_sorted(&actor, TaskSort::Due, 50, 0).await.unwrap();
+        assert_eq!(names(&by_due), vec!["先到期", "后到期", "什么都没填"]);
+
+        let (by_effort, _, _) = ctx.qsvc.list_sorted(&actor, TaskSort::Effort, 50, 0).await.unwrap();
+        assert_eq!(names(&by_effort), vec!["后到期", "先到期", "什么都没填"]);
+
+        let (by_priority, _, _) = ctx.qsvc.list_sorted(&actor, TaskSort::Priority, 50, 0).await.unwrap();
+        assert_eq!(names(&by_priority), vec!["后到期", "先到期", "什么都没填"]);
+
+        // created 是倒序：最后建的排最前
+        let (by_created, _, _) = ctx.qsvc.list_sorted(&actor, TaskSort::Created, 50, 0).await.unwrap();
+        assert_eq!(names(&by_created), vec!["什么都没填", "后到期", "先到期"]);
+
+        // 非 smart 的排序没有"理由"可言（不是为了省事，是不该编）
+        let (_, _, ranked) = ctx.qsvc.list_sorted(&actor, TaskSort::Due, 50, 0).await.unwrap();
+        assert!(ranked.is_empty());
     }
 }

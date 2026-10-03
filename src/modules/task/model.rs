@@ -146,6 +146,21 @@ impl Type<Sqlite> for TaskPriority {
     }
 }
 
+/// 列表排序方式。**默认 smart**（系统算"先做哪件"），其余四种是用户可选的显式口径。
+///
+/// `created` 保留在选项里是**产品功能**（"我就想按录入时间看"），但系统不再用它兜底 ——
+/// 排序算崩了要修排序，不是退回旧口径（设计文档 08 §S3 的退出判据）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TaskSort {
+    #[default]
+    Smart,
+    Due,
+    Created,
+    Priority,
+    Effort,
+}
+
 /// 任务实体 - 根据new_task.md设计
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, FromRow)]
 pub struct Task {

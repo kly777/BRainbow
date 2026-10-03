@@ -24,6 +24,13 @@ pub struct TaskResponse {
     pub priority: Option<TaskPriority>,
     /// 标签（列表出口一次批量查询挂上，见 `TaskQueryService::responses`）
     pub tags: Vec<Tag>,
+    /// 排序理由：界面显示的那一行（`今天到期 · 标为 p1`）。
+    /// 只有 `sort=smart` 的列表会填；其余口径没有"为什么排这儿"可言
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    /// 理由的分项（供客户端自己组织文案）；**smart 排序下恒非空**（P8）
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reasons: Vec<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -42,6 +49,8 @@ impl From<Task> for TaskResponse {
             due_at: task.due_at,
             priority: task.priority,
             tags: Vec::new(),
+            reason: None,
+            reasons: Vec::new(),
             created_at: task.created_at,
             updated_at: task.updated_at,
         }
@@ -52,6 +61,13 @@ impl TaskResponse {
     /// 挂上标签（写路径已经知道结果，读路径用一次批量查询，两条都不做 N+1）
     pub fn with_tags(mut self, tags: Vec<Tag>) -> Self {
         self.tags = tags;
+        self
+    }
+
+    /// 挂上排序理由（`sort=smart` 的列表出口用）
+    pub fn with_ranking(mut self, ranked: &super::ranking::Ranked) -> Self {
+        self.reason = Some(ranked.summary());
+        self.reasons = ranked.details();
         self
     }
 }
@@ -189,6 +205,8 @@ mod tests {
                 due_at: None,
                 priority: None,
                 tags: vec![],
+                reason: None,
+                reasons: vec![],
                 created_at: chrono::Utc::now(),
                 updated_at: chrono::Utc::now(),
             },

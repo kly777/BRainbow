@@ -4,6 +4,7 @@ use std::sync::Arc;
 pub(crate) mod crud;
 pub(crate) mod dependency;
 pub(crate) mod query;
+pub(crate) mod sorting;
 pub(crate) mod status;
 pub(crate) mod tag;
 

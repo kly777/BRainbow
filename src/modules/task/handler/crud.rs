@@ -12,17 +12,28 @@ use crate::shared::actor::Actor;
 use crate::shared::error_types as error;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
 
+/// `GET /tasks` 的查询参数：分页 + 排序
+#[derive(Debug, serde::Deserialize)]
+pub struct ListQuery {
+    #[serde(flatten)]
+    pub pagination: Pagination,
+    /// 排序口径：smart（默认）| due | created | priority | effort
+    #[serde(default)]
+    pub sort: crate::modules::task::model::TaskSort,
+}
+
 pub async fn get_tasks_handler(
-    Query(pagination): Query<Pagination>,
-    State(query): State<TaskQueryService>,
+    Query(query): Query<ListQuery>,
+    State(query_service): State<TaskQueryService>,
     Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
-    match query
-        .list(&actor, pagination.limit(), pagination.offset())
+    let pagination = &query.pagination;
+    match query_service
+        .list_sorted(&actor, query.sort, pagination.limit(), pagination.offset())
         .await
     {
-        Ok((tasks, total)) => match query.responses(tasks).await {
-            Ok(items) => Json(PaginatedResponse::new(items, total, &pagination)).into_response(),
+        Ok((tasks, total, ranked)) => match query_service.ranked_responses(tasks, ranked).await {
+            Ok(items) => Json(PaginatedResponse::new(items, total, pagination)).into_response(),
             Err(e) => e.into_response(),
         },
         Err(e) => e.into_response(),

@@ -2,6 +2,7 @@ pub mod dto;
 mod handler;
 mod model;
 mod query;
+pub mod ranking;
 mod repository;
 mod response;
 pub(crate) mod service;

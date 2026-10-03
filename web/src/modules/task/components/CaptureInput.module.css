@@ -1,0 +1,141 @@
+/* ── 录入框：第 1 层常驻单行 + 第 2 层唤出的补充控件 ──
+   令牌一律取 shared/styles/tokens.css（--t-*）与 app/global.css（--radius/--space/--text），
+   本文件不发明新的视觉语言（P12）。类名 kebab-case、JS 侧 camelCaseOnly 取用。 */
+
+.capture {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2xs);
+	container-type: inline-size;
+}
+
+.row {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2xs);
+}
+
+.title-input {
+	flex: 1;
+	min-width: 0;
+}
+
+.expand-button {
+	flex-shrink: 0;
+	min-width: 1.75rem;
+	font-variant-numeric: tabular-nums;
+}
+
+/* ── 实时解析预览 ── */
+
+.preview {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--space-2xs);
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}
+
+.chip {
+	padding: 0.0625rem var(--space-2xs);
+	border-radius: var(--radius-2xs);
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-ink);
+	font-variant-numeric: tabular-nums;
+}
+
+.chip-muted {
+	padding: 0.0625rem var(--space-2xs);
+	border-radius: var(--radius-2xs);
+	border: 1px dashed var(--t-color-border);
+	color: var(--t-color-ink-muted);
+}
+
+.preview-warning {
+	color: var(--t-color-warning);
+}
+
+/* ── 第 2 层：六个控件 ── */
+
+.panel {
+	/* 展开动效 ≤140ms（P3）；reduced-motion 下由 global.css 关掉过渡 */
+	animation: panel-in var(--t-transition-fast) ease-out;
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: var(--space-sm);
+	padding: var(--space-sm);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	background: var(--t-color-surface);
+}
+
+@keyframes panel-in {
+	from {
+		opacity: 0;
+		transform: translateY(-0.25rem);
+	}
+}
+
+/* 窄屏（组件级自适应，看的是宿主容器宽度而不是视口）：单列 */
+
+@container (width < 30rem) {
+	.panel {
+		grid-template-columns: 1fr;
+	}
+}
+
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3xs, 0.25rem);
+	min-width: 0;
+}
+
+.label {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}
+
+.effort-input {
+	width: 100%;
+}
+
+.date-row {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2xs);
+}
+
+.date-input {
+	flex: 1;
+	min-width: 0;
+}
+
+.calendar-button {
+	flex-shrink: 0;
+	padding: var(--space-3xs, 0.25rem);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	background: none;
+	cursor: pointer;
+	line-height: 1;
+}
+
+.calendar-button:hover {
+	border-color: var(--t-color-accent);
+}
+
+/* 原生选择器本体不显示：它只是 `showPicker()` 的落点（打字是主路径，日历是快捷方式） */
+.picker {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.helper {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-faint);
+}

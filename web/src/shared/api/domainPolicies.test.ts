@@ -67,6 +67,7 @@ const OWN_ENDPOINTS: Record<DomainName, readonly string[]> = {
 		"/tasks/dag?task_id=1",
 		"/tasks/calendar?start=1&end=2",
 		"/tasks/5/detail",
+		"/tags?prefix=%E5%B7%A5",
 	],
 	db: ["/db", "/db/tables?page=1", "/db/tables/backrefs?id=1"],
 	onto: ["/onto", "/onto/5"],

@@ -53,6 +53,8 @@ export const DOMAIN_POLICIES: Record<DomainName, DomainPolicy> = {
 		reads: [
 			/^GET \/tasks(?:\?|$)/,
 			/^GET \/tasks\/(?:search|tree|stats|user|status|all|dag|calendar)\b/,
+			// 标签补全（`/tags?prefix=`，标签随任务写入而变）
+			/^GET \/tags(?:\?|$)/,
 		],
 		singles: [/^GET \/tasks\/\d+/],
 		invalidates: ["timeWindows"],

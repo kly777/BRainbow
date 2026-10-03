@@ -1,8 +1,16 @@
-// 任务页工具条：视图切换 + 搜索 + 快速添加（从 TaskManager.tsx 下钻）
+// 任务页工具条：视图切换 + 搜索 + 录入（从 TaskManager.tsx 下钻）
+//
+// 录入框从"裸 input"换成 CaptureInput（两层结构）：第 1 层仍是单行回车即建，
+// 第 2 层由 `[+]` 唤出六个可选控件；`!p1` / `#标签` / `~60m` / `@提及` 的符号
+// 与全局浮窗共用同一套解析规则（lib/capture.ts）。
 
 import { FilterGroup, SearchInput } from "@components/ui";
-import { createSignal } from "solid-js";
+import { notifySuccess } from "@shared/utils";
+import type { CreateTaskRequest } from "../api.ts";
+import { captureToCreateRequest } from "../lib/task-payload.ts";
 import styles from "../TaskManager.module.css";
+import type { CaptureSubmit } from "./CaptureInput.tsx";
+import CaptureInput from "./CaptureInput.tsx";
 import { useTasks } from "./TaskProvider.tsx";
 
 export interface TaskToolbarProps {
@@ -13,13 +21,21 @@ export interface TaskToolbarProps {
 }
 
 export default function TaskToolbar(props: TaskToolbarProps) {
-	const { add, search, reload } = useTasks();
-	const [title, setTitle] = createSignal("");
+	const { add, search, reload, tasks } = useTasks();
 
 	const doSearch = (q: string) => {
 		if (q) search(q);
 		else reload();
 		props.onSearchChange(q);
+	};
+
+	/** 提交：乐观插入由 provider 负责，这里只负责提一句提示（P2：不弹模态、不跳转） */
+	const submit = async (payload: CaptureSubmit) => {
+		const req: CreateTaskRequest = captureToCreateRequest(payload);
+		const created = await add(req);
+		if (created) {
+			notifySuccess("已创建", created.title);
+		}
 	};
 
 	return (
@@ -42,21 +58,11 @@ export default function TaskToolbar(props: TaskToolbarProps) {
 			</div>
 
 			<div class={styles.quickAddBox}>
-				<input
-					type="text"
-					placeholder="+ 快速添加…"
-					aria-label="快速添加任务"
-					value={title()}
-					onInput={(e) => setTitle(e.currentTarget.value)}
-					onKeyDown={(e) => {
-						if (e.key === "Enter") {
-							const t = title().trim();
-							if (!t) return;
-							setTitle("");
-							add({ title: t });
-						}
-					}}
-					class={styles.quickAddInput}
+				{/* 父任务候选给的是当前列表（含层级）：够常用，又不为下拉多打一次请求 */}
+				<CaptureInput
+					placeholder="+ 快速添加… !p1 #标签 ~60m"
+					parentCandidates={tasks()}
+					onSubmit={submit}
 				/>
 			</div>
 		</div>

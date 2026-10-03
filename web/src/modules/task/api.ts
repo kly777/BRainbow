@@ -13,6 +13,7 @@ import { MAX_PAGE_SIZE } from "./api-funcs.ts";
 import type {
 	CreateTaskRequest,
 	DagView,
+	Tag,
 	Task,
 	TaskDetail,
 	TaskStatusType,
@@ -99,6 +100,15 @@ export const searchTasksE = (
 
 export const getArchivedTasksE = (): Promise<PaginatedResponse<Task>> =>
 	cachedRequest("/tasks/status/archived");
+
+/**
+ * 标签补全（录入框用）：`prefix` 为空即"取前几条"。
+ *
+ * 缓存 30s 够用 —— 标签只在写任务时变，而写任务会连坐失效 tasks 域（含本端点，见
+ * domainPolicies）；调用方另有 200ms 输入去抖，不会每敲一个字都打一次请求。
+ */
+export const getTagsE = (prefix = ""): Promise<Tag[]> =>
+	cachedRequest(`/tags?prefix=${encodeURIComponent(prefix)}`);
 
 // 任务统计缓存 15 秒
 export const getTaskStatsE = (): Promise<{

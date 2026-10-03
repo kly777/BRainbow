@@ -179,3 +179,97 @@ function strip(input: string, consumed: Array<[number, number]>): string {
 function collapse(text: string): string {
 	return text.replace(/\s+/gu, " ").trim();
 }
+
+// ── 回写：第 2 层控件 → 第 1 层的文本 ──
+//
+// 两层是**同一份状态的两种输入方式**（P3）：在下拉里选了 p2，标题行里的 `!p1` 要跟着
+// 变成 `!p2`；反之亦然。实现走"改文本"而不是"两份状态互相同步"—— 文本是唯一真相，
+// 控件派生于解析结果，回写就是一次纯文本替换，没有能把两份状态写岔的窗口。
+//
+// 注意日期**没有符号**，所以截止/开始时间不在文本里，它们是第 2 层自己的状态。
+
+/** `!pX` token（整 token；`!p1x` 不算，与解析规则一致） */
+const PRIORITY_TOKEN_RE = /(^|\s)![pP][1-4](?=\s|$)/gu;
+const EFFORT_TOKEN_RE =
+	/(^|\s)~\d+(?:\.\d+)?(?:m|min|h|hr|小时|分钟)?(?=\s|$)/giu;
+
+/** 把匹配到的 token 全部删掉，`replacement` 非空时追加到末尾 */
+function replaceToken(
+	text: string,
+	pattern: RegExp,
+	replacement: string | null,
+): string {
+	const cleaned = collapse(text.replace(pattern, "$1"));
+	if (!replacement) {
+		return cleaned;
+	}
+	return cleaned ? `${cleaned} ${replacement}` : replacement;
+}
+
+/** 设定优先级 token（`null` = 删掉） */
+export function setPriorityToken(
+	text: string,
+	priority: TaskPriority | null,
+): string {
+	return replaceToken(
+		text,
+		PRIORITY_TOKEN_RE,
+		priority === null ? null : `!${priority}`,
+	);
+}
+
+/** 设定时长 token（`null` = 删掉；数值按分钟，写成 `~60m`） */
+export function setEffortToken(text: string, minutes: number | null): string {
+	return replaceToken(
+		text,
+		EFFORT_TOKEN_RE,
+		minutes === null ? null : `~${minutes}m`,
+	);
+}
+
+function escapeRegExp(text: string): string {
+	return text.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+}
+
+/** 追加标签 token（名字里若有空格会退化成两个 token，所以名字先 trim 成一个词） */
+export function addTagToken(text: string, name: string): string {
+	const clean = name.trim();
+	if (!clean || clean.includes(" ")) {
+		return text;
+	}
+	const pattern = new RegExp(`(^|\\s)#${escapeRegExp(clean)}(?=\\s|$)`, "gu");
+	if (pattern.test(text)) {
+		return text; // 已经有了，不重复追加
+	}
+	const trimmed = collapse(text);
+	return trimmed ? `${trimmed} #${clean}` : `#${clean}`;
+}
+
+/** 删掉标签 token */
+export function removeTagToken(text: string, name: string): string {
+	const clean = name.trim();
+	if (!clean) {
+		return text;
+	}
+	return collapse(
+		text.replace(
+			new RegExp(`(^|\\s)#${escapeRegExp(clean)}(?=\\s|$)`, "gu"),
+			"$1",
+		),
+	);
+}
+
+/**
+ * 提及本期**只解析不落库**：先存进 description 顶部的一行 Markdown 引用。
+ *
+ * 这样解析行为与存储行为解耦 —— 将来要加 `task_mention` 关联表，只需从这段文本回填，
+ * 解析器不用改。不存又会让 `@` 符号毫无价值（打了解析完就丢）。
+ */
+export function mentionsToDescription(
+	mentions: readonly string[],
+): string | null {
+	if (mentions.length === 0) {
+		return null;
+	}
+	return `> 提及：${mentions.map((name) => `@${name}`).join(" ")}`;
+}

@@ -2,7 +2,13 @@
 // 不是"顺手写的断言"：改了语法就得同时改这里与那份文档。
 
 import { describe, expect, it } from "vitest";
-import { parseCapture } from "./capture.ts";
+import {
+	addTagToken,
+	parseCapture,
+	removeTagToken,
+	setEffortToken,
+	setPriorityToken,
+} from "./capture.ts";
 
 describe("前缀兼容（全局浮窗的类型前缀由 detectType 处理，这里只看行内 token）", () => {
 	it("`#x` 在任务录入框里是标签、不是类型前缀", () => {
@@ -212,5 +218,51 @@ describe("组合与不解析日期的红线", () => {
 
 	it("中文标签免转义", () => {
 		expect(parseCapture("#家务 #购物清单").tags).toEqual(["家务", "购物清单"]);
+	});
+});
+
+describe("回写：第 2 层控件改文本（两层是同一份状态）", () => {
+	it("设优先级：旧 token 被替换，不留两份", () => {
+		expect(setPriorityToken("写周报 !p1", "p2")).toBe("写周报 !p2");
+	});
+
+	it("设优先级：原本没有就追加", () => {
+		expect(setPriorityToken("写周报", "p1")).toBe("写周报 !p1");
+		expect(setPriorityToken("", "p1")).toBe("!p1");
+	});
+
+	it("设优先级：null = 删掉", () => {
+		expect(setPriorityToken("写周报 !p1", null)).toBe("写周报");
+		expect(setPriorityToken("!p1", null)).toBe("");
+	});
+
+	it("回写后解析结果与新控件值一致（闭环）", () => {
+		const text = setPriorityToken("写周报 #工作 ~60m", "p3");
+		const r = parseCapture(text);
+		expect(r.priority).toBe("p3");
+		expect(r.tags).toEqual(["工作"]);
+		expect(r.effortMinutes).toBe(60);
+		expect(r.cleanTitle).toBe("写周报");
+	});
+
+	it("设时长：`~1.5h` 被换成规范写法 `~90m`", () => {
+		expect(setEffortToken("写周报 ~1.5h", 90)).toBe("写周报 ~90m");
+		expect(setEffortToken("写周报 ~1.5h", null)).toBe("写周报");
+	});
+
+	it("加标签：追加、去重、中文直接写", () => {
+		expect(addTagToken("买牛奶", "工作")).toBe("买牛奶 #工作");
+		expect(addTagToken("买牛奶 #工作", "工作")).toBe("买牛奶 #工作");
+		expect(addTagToken("", "工作")).toBe("#工作");
+	});
+
+	it("删标签：只删那一个", () => {
+		expect(removeTagToken("买牛奶 #工作 #家", "工作")).toBe("买牛奶 #家");
+		expect(removeTagToken("#工作", "工作")).toBe("");
+	});
+
+	it("名字里有正则元字符也不炸", () => {
+		expect(addTagToken("x", "a+b")).toBe("x #a+b");
+		expect(removeTagToken("x #a+b", "a+b")).toBe("x");
 	});
 });

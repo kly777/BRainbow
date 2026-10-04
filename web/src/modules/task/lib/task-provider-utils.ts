@@ -1,6 +1,6 @@
 // ── TaskProvider 的纯函数和 API 调度映射 ──
 
-import type { CreateTaskRequest, Task } from "../api.ts";
+import type { CreateTaskRequest, Task, TaskStatus } from "../api.ts";
 import {
 	activateTaskE,
 	archiveTaskE,
@@ -25,8 +25,14 @@ export function makeTemp(req: CreateTaskRequest): Task {
 	};
 }
 
-/** 状态 → API 调用映射 */
-export const STATUS_API: Record<string, (id: number) => Promise<Task>> = {
+/**
+ * 状态 → API 调用映射。
+ *
+ * 键收窄成 `TaskStatus`：这张表**必须**覆盖全部四个状态，少一个就是"某个状态点不动"，
+ * 而 `Record<TaskStatus, …>` 会在新增状态时编译失败把它顶出来（`Record<string, …>`
+ * 则对新增状态毫无反应）。
+ */
+export const STATUS_API: Record<TaskStatus, (id: number) => Promise<Task>> = {
 	completed: (id) => completeTaskE(id),
 	active: (id) => activateTaskE(id),
 	archived: (id) => archiveTaskE(id),

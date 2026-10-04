@@ -39,6 +39,8 @@ describe("makeTemp", () => {
 
 describe("STATUS_API", () => {
 	it("has all expected status keys", () => {
+		// 键**覆盖**这件事现在由类型保证（`Record<TaskStatus, …>` 少一个就编不过），
+		// 这条断言留下来是为了"具体是哪四个"仍有据可查，而不是靠翻代码。
 		expect(Object.keys(STATUS_API).sort()).toEqual([
 			"active",
 			"archived",
@@ -47,9 +49,11 @@ describe("STATUS_API", () => {
 		]);
 	});
 
-	it("each entry returns a Task with the given id on success", async () => {
-		for (const key of Object.keys(STATUS_API)) {
-			expect(typeof STATUS_API[key]).toBe("function");
+	it("每个状态都挂了 API 调用", () => {
+		// `Object.keys` 给的是 `string[]`，索引 `Record<TaskStatus, …>` 需要断言；
+		// `Object.values` 不用断言，于是用后者 —— 断言正是这次要消掉的东西。
+		for (const fn of Object.values(STATUS_API)) {
+			expect(typeof fn).toBe("function");
 		}
 	});
 });

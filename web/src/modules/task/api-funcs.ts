@@ -2,7 +2,7 @@
 
 import type { PaginatedResponse } from "@shared/api";
 import { buildQuery, cachedRequest } from "@shared/api";
-import type { CalendarEvent, Task } from "./api-types.ts";
+import type { CalendarEvent, Task, TaskStatus } from "./api-types.ts";
 
 // ==================== Task API Functions ====================
 
@@ -15,7 +15,7 @@ const MAX_ALL_PAGES = 10;
 export const getCalendarEventsE = (
 	start?: string,
 	end?: string,
-	status?: string,
+	status?: TaskStatus,
 ): Promise<readonly CalendarEvent[]> => {
 	return cachedRequest(`/tasks/calendar${buildQuery({ start, end, status })}`);
 };

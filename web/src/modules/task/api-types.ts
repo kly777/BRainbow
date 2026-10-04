@@ -4,12 +4,21 @@
 
 // ── Task 基础 ──
 
+/**
+ * 任务状态。与后端 `TaskStatus` 枚举同一组取值（`src/modules/task/model.rs`）。
+ *
+ * 定义放在这里而不是 `lib/status-colors.ts`：那份是"状态 → 令牌名"的视觉表，
+ * 而**状态本身是接口契约**（列表、日历、依赖图三处的 `status` 列都是它），
+ * 归 api-types 才不会让 api 契约反过来依赖一张视觉映射表。
+ */
+export type TaskStatus = "backlog" | "active" | "completed" | "archived";
+
 export interface Task {
 	id: number;
 	title: string;
 	description: string | null;
 	parent_task_id: number | null;
-	status: string;
+	status: TaskStatus;
 	completed_at: string | null;
 	effort_estimate_minutes: number | null;
 	created_at: string;
@@ -27,7 +36,7 @@ export interface UpdateTaskRequest {
 	title?: string;
 	description?: string | null;
 	parent_task_id?: number | null;
-	status?: string | null;
+	status?: TaskStatus | null;
 	effort_estimate_minutes?: number | null;
 }
 
@@ -71,7 +80,7 @@ export interface CalendarEvent {
 	start: string;
 	end: string;
 	window_type: string;
-	status: string;
+	status: TaskStatus;
 }
 
 // ── DAG 依赖图 ──
@@ -79,7 +88,7 @@ export interface CalendarEvent {
 export interface DagNode {
 	id: number;
 	title: string;
-	status: string;
+	status: TaskStatus;
 }
 
 export interface DagEdge {

@@ -17,16 +17,28 @@
 
 import type { TokenName } from "@shared/styles";
 
-export type TaskStatusKey = "backlog" | "active" | "completed" | "archived";
+import type { TaskStatus } from "../api-types.ts";
 
-export const STATUS_TOKENS: Record<TaskStatusKey, TokenName> = {
+/**
+ * 状态字面量本身是接口契约，定义在 `api-types.ts`；这里只登记它对应的令牌。
+ *
+ * 旧的 `TaskStatusKey` 已并入 `TaskStatus` —— 同一个状态叫两个名字，
+ * 加一个状态时就会只改一处。
+ */
+export const STATUS_TOKENS: Record<TaskStatus, TokenName> = {
 	backlog: "--t-color-ink-muted",
 	active: "--t-color-accent",
 	completed: "--t-color-success",
 	archived: "--t-color-ink-faint",
 };
 
-/** 未知状态回退到 muted（与改造前依赖图的兜底意图一致） */
+/**
+ * 未知状态回退到 muted（与改造前依赖图的兜底意图一致）。
+ *
+ * 参数仍是 `string` 而不是 `TaskStatus`：**调用方拿到的数据未必受类型保护** ——
+ * 老库里可能存着已被后端删掉的状态，`cast`/迁移之前这里必须真的兜住。
+ * 取不到就是 muted，与"不认得这个状态"这件事本身相符。
+ */
 export function statusToken(status: string): TokenName {
-	return STATUS_TOKENS[status as TaskStatusKey] ?? "--t-color-ink-muted";
+	return STATUS_TOKENS[status as TaskStatus] ?? "--t-color-ink-muted";
 }

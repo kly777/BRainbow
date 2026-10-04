@@ -1,7 +1,7 @@
 import { Modal } from "@components/ui";
 import { notifyError, tryAsync } from "@shared/utils";
 import { type Component, createEffect, createSignal, Show } from "solid-js";
-import type { Task, TimeWindow } from "../api.ts";
+import type { Task, TaskStatus, TimeWindow } from "../api.ts";
 import { getTimeWindowsE } from "../timeWindowApi.ts";
 import BasicInfoTab from "./BasicInfoTab.tsx";
 import DependenciesTab from "./DependenciesTab.tsx";
@@ -32,7 +32,7 @@ export default function EditTaskModal(props: EditTaskModalProps) {
 	// ── 基本信息 ──
 	const [title, setTitle] = createSignal("");
 	const [description, setDescription] = createSignal("");
-	const [status, setStatus] = createSignal("backlog");
+	const [status, setStatus] = createSignal<TaskStatus>("backlog");
 	const [effort, setEffort] = createSignal<number | undefined>();
 	const [parentTaskId, setParentTaskId] = createSignal<number | undefined>();
 

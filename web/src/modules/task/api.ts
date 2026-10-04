@@ -15,6 +15,7 @@ import type {
 	DagView,
 	Task,
 	TaskDetail,
+	TaskStatus,
 	UpdateTaskRequest,
 } from "./api-types.ts";
 
@@ -105,7 +106,10 @@ export const addTaskTimeAllocationE = (
 export const getUserTasksE = (userId: number): Promise<readonly Task[]> =>
 	cachedRequest(`/tasks/user/${userId}`);
 
-export const updateTaskStatusE = (id: number, status: string): Promise<Task> =>
+export const updateTaskStatusE = (
+	id: number,
+	status: TaskStatus,
+): Promise<Task> =>
 	domains.tasks.invalidate(patch<Task>(`/tasks/${id}`, { status }), {
 		entity: `/tasks/${id}`,
 	});

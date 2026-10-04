@@ -11,7 +11,7 @@ import {
 	onMount,
 	useContext,
 } from "solid-js";
-import type { CreateTaskRequest, Task } from "../api.ts";
+import type { CreateTaskRequest, Task, TaskStatus } from "../api.ts";
 import {
 	createTaskE as apiCreateTask,
 	deleteTaskE as apiDeleteTask,
@@ -100,7 +100,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		return null;
 	};
 
-	const updateStatus = async (id: number, newStatus: string) => {
+	const updateStatus = async (id: number, newStatus: TaskStatus) => {
 		const prev = tasks();
 		const idx = prev.findIndex((t) => t.id === id);
 		if (idx === -1) return;
@@ -111,7 +111,9 @@ export function TaskProvider(props: { children: JSX.Element }) {
 
 		const apiFn = STATUS_API[newStatus];
 		if (!apiFn) {
-			// 非法状态：回滚
+			// 类型上 `STATUS_API` 是全键覆盖，这里取不到值 —— 但别删这段兜底：
+			// 它挡的是"运行时的数据不是这四个之一"（老库里已被后端删掉的状态）。
+			// 那时宁可回滚，也不要把界面留在一个乐观更新出来的假状态上。
 			setTasks((c) =>
 				c.map((t) => (t.id === id ? { ...t, status: orig.status } : t)),
 			);

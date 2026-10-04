@@ -6,6 +6,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::model::{MemWithChunks, TagInfo};
+use crate::shared::db_query::SortDir;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateMemRequest {
@@ -66,13 +67,41 @@ pub struct MemCounts {
     pub suspended: usize,
 }
 
+/// 管理页的排序列。
+///
+/// 值域以前只体现在 SQL 构造的 `match query.sort.as_deref()` 里：认得的三个显式列出，
+/// 其余全落进 `_ => ORDER BY m.due_at`。于是拼错的列名不报错，只是静默按到期时间排。
+/// 前端 `lib/mem-manage-utils.ts` 早就有 `SortField` 联合类型 —— 这里把它落到后端。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MemSortField {
+    /// 到期时间（缺省）
+    #[default]
+    DueAt,
+    /// 难度
+    Difficulty,
+    /// 提示块创建时间
+    ///
+    /// 名字里有**点**（前端 `SortField` 与 URL 参数一直用的是 `cue.created_at`），
+    /// `rename_all = "snake_case"` 生成的是 `cue_created_at`，对不上 —— 所以这一条
+    /// 必须显式写死。写错的话每次"按创建时间排"都会被拒成 400。
+    #[serde(rename = "cue.created_at")]
+    CueCreatedAt,
+    /// 卡片状态
+    State,
+}
+
 /// 管理页查询参数
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct MemQuery {
     pub q: Option<String>,
     pub state: Option<String>,
-    pub sort: Option<String>,
-    pub order: Option<String>,
+    /// 排序列，缺省 due_at
+    #[serde(default)]
+    pub sort: MemSortField,
+    /// 排序方向，缺省 asc
+    #[serde(default)]
+    pub order: SortDir,
     /// 按 id 直达单条记忆（全局搜索跳转用），设置后忽略 buried/state 过滤
     pub id: Option<i64>,
     /// 白名单标签 ID（逗号分隔），仅显示包含这些标签的 mem
@@ -157,4 +186,56 @@ pub struct SessionEstimate {
     pub total_estimate: usize,
     /// 近期单卡平均耗时（秒；0 = 无历史记录）
     pub avg_seconds: f64,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// 前端 `lib/mem-manage-utils.ts` 的 `SortField` 与 `VALID_SORT_FIELDS`
+    /// 就是这几个字面量 —— 两边对不上时不会编译失败，只会每次请求都 400。
+    /// 这条测试把 URL 参数的实际形态钉住（`cue.created_at` 带点，不是
+    /// `cue_created_at`）。
+    #[test]
+    fn sort_field_accepts_exactly_what_the_frontend_sends() {
+        for (raw, expected) in [
+            ("due_at", MemSortField::DueAt),
+            ("difficulty", MemSortField::Difficulty),
+            ("cue.created_at", MemSortField::CueCreatedAt),
+            ("state", MemSortField::State),
+        ] {
+            let q: MemQuery = serde_json::from_str(&format!(r#"{{"sort":"{raw}"}}"#)).unwrap();
+            assert_eq!(q.sort, expected, "{raw}");
+        }
+    }
+
+    #[test]
+    fn query_defaults_match_the_previous_behaviour() {
+        // 缺省：按 due_at 升序。改造前是 `unwrap_or(due_at)` + `!= desc` 走 ASC
+        let q: MemQuery = serde_json::from_str("{}").unwrap();
+        assert_eq!(q.sort, MemSortField::DueAt);
+        assert_eq!(q.order, SortDir::Asc);
+    }
+
+    #[test]
+    fn an_unrecognised_sort_or_order_is_rejected() {
+        // 改造前：认不出的 sort 落进 `_ =>` 按 due_at 排、认不出的 order 走 ASC，
+        // 都是静默换一种顺序返回
+        for bad in [
+            r#"{"sort":"visits"}"#,
+            r#"{"sort":"cue_created_at"}"#,
+            r#"{"order":"DESC"}"#,
+            r#"{"order":"up"}"#,
+        ] {
+            let parsed: Result<MemQuery, _> = serde_json::from_str(bad);
+            assert!(parsed.is_err(), "{bad} 本该被拒");
+        }
+    }
+
+    #[test]
+    fn order_can_be_set_explicitly() {
+        let q: MemQuery = serde_json::from_str(r#"{"order":"desc"}"#).unwrap();
+        assert_eq!(q.order, SortDir::Desc);
+        assert_eq!(q.order.sql(), "DESC");
+    }
 }

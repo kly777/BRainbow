@@ -21,9 +21,47 @@
 //! let safe = sanitize_table_name(user_input)?;
 //! ```
 
+use serde::Deserialize;
 use sqlx::{Database, Encode, QueryBuilder, Type};
 
 use super::actor::Actor;
+
+// ── 排序方向 ──
+
+/// 排序方向（`ORDER BY … ASC/DESC`）。
+///
+/// 放在 shared 而不是各模块里：它不是某个业务域的词汇，而是"怎么拼那条 ORDER BY"
+/// 的一部分，与 [`push_owner_scope`] 同属 SQL 侧的工具。mem 与 db_viewer 两处
+/// 都需要它，各自定义一份就会回到"两个模块对同一个词的理解慢慢分家"。
+///
+/// 缺省是 `Asc` —— 与两处改造前的行为一致（`order` 没给时都走升序）。
+///
+/// 为什么要收成枚举：以前 `order` 是自由字符串，判据是
+/// `order.as_deref() == Some("desc")`，于是**任何**别的值（拼错、大小写不同、
+/// 空串）都落进 else 分支变成升序。升序不该是"认不出来"的默认值 ——
+/// 拼错的方向会静默按反方向返回，而结果看着是正常的。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SortDir {
+    #[default]
+    Asc,
+    Desc,
+}
+
+impl SortDir {
+    /// 拼进 SQL 的关键字。
+    pub fn sql(self) -> &'static str {
+        match self {
+            Self::Asc => "ASC",
+            Self::Desc => "DESC",
+        }
+    }
+
+    /// 是否降序（给"只关心方向"的调用方用，如 db_viewer 的 `sort_desc: bool`）。
+    pub fn is_desc(self) -> bool {
+        matches!(self, Self::Desc)
+    }
+}
 
 // ── QueryBuilder 扩展 ──
 
@@ -168,6 +206,43 @@ mod tests {
         assert_eq!(like_prefix("50%"), "50\\%%");
         assert_eq!(like_prefix("a_b"), "a\\_b%");
         assert_eq!(like_prefix(""), "%");
+    }
+
+    // ── SortDir ──
+
+    #[test]
+    fn sort_dir_maps_to_sql_keywords() {
+        assert_eq!(SortDir::Asc.sql(), "ASC");
+        assert_eq!(SortDir::Desc.sql(), "DESC");
+        assert!(!SortDir::Asc.is_desc());
+        assert!(SortDir::Desc.is_desc());
+    }
+
+    #[test]
+    fn sort_dir_defaults_to_ascending() {
+        // 与改造前一致：`order` 没给时走升序。默认值反过来会让列表默默倒序
+        assert_eq!(SortDir::default(), SortDir::Asc);
+        assert_eq!(SortDir::default().sql(), "ASC");
+    }
+
+    #[test]
+    fn sort_dir_accepts_exactly_asc_and_desc() {
+        assert_eq!(
+            serde_json::from_str::<SortDir>(r#""asc""#).unwrap(),
+            SortDir::Asc
+        );
+        assert_eq!(
+            serde_json::from_str::<SortDir>(r#""desc""#).unwrap(),
+            SortDir::Desc
+        );
+        // 改造前 `== Some("desc")` 只认小写 desc，其余（含升序的写法）都静默变升序；
+        // 现在拼错的直接 400，别让它悄悄按反方向返回
+        for bad in [r#""DESC""#, r#""ascending""#, r#""""#, r#""down""#] {
+            assert!(
+                serde_json::from_str::<SortDir>(bad).is_err(),
+                "{bad} 本该被拒"
+            );
+        }
     }
 
     #[tokio::test]

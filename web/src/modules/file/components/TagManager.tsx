@@ -14,7 +14,6 @@ import {
 	mergeFileTag,
 	renameFileTag,
 } from "@modules/file/api";
-import { getErrorMessage } from "@shared/api";
 import {
 	isImeComposing,
 	notifyError,
@@ -59,7 +58,9 @@ const TagManager: Component<Props> = (props) => {
 			setEditingId(null);
 			afterChange("标签已重命名");
 		} else {
-			notifyError("重命名失败", getErrorMessage(result.error));
+			// 传 error 对象而不是 getErrorMessage 的结果：文案由 notifyError 提取，
+			// 顺带能把 details（错误码）也带上，而先转成字符串会把它丢掉
+			notifyError("重命名失败", result.error);
 		}
 	};
 
@@ -72,7 +73,7 @@ const TagManager: Component<Props> = (props) => {
 		if (!confirmed) return;
 		const result = await tryAsync(() => deleteFileTag(tag.id));
 		if (result.ok) afterChange("标签已删除");
-		else notifyError("删除失败", getErrorMessage(result.error));
+		else notifyError("删除失败", result.error);
 	};
 
 	const submitMerge = async (fromId: number, targetId: number) => {
@@ -81,7 +82,7 @@ const TagManager: Component<Props> = (props) => {
 			setMergingId(null);
 			afterChange("标签已合并");
 		} else {
-			notifyError("合并失败", getErrorMessage(result.error));
+			notifyError("合并失败", result.error);
 		}
 	};
 

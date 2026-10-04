@@ -27,6 +27,23 @@ function alreadyReported(error: unknown): boolean {
 }
 
 /**
+ * 把第二个参数翻成要给用户看的那句话。
+ *
+ * **字符串直接就是文案，不再过 `getErrorMessage`。** 它不认字符串（只认
+ * HttpError / NetworkError / ValidationError / Error），一律返回"未知错误" ——
+ * 于是 `notifyError("删除失败", getErrorMessage(err))` 这种写法会把调用方刚取出来的
+ * 原因原地丢掉，界面上永远只显示"未知错误"。这种写法在仓库里出现过六处
+ * （file 的删除/重命名/合并，task 的落位…），都是同一句"未知错误"。
+ *
+ * 两种写法现在都对：
+ *   notifyError("删除失败", err)                  —— 传错误对象，这里提取原因
+ *   notifyError("删除失败", getErrorMessage(err)) —— 传文案，原样显示
+ */
+function messageOf(error: unknown): string {
+	return typeof error === "string" ? error : getErrorMessage(error);
+}
+
+/**
  * 显示错误通知（带可选的原始 error 对象提取详情）。
  * 401/403/5xx 静默 —— 见 `alreadyReported`。
  */
@@ -36,7 +53,7 @@ export function notifyError(title: string, error?: unknown): void {
 	showToast({
 		type: "error",
 		title,
-		message: error ? getErrorMessage(error) : "",
+		message: error ? messageOf(error) : "",
 		details:
 			error && typeof error === "object" && "code" in (error as object)
 				? String((error as { code: string }).code)
@@ -60,7 +77,7 @@ export function notifyWarning(title: string, error?: unknown): void {
 	showToast({
 		type: "warning",
 		title,
-		message: error ? getErrorMessage(error) : "",
+		message: error ? messageOf(error) : "",
 		duration: 5000,
 	});
 }

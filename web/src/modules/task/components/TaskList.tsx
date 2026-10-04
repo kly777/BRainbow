@@ -43,7 +43,8 @@ function TaskStatusSection(props: TaskStatusSectionProps) {
 					<span
 						class={`${styles.statusIndicator} ${props.statusColorClass}`}
 					></span>
-					{`${props.title} (${props.tasks.length})`}
+					{props.title}
+					<span class={styles.statusCount}>{props.tasks.length}</span>
 				</h2>
 				<div class={styles.taskList}>
 					<For each={props.tasks}>

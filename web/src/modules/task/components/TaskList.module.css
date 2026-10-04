@@ -13,16 +13,28 @@
 	/* 挂载点类（无样式，供 JS 引用） */
 }
 
+/*
+ * 段落头。照参考产品（Todoist 的清单分组）：**粗体墨色标题 + 行内弱化计数**。
+ *
+ * 去掉原来的 `text-transform: uppercase` + `letter-spacing: 0.08em` ——
+ * 那套是拉丁文的"eyebrow 标签"做法（瑞士风那条"微标签大写 + 字距"），
+ * 而这里四个段落名全是中文：uppercase 对中文无效，字距只会把中文抻得松散。
+ */
 .status-title {
 	margin: 0 0 var(--space-md);
 	font-size: var(--text-sm);
-	font-weight: 500;
-	color: var(--t-color-ink-muted);
-	text-transform: uppercase;
-	letter-spacing: 0.08em;
+	font-weight: 600;
+	color: var(--t-color-ink);
 	display: flex;
 	align-items: center;
 	gap: var(--space-sm);
+}
+
+/* 计数：弱化到 muted、常规字重、等宽数字 —— 它是标题的附注，不该和标题争重 */
+.status-count {
+	font-weight: 400;
+	color: var(--t-color-ink-muted);
+	font-variant-numeric: tabular-nums;
 }
 
 .status-indicator {
@@ -87,8 +99,9 @@
 	display: flex;
 	align-items: center;
 
-	/* 与标题第一行光学对齐：标题 14px × leading-normal ≈ 21px 的行盒，圆点 18px */
-	height: calc(var(--text-sm) * var(--leading-normal));
+	/* 与标题第一行光学对齐：行高 = 标题一个行盒（16px × leading-normal），
+	   24px 的圆点在其中居中 —— 标题折行时圆点仍贴着第一行，与参考产品一致 */
+	height: calc(var(--text-base) * var(--leading-normal));
 }
 
 .task-main {
@@ -96,10 +109,18 @@
 	min-width: 0;
 }
 
+/*
+ * 行标题：16px（`--text-base`）/ 500。
+ *
+ * 两个独立参照都落在这里 —— GitHub 的 issue 列表标题实测 16px/w500–600，
+ * Todoist 的任务标题约 16px。原来写的是 `--text-sm`（14px）/600，
+ * 结果整列表的字号比这类产品小一档，扫读时"像表单条目"而不像任务。
+ * 字重从 600 降到 500：字号已经上去了，600 在小字重字体里显得吵。
+ */
 .task-title {
 	margin: 0 0 var(--space-xs);
-	font-size: var(--text-sm);
-	font-weight: 600;
+	font-size: var(--text-base);
+	font-weight: 500;
 	color: var(--t-color-ink);
 	line-height: var(--leading-normal);
 	letter-spacing: -0.01em;

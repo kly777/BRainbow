@@ -1,6 +1,7 @@
 import { useModal } from "@shared/utils";
 import { createMemo, createSignal, For, Show } from "solid-js";
-import type { Task, TaskStatus } from "../api.ts";
+import type { Task } from "../api.ts";
+import type { TaskStatusKey } from "../lib/status-colors.ts";
 import {
 	buildChildrenMap,
 	DUE_BUCKET_TITLES,
@@ -65,7 +66,7 @@ function TaskStatusSection(props: TaskStatusSectionProps) {
 }
 
 // 四个分组的标题（顺序与状态名来自 lib/task-group.ts 的单一来源）
-const SECTION_TITLES: Record<TaskStatus, string> = {
+const SECTION_TITLES: Record<TaskStatusKey, string> = {
 	backlog: "待办列表",
 	active: "进行中",
 	completed: "已完成",

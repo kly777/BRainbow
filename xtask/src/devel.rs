@@ -109,10 +109,25 @@ pub fn run_e2e(cfg: &Config, args: &[String]) -> Result<()> {
 /// 只判"有没有"，不校验 revision：版本对不上时 Playwright 自己会要求重装，
 /// 这里负责的是把"完全没装"提前说清楚，省得对着一串路径报错发愣。
 fn playwright_browser_present() -> bool {
-    let Some(home) = std::env::var_os("HOME") else {
+    // 缓存目录按平台走（Playwright 自己的规则，见其 registry 的 `cacheDirectory`）：
+    // Windows 在 `%LOCALAPPDATA%\ms-playwright`，macOS 在 `~/Library/Caches/ms-playwright`，
+    // Linux 才是 `$XDG_CACHE_HOME`（缺省 `~/.cache`）。原来只认 `$HOME/.cache`，
+    // 在 Windows 上 `HOME` 通常没定义 —— 于是函数直接"当它装了"，
+    // 把缺浏览器这件事推给 Playwright 自己去报。
+    let cache_root = if cfg!(windows) {
+        std::env::var_os("LOCALAPPDATA").map(PathBuf::from)
+    } else if cfg!(target_os = "macos") {
+        std::env::var_os("HOME").map(|home| PathBuf::from(home).join("Library/Caches"))
+    } else {
+        std::env::var_os("XDG_CACHE_HOME")
+            .map(PathBuf::from)
+            .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".cache")))
+    };
+    // 认不出缓存目录就当它装了：宁可让 Playwright 自己报，也别误报"没装"。
+    let Some(cache_root) = cache_root else {
         return true;
     };
-    std::fs::read_dir(PathBuf::from(home).join(".cache/ms-playwright"))
+    std::fs::read_dir(cache_root.join("ms-playwright"))
         .map(|mut entries| entries.next().is_some())
         .unwrap_or(false)
 }

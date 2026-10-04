@@ -13,6 +13,7 @@ import { MAX_PAGE_SIZE } from "./api-funcs.ts";
 import type {
 	CreateTaskRequest,
 	DagView,
+	SuggestionsResponse,
 	Tag,
 	Task,
 	TaskDetail,
@@ -109,6 +110,18 @@ export const getArchivedTasksE = (): Promise<PaginatedResponse<Task>> =>
  */
 export const getTagsE = (prefix = ""): Promise<Tag[]> =>
 	cachedRequest(`/tags?prefix=${encodeURIComponent(prefix)}`);
+
+/**
+ * 时段建议（**纯读**）：后端只算不写，采纳由前端显式调 `createTimeWindowE`。
+ *
+ * 不走 `cachedRequest`：建议每次都要重算（用户刚拖完一个块，凭据就是"此刻的日历"），
+ * 缓存会让建议停留在旧状态 —— 那比慢 20ms 糟糕得多。
+ */
+export const getSuggestionsE = (
+	from: string,
+	to: string,
+): Promise<SuggestionsResponse> =>
+	request<SuggestionsResponse>(`/tasks/suggestions${buildQuery({ from, to })}`);
 
 // 任务统计缓存 15 秒
 export const getTaskStatsE = (): Promise<{

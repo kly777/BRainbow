@@ -18,7 +18,7 @@ import {
 	For,
 	Show,
 } from "solid-js";
-import type { CalendarEvent } from "../api-types.ts";
+import type { CalendarEvent, SlotSuggestion } from "../api-types.ts";
 import type { TaskCalendarApi } from "../hooks/useTaskCalendar.ts";
 import { dayKey, isSameDay, MINUTES_PER_DAY } from "../lib/calendar.ts";
 import {
@@ -45,6 +45,11 @@ import {
 	previewDrop,
 } from "../lib/dragSchedule.ts";
 import styles from "./CalendarTimeGrid.module.css";
+import {
+	CapacityBar,
+	SuggestionBlock,
+	UnscheduledList,
+} from "./SuggestionLayer.tsx";
 
 /** 整天的轴高度（1440 分钟 × 每分钟像素） */
 const DAY_HEIGHT = minutesToPixels(MINUTES_PER_DAY);
@@ -82,6 +87,9 @@ interface AxisDayColumnProps {
 	/** 拖拽状态与拖影预览在这一层维护（每列各自一份） */
 	drag: DragState;
 	setDrag: (state: DragState) => void;
+	/** 这天该画哪些建议块（关掉图层时是空数组） */
+	suggestions?: () => readonly SlotSuggestion[];
+	onAdoptSuggestion?: (taskId: number, start: string, end: string) => void;
 }
 
 const AxisDayColumn: Component<AxisDayColumnProps> = (props) => {
@@ -283,6 +291,18 @@ const AxisDayColumn: Component<AxisDayColumnProps> = (props) => {
 					/>
 				)}
 			</Show>
+
+			{/* 建议块：画在同一根轴上，但**必须比真实事件淡**（P9 的视觉落点） */}
+			<For each={props.suggestions?.() ?? []}>
+				{(suggestion) => (
+					<SuggestionBlock
+						suggestion={suggestion}
+						onAdopt={(taskId, start, end) =>
+							props.onAdoptSuggestion?.(taskId, start, end)
+						}
+					/>
+				)}
+			</For>
 		</div>
 	);
 };
@@ -424,6 +444,28 @@ export interface CalendarTimeGridProps {
 	 * 服务端是最终裁决者（C001/C002），这里只把用户的意图传上去。
 	 */
 	onSchedule?: (move: ScheduleMove) => void;
+	/** 落位成功之后调（建议的依据变了，要重算） */
+	onScheduled?: () => void;
+
+	// ── 建议图层（P9：系统只建议，落位由人来点）──
+	showSuggestions?: boolean;
+	suggestionsEnabled?: () => boolean;
+	onToggleSuggestions?: (value: boolean) => void;
+	/** 排不下的任务 + 原因 */
+	unscheduled?: () => readonly {
+		task_id: number;
+		title: string;
+		reason: string;
+	}[];
+	/** 建议块的全局列表（每列自己按天过滤） */
+	suggestions?: () => readonly SlotSuggestion[];
+	onAdoptSuggestion?: (taskId: number, start: string, end: string) => void;
+	/** 容量账；全零时不渲染 */
+	capacity?: {
+		total_minutes: number;
+		used_minutes: number;
+		suggested_minutes: number;
+	};
 }
 
 export default function CalendarTimeGrid(props: CalendarTimeGridProps) {
@@ -608,14 +650,58 @@ export default function CalendarTimeGrid(props: CalendarTimeGridProps) {
 								focusedId={focusedId}
 								setFocusedId={setFocusedId}
 								moveFocus={(delta) => moveFocus(blocksForDay(day), delta)}
-								onSchedule={(move) => props.onSchedule?.(move)}
+								onSchedule={(move) => {
+									props.onSchedule?.(move);
+									// 落位之后建议的依据变了（那张日历刚被改过），要重算
+									props.onScheduled?.();
+								}}
 								drag={drag()}
 								setDrag={setDrag}
+								suggestions={() =>
+									(props.suggestions?.() ?? []).filter(
+										(s) => dayKey(new Date(s.start)) === dayKey(day),
+									)
+								}
+								onAdoptSuggestion={props.onAdoptSuggestion}
 							/>
 						)}
 					</For>
 				</div>
 			</div>
+
+			{/* 建议图层（P9 的第二层保险）：关掉它就是「全部不采纳」，零成本 */}
+			<Show when={props.showSuggestions !== false}>
+				<div class={styles.suggestionFooter}>
+					<label class={styles.suggestionToggleLabel}>
+						<input
+							type="checkbox"
+							checked={props.suggestionsEnabled?.() ?? true}
+							onChange={(e) =>
+								props.onToggleSuggestions?.(e.currentTarget.checked)
+							}
+						/>
+						建议
+					</label>
+					{/* S6-k：能力边界的文案 —— 说「你已安排的时段」，**不说「你的空闲时间」**。
+					    `busy` 集合看不到别的日历，承诺"空闲"会是一个不兑现的承诺（05 §3.5 / 06 §7） */}
+					<p class={styles.suggestionNote}>
+						建议基于你已安排的时段，别的日历这里看不见。
+					</p>
+					<Show when={props.unscheduled?.().length}>
+						<UnscheduledList
+							items={props.unscheduled?.() ?? []}
+							onOpenTask={(taskId) => props.onOpenTask?.(taskId)}
+						/>
+					</Show>
+					<Show when={(props.capacity?.total_minutes ?? 0) > 0}>
+						<CapacityBar
+							total={props.capacity?.total_minutes ?? 0}
+							used={props.capacity?.used_minutes ?? 0}
+							suggested={props.capacity?.suggested_minutes ?? 0}
+						/>
+					</Show>
+				</div>
+			</Show>
 		</div>
 	);
 }

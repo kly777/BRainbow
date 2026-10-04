@@ -1,12 +1,15 @@
 // 任务主视图：列表 + 右栏（日历/依赖图）或看板（从 TaskManager.tsx 下钻）
 
-import { FilterGroup, LoadingSkeleton } from "@components/ui";
+import { FilterGroup, LoadingSkeleton, showConfirm } from "@components/ui";
 import { createSignal, Show } from "solid-js";
+import { useSuggestions } from "../hooks/useSuggestions.ts";
 import { useTaskCalendar } from "../hooks/useTaskCalendar.ts";
+import { startOfDay } from "../lib/calendar.ts";
 import { scheduleWindow } from "../lib/schedule.ts";
 import styles from "../TaskManager.module.css";
 import CalendarSettings from "./CalendarSettings.tsx";
 import CalendarTimeGrid, { type ScheduleMove } from "./CalendarTimeGrid.tsx";
+import { adoptSuggestion } from "./SuggestionLayer.tsx";
 import TaskCalendar from "./TaskCalendar.tsx";
 import TaskDag from "./TaskDag.tsx";
 import TaskDrawer from "./TaskDrawer.tsx";
@@ -41,6 +44,50 @@ export default function TaskPanel(props: TaskPanelProps) {
 			},
 			() => calendar.reload(),
 		);
+	};
+
+	// 建议图层：端点**只算不写**（P9），采纳是用户显式的一次点击。
+	// 区间跟着日历当前看的那一段走（周/日视就是这一周/这一天）
+	const rangeStart = () => {
+		const days = calendar.visibleDays();
+		const first = days[0];
+		return first ? startOfDay(first) : startOfDay(calendar.currentDate());
+	};
+	const rangeEnd = () => {
+		const days = calendar.visibleDays();
+		const last = days[days.length - 1];
+		const base = last ? startOfDay(last) : startOfDay(calendar.currentDate());
+		const next = new Date(base);
+		next.setDate(next.getDate() + 1);
+		return next;
+	};
+	const suggestions = useSuggestions(rangeStart, rangeEnd);
+
+	// 采纳一条建议。落在 `feasible` 之外时**问一次**（05 §3.5 的方案 C）：
+	// 不静默排，也不自动建配套的 `feasible` 去污染用户数据
+	const adopt = (taskId: number, start: string, end: string) => {
+		void adoptSuggestion(taskId, start, end, async (s, e) => {
+			const from = new Date(s).toLocaleString("zh-CN", {
+				month: "numeric",
+				day: "numeric",
+				hour: "2-digit",
+				minute: "2-digit",
+			});
+			const until = new Date(e).toLocaleString("zh-CN", {
+				hour: "2-digit",
+				minute: "2-digit",
+			});
+			return showConfirm({
+				title: "这段不在你标记的可行时段里",
+				message: `${from}–${until} 仍要排上吗？可行时段是给计划任务用的，这里只是系统的一个猜测。`,
+				confirmLabel: "排上",
+			});
+		}).then((ok) => {
+			if (ok) {
+				calendar.reload();
+				suggestions.refresh();
+			}
+		});
 	};
 
 	return (
@@ -79,6 +126,17 @@ export default function TaskPanel(props: TaskPanelProps) {
 												calendar={calendar}
 												onOpenTask={setOpenTaskId}
 												onSchedule={handleSchedule}
+												onScheduled={() => {
+													calendar.reload();
+													suggestions.refresh();
+												}}
+												showSuggestions={suggestions.enabled()}
+												suggestionsEnabled={suggestions.enabled}
+												onToggleSuggestions={suggestions.setEnabled}
+												unscheduled={suggestions.unscheduled}
+												capacity={suggestions.capacity()}
+												suggestions={suggestions.suggestions}
+												onAdoptSuggestion={adopt}
 											/>
 										}
 									>

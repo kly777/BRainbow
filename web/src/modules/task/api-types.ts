@@ -115,6 +115,50 @@ export interface CalendarEvent {
 	due_at: string | null;
 }
 
+// ── 时段建议（纯读，不落库）──
+
+/**
+ * 置信度决定**怎么画**，不是"要不要给"。
+ *
+ * `low`（时长是估的）用弱化样式而不是隐藏：Kocielnik et al. (CHI 2019) 的结论是
+ * 误报比漏报更伤信任，而完全隐藏等于把"可能有价值"的建议一并丢掉。
+ */
+export type SuggestionConfidence = "high" | "medium" | "low";
+
+export interface SlotSuggestion {
+	task_id: number;
+	title: string;
+	start: string;
+	end: string;
+	effort_minutes: number;
+	/** 最高贡献的那条理由（人话，不是因子名） */
+	reason: string;
+	score: number;
+	confidence: SuggestionConfidence;
+}
+
+/** 排不下的任务 + 为什么（诚实：宁可少给，不可假装塞满） */
+export interface Unscheduled {
+	task_id: number;
+	title: string;
+	reason: string;
+}
+
+export interface SuggestionCapacity {
+	/** 区间内工作时段总容量（分钟） */
+	total_minutes: number;
+	/** 已被 planned/actual 占用 */
+	used_minutes: number;
+	/** 本次建议占用 */
+	suggested_minutes: number;
+}
+
+export interface SuggestionsResponse {
+	suggestions: SlotSuggestion[];
+	unscheduled: Unscheduled[];
+	capacity: SuggestionCapacity;
+}
+
 // ── DAG 依赖图 ──
 
 export interface DagNode {

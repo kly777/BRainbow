@@ -183,6 +183,48 @@
 	display: none;
 }
 
+/* ── 拖拽（HIG 反馈契约，06-日历视图 §6.1） ── */
+
+/* 拖起来的那块：半透明 + 跟随。**不改几何** —— 一改位置用户就对
+   "它会落在哪儿"失去判断（HIG：拖影要如实反映当前位置） */
+.dragging {
+	opacity: 0.6;
+	cursor: grabbing;
+}
+
+/* 落位预览（拖影）：
+   - 合法：accent 虚线框 + 淡底
+   - 非法：**不加高亮**（HIG：非法的目标不该有任何「可以放这儿」的暗示），
+     只留一条极细的 danger 边，表示「这里有障碍」 */
+.drop-preview {
+	position: absolute;
+	left: 0;
+	right: 0;
+	border: 1px dashed var(--t-color-accent);
+	background: color-mix(in oklch, var(--t-color-accent) 6%, transparent);
+	border-radius: var(--radius-2xs);
+	pointer-events: none;
+	z-index: 1;
+}
+
+.drop-preview-illegal {
+	border-style: solid;
+	border-color: var(--t-color-danger);
+	border-width: 1px 0;
+	background: none;
+}
+
+/* 键盘改时间的输入框：填满块，避免又一个小到读不清的控件 */
+.retime-input {
+	width: 100%;
+	padding: 0;
+	border: none;
+	background: none;
+	color: inherit;
+	font: inherit;
+	font-size: var(--text-2xs);
+}
+
 /* ── 三通道语义（与月网格同一套） ── */
 
 .type-planned {

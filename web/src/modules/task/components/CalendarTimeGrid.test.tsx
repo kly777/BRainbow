@@ -53,6 +53,17 @@ async function flush() {
 	await Promise.resolve();
 }
 
+/**
+ * 事件块是 `div[role=button]` 而不是 `<button>`（块内要嵌改时间的 input，
+ * HTML 禁止 button 含交互内容），所以按 class 找而不是按标签名。
+ */
+const blocksOf = (host: HTMLElement) => [
+	...host.querySelectorAll<HTMLElement>('[class*="eventBlock"]'),
+];
+
+const blockByTitle = (host: HTMLElement, title: string) =>
+	blocksOf(host).find((b) => b.textContent?.includes(title));
+
 describe("CalendarTimeGrid", () => {
 	beforeEach(() => {
 		localStorage.clear();
@@ -100,12 +111,8 @@ describe("CalendarTimeGrid", () => {
 		const host = mount();
 		await flush();
 
-		const heightOf = (title: string) => {
-			const el = [...host.querySelectorAll("button")].find((b) =>
-				b.textContent?.includes(title),
-			);
-			return Number.parseFloat(el?.style.height ?? "0");
-		};
+		const heightOf = (title: string) =>
+			Number.parseFloat(blockByTitle(host, title)?.style.height ?? "0");
 		expect(heightOf("两小时")).toBeCloseTo(heightOf("一小时") * 2, 0);
 		// 5 分钟在 48px/小时 下只有 4px，被 24px 下限托住
 		expect(heightOf("五分钟")).toBe(24);
@@ -136,12 +143,8 @@ describe("CalendarTimeGrid", () => {
 		await flush();
 
 		// CSS 的百分比带一串小数，按数值比而不是按字符串比
-		const styleOf = (title: string, prop: "width" | "left") => {
-			const el = [...host.querySelectorAll("button")].find((b) =>
-				b.textContent?.includes(title),
-			);
-			return Number.parseFloat(el?.style[prop] ?? "0");
-		};
+		const styleOf = (title: string, prop: "width" | "left") =>
+			Number.parseFloat(blockByTitle(host, title)?.style[prop] ?? "0");
 
 		for (const title of ["A", "B", "C"]) {
 			expect(styleOf(title, "width")).toBeCloseTo(100 / 3, 3);
@@ -160,9 +163,7 @@ describe("CalendarTimeGrid", () => {
 		const host = mount();
 		await flush();
 
-		const labels = [...host.querySelectorAll("button")].map(
-			(b) => b.textContent,
-		);
+		const labels = blocksOf(host).map((b) => b.textContent);
 		expect(labels.some((l) => l?.includes("可行块"))).toBe(false);
 		expect(labels.some((l) => l?.includes("计划块"))).toBe(true);
 	});

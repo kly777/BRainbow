@@ -10,7 +10,14 @@
 // 那是安排（06-日历视图 §5.2）。它只出现在月网格的存在性徽标与全天行里。
 
 import { Tooltip } from "@components/ui";
-import { type Component, createEffect, createMemo, For, Show } from "solid-js";
+import {
+	type Component,
+	createEffect,
+	createMemo,
+	createSignal,
+	For,
+	Show,
+} from "solid-js";
 import type { CalendarEvent } from "../api-types.ts";
 import type { TaskCalendarApi } from "../hooks/useTaskCalendar.ts";
 import { dayKey, isSameDay, MINUTES_PER_DAY } from "../lib/calendar.ts";
@@ -18,12 +25,25 @@ import {
 	type AxisBlock,
 	blockHeight,
 	blockSize,
+	dragOffsetToMinute,
 	hourMarks,
 	type LaidOutBlock,
 	layoutOverlaps,
 	minutesToPixels,
 	projectToDay,
 } from "../lib/calendarAxis.ts";
+import {
+	blocksOfDay,
+	cancelDrag,
+	type DragState,
+	formatTimeInput,
+	INITIAL_DRAG,
+	nudgeMinutes,
+	onPointerMove,
+	onPointerUp,
+	parseTimeInput,
+	previewDrop,
+} from "../lib/dragSchedule.ts";
 import styles from "./CalendarTimeGrid.module.css";
 
 /** 整天的轴高度（1440 分钟 × 每分钟像素） */
@@ -33,16 +53,46 @@ const DAY_HEIGHT = minutesToPixels(MINUTES_PER_DAY);
 const WORKDAY_START_MINUTE = 9 * 60;
 
 interface AxisDayColumnProps {
+	day: Date;
 	dayIndex: number;
 	today: boolean;
 	segments: readonly AxisBlock[];
 	nowMinute: number | null;
 	onOpenTask: (taskId: number) => void;
+	/** 落位请求（拖完 / 键盘改完都走它）；`windowId` 为 null 表示"新建一条" */
+	onSchedule: (
+		windowId: number | null,
+		dayKeyValue: string,
+		startMinute: number,
+		endMinute: number,
+	) => void;
+	/** 拖拽状态与拖影预览在这一层维护（每列各自一份） */
+	drag: DragState;
+	setDrag: (state: DragState) => void;
 }
 
 const AxisDayColumn: Component<AxisDayColumnProps> = (props) => {
 	// 重叠布局：列数 = 最大同时重叠数（贪心的最优性保证）
 	const laid = createMemo(() => layoutOverlaps(props.segments));
+	const [originY, setOriginY] = createSignal<number | null>(null);
+	const [draggingId, setDraggingId] = createSignal<number | null>(null);
+
+	/** 落点预览：拖拽中才画，且**只对合法落点画**（HIG：非法目标不给高亮） */
+	const preview = createMemo(() => {
+		if (props.drag.phase !== "dragging" || draggingId() === null) {
+			return null;
+		}
+		return previewDrop(
+			props.drag.targetMinute,
+			props.drag.durationMinutes,
+			blocksOfDay(props.segments),
+		);
+	});
+
+	const localY = (e: { clientY: number; currentTarget: HTMLElement }) => {
+		const rect = e.currentTarget.getBoundingClientRect();
+		return e.clientY - rect.top;
+	};
 
 	return (
 		<div
@@ -50,6 +100,55 @@ const AxisDayColumn: Component<AxisDayColumnProps> = (props) => {
 			classList={{
 				[styles.today]: props.today,
 				[styles.weekendCol]: props.dayIndex === 0 || props.dayIndex === 6,
+			}}
+			onPointerMove={(e) => {
+				if (originY() === null) {
+					return;
+				}
+				props.setDrag(
+					onPointerMove(
+						props.drag,
+						localY(e) - (originY() as number),
+						dragOffsetToMinute,
+					),
+				);
+			}}
+			onPointerUp={() => {
+				setOriginY(null);
+				const dropped = onPointerUp(props.drag);
+				const draggedId = draggingId();
+				setDraggingId(null);
+				// 位移不足 → null → 判定为点击，不落位（S5-i）
+				if (!dropped || draggedId === null) {
+					return;
+				}
+				const p = previewDrop(
+					dropped.targetMinute,
+					dropped.durationMinutes,
+					blocksOfDay(props.segments),
+				);
+				if (p.legal) {
+					props.onSchedule(
+						draggedId,
+						dayKey(props.day),
+						p.startMinute,
+						p.endMinute,
+					);
+				}
+				props.setDrag(cancelDrag());
+			}}
+			onPointerCancel={() => {
+				setOriginY(null);
+				setDraggingId(null);
+				props.setDrag(cancelDrag());
+			}}
+			onPointerLeave={() => {
+				if (originY() === null) {
+					return;
+				}
+				setOriginY(null);
+				setDraggingId(null);
+				props.setDrag(cancelDrag());
 			}}
 		>
 			{/* 小时横线：纯背景，事件块画在它上面 */}
@@ -62,8 +161,66 @@ const AxisDayColumn: Component<AxisDayColumnProps> = (props) => {
 			</div>
 
 			<For each={laid()}>
-				{(block) => <EventBlock block={block} onOpenTask={props.onOpenTask} />}
+				{(block) => (
+					<EventBlock
+						block={block}
+						dragging={draggingId() === block.taskId}
+						onGrab={(y) => {
+							setOriginY(y);
+							setDraggingId(block.taskId);
+							props.setDrag({
+								...INITIAL_DRAG,
+								phase: "dragging",
+								durationMinutes: block.endMinute - block.startMinute,
+							});
+						}}
+						onNudge={(delta) => {
+							// S5-f 的键盘等价路径：↑/↓ 直接上移下移一格 15 分钟
+							const next = nudgeMinutes(
+								block.startMinute,
+								delta,
+								undefined,
+								block.endMinute - block.startMinute,
+							);
+							props.onSchedule(
+								block.id,
+								dayKey(props.day),
+								next,
+								next + (block.endMinute - block.startMinute),
+							);
+						}}
+						onRetime={(text) => {
+							const parsed = parseTimeInput(text);
+							if (parsed === null) {
+								return;
+							}
+							const span = block.endMinute - block.startMinute;
+							props.onSchedule(
+								block.id,
+								dayKey(props.day),
+								parsed,
+								parsed + span,
+							);
+						}}
+						onOpenTask={props.onOpenTask}
+					/>
+				)}
 			</For>
+
+			{/* 落位预览（拖影）：半透明 + 只在合法时出现 */}
+			<Show when={preview()}>
+				{(p) => (
+					<div
+						class={styles.dropPreview}
+						classList={{ [styles.dropPreviewIllegal]: !p().legal }}
+						style={{
+							top: `${minutesToPixels(p().startMinute)}px`,
+							height: `${minutesToPixels(p().endMinute - p().startMinute)}px`,
+						}}
+						aria-hidden="true"
+					/>
+				)}
+			</Show>
 
 			{/* 当前时间线：只在"今天"这一列画。
 			    三元而不是 `today && nowMinute !== null` —— 后者的类型是 boolean，
@@ -81,22 +238,38 @@ const AxisDayColumn: Component<AxisDayColumnProps> = (props) => {
 	);
 };
 
-/** 一个事件块：高度 ∝ 时长，宽度按重叠列数分 */
+/** 一个事件块：高度 ∝ 时长，宽度按重叠列数分；可拖、可键盘改时间 */
 const EventBlock: Component<{
 	block: LaidOutBlock;
+	/** 正在被拖（半透明，让用户看见自己拖的是哪一块） */
+	dragging: boolean;
+	/** 开始拖（记录起点 Y；位移判定在 lib/dragSchedule） */
+	onGrab: (clientY: number) => void;
+	/** 键盘上移下移一格 */
+	onNudge: (delta: -1 | 1) => void;
+	/** 键盘改时间（`Enter` 进的 `HH:MM` 输入） */
+	onRetime: (text: string) => void;
 	onOpenTask: (taskId: number) => void;
 }> = (props) => {
 	const height = () => blockHeight(props.block);
 	const size = () => blockSize(props.block.endMinute - props.block.startMinute);
 	const clock = (m: number) =>
 		`${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+	// `Enter` 进改时间模式；再按 `Enter` 或 `Esc` 退出
+	const [editingTime, setEditingTime] = createSignal(false);
 
 	return (
 		<Tooltip
 			label={`${props.block.title} · ${clock(props.block.startMinute)}–${clock(props.block.endMinute)}`}
 		>
-			<button
-				type="button"
+			{/*
+			 * 用带 tabindex 的 div + role=button，而不是真 <button>：
+			 * 块内会嵌一个改时间的 <input>（键盘等价路径），而 HTML 禁止
+			 * <button> 含交互内容。两条 lint 抑制的理由都是这一条。
+			 */}
+			{/* biome-ignore lint/a11y/useFocusableInteractive: div 带 tabindex={0}，可聚焦 */}
+			{/* biome-ignore lint/a11y/useSemanticElements: 用 div + role=button 而不是真 <button> —— 块内要嵌改时间的 <input>，HTML 禁止 <button> 含交互内容 */}
+			<div
 				class={styles.eventBlock}
 				classList={{
 					[styles.typePlanned]: props.block.windowType === "planned",
@@ -109,6 +282,7 @@ const EventBlock: Component<{
 					// 分档只改**放几行字**，不改块高度（MD3：压缩可点击目标有代价）。
 					// 只有 "tiny" 需要专门样式（放不下时间前缀），short/medium/long 同款
 					[styles.sizeTiny]: size() === "tiny",
+					[styles.dragging]: props.dragging,
 				}}
 				style={{
 					top: `${minutesToPixels(props.block.startMinute)}px`,
@@ -116,11 +290,66 @@ const EventBlock: Component<{
 					left: `${(props.block.column / props.block.columns) * 100}%`,
 					width: `${(1 / props.block.columns) * 100}%`,
 				}}
-				onClick={() => props.onOpenTask(props.block.taskId)}
+				role="button"
+				tabindex={0}
+				aria-label={`${props.block.title} ${clock(props.block.startMinute)} 到 ${clock(props.block.endMinute)}`}
+				onClick={() => {
+					// 位移不足时 pointerup 会把它判回点击 —— 这里才打开详情（S5-i）
+					if (!props.dragging) {
+						props.onOpenTask(props.block.taskId);
+					}
+				}}
+				onPointerDown={(e) => {
+					// 只响应主键：右键/中键留给浏览器
+					if (e.button !== 0 || editingTime()) {
+						return;
+					}
+					props.onGrab(e.clientY);
+				}}
+				onKeyDown={(e) => {
+					if (editingTime()) {
+						return; // 输入框自己的按键由它处理
+					}
+					// ↑/↓ 直接上移下移一格（键盘等价路径之一，WCAG 2.5.7）
+					if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+						e.preventDefault();
+						props.onNudge(e.key === "ArrowUp" ? -1 : 1);
+					}
+					// Enter 进改时间（键盘等价路径之二）
+					if (e.key === "Enter") {
+						e.preventDefault();
+						setEditingTime(true);
+					}
+				}}
 			>
-				<span class={styles.blockTime}>{clock(props.block.startMinute)}</span>
-				<span class={styles.blockTitle}>{props.block.title}</span>
-			</button>
+				<Show
+					when={editingTime()}
+					fallback={
+						<>
+							<Show when={size() !== "tiny"}>
+								<span class={styles.blockTime}>
+									{clock(props.block.startMinute)}
+								</span>
+							</Show>
+							<span class={styles.blockTitle}>{props.block.title}</span>
+						</>
+					}
+				>
+					<input
+						class={styles.retimeInput}
+						value={formatTimeInput(props.block.startMinute)}
+						autofocus
+						aria-label={`改「${props.block.title}」的开始时间`}
+						onChange={(e) => props.onRetime(e.currentTarget.value)}
+						onKeyDown={(e) => {
+							if (e.key === "Enter" || e.key === "Escape") {
+								e.stopPropagation();
+								setEditingTime(false);
+							}
+						}}
+					/>
+				</Show>
+			</div>
 		</Tooltip>
 	);
 };
@@ -128,11 +357,23 @@ const EventBlock: Component<{
 export interface CalendarTimeGridProps {
 	calendar: TaskCalendarApi;
 	onOpenTask?: (taskId: number) => void;
+	/**
+	 * 落位（拖完 / 键盘改完都走它）。`windowId` 为 null 表示"在那儿新建一条"。
+	 * 服务端是最终裁决者（C001/C002），这里只把用户的意图传上去。
+	 */
+	onSchedule?: (
+		windowId: number | null,
+		dayKeyValue: string,
+		startMinute: number,
+		endMinute: number,
+	) => void;
 }
 
 export default function CalendarTimeGrid(props: CalendarTimeGridProps) {
 	const m = props.calendar;
 	let scrollerRef: HTMLDivElement | undefined;
+	// 每列各自一份拖拽状态（一次只拖一块）
+	const [drag, setDrag] = createSignal<DragState>(INITIAL_DRAG);
 
 	const today = new Date();
 	const nowMinute = () => {
@@ -270,11 +511,17 @@ export default function CalendarTimeGrid(props: CalendarTimeGridProps) {
 					<For each={days()}>
 						{(day, index) => (
 							<AxisDayColumn
+								day={day}
 								dayIndex={index()}
 								today={isSameDay(day, today)}
 								segments={blocksForDay(day)}
 								nowMinute={nowMinute()}
 								onOpenTask={(taskId) => props.onOpenTask?.(taskId)}
+								onSchedule={(windowId, key, start, end) =>
+									props.onSchedule?.(windowId, key, start, end)
+								}
+								drag={drag()}
+								setDrag={setDrag}
 							/>
 						)}
 					</For>

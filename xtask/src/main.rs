@@ -237,3 +237,130 @@ fn report(err: &Error) {
         other => ui::error(&other.to_string()),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::CommandFactory;
+    use std::collections::BTreeMap;
+    use std::path::Path;
+
+    /// 仓库根目录（`config::project_dir` 同款推导，只是这里要的是 justfile 所在处）。
+    fn project_dir() -> PathBuf {
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("xtask 有上级目录")
+            .to_path_buf()
+    }
+
+    /// 解析 justfile：`recipe 名 → 它转发到的 xtask 子命令`。
+    ///
+    /// 只认顶层 recipe（列首无空白、行尾是冒号），配方体取其后所有缩进行。
+    /// 约定就是 justfile 头部写的那条"每个 recipe 只写一条命令"，所以从配方体里
+    /// 抓 `cargo xtask <子命令>` 就够了 —— 不引入 just 的解析器，也不 spawn `just`。
+    fn parse_justfile() -> BTreeMap<String, String> {
+        let text = std::fs::read_to_string(project_dir().join("justfile"))
+            .expect("读 justfile（测试要钉住它与 CLI 的一致性）");
+
+        let mut recipes = BTreeMap::new();
+        let mut current: Option<(String, Vec<String>)> = None;
+        for raw in text.lines() {
+            if raw.starts_with(char::is_whitespace) {
+                if let Some((_, body)) = current.as_mut() {
+                    body.push(raw.trim().to_string());
+                }
+                continue;
+            }
+            if raw.starts_with('#') {
+                continue;
+            }
+            // 配方体收尾：名字 → 它转发的子命令（没有 `cargo xtask` 的不记）
+            finish_recipe(&mut recipes, current.take());
+            // `build *args:` / `render what *args:` —— 取行首那个标识符
+            let head = raw.trim_end().strip_suffix(':').unwrap_or(raw);
+            let name = head.split_whitespace().next().unwrap_or_default();
+            if !name.is_empty() {
+                current = Some((name.to_string(), Vec::new()));
+            }
+        }
+        finish_recipe(&mut recipes, current);
+        recipes
+    }
+
+    /// 把一条读完的配方记进表里；没有转发到 `cargo xtask` 的（`default:` 之类）略过。
+    fn finish_recipe(recipes: &mut BTreeMap<String, String>, recipe: Option<(String, Vec<String>)>) {
+        let Some((name, body)) = recipe else {
+            return;
+        };
+        if let Some(cmd) = body.iter().find_map(|line| xtask_subcommand(line)) {
+            recipes.insert(name, cmd.to_string());
+        }
+    }
+
+    /// 从配方体一行里取出 xtask 子命令名（非 `cargo xtask` 开头的行返回 `None`）。
+    fn xtask_subcommand(line: &str) -> Option<&str> {
+        let rest = line.strip_prefix("@cargo xtask ")?;
+        rest.split_whitespace().next()
+    }
+
+    #[test]
+    fn justfile_recipes_forward_to_real_subcommands() {
+        let cli_subcommands: Vec<String> = Cli::command()
+            .get_subcommands()
+            .map(|c| c.get_name().to_string())
+            .collect();
+
+        let recipes = parse_justfile();
+        assert!(
+            recipes.len() >= 30,
+            "justfile 解析出 {} 条配方，太少 —— 解析器多半坏了",
+            recipes.len()
+        );
+
+        let mut unknown = Vec::new();
+        for (recipe, sub) in &recipes {
+            if !cli_subcommands.iter().any(|c| c == sub) {
+                unknown.push(format!("just {recipe} → `cargo xtask {sub}`（无此子命令）"));
+            }
+        }
+        assert!(
+            unknown.is_empty(),
+            "justfile 指向了不存在的子命令（改名时漏改 justfile？）：\n  {}",
+            unknown.join("\n  ")
+        );
+    }
+
+    #[test]
+    fn every_subcommand_has_a_just_recipe() {
+        let cli_subcommands: Vec<String> = Cli::command()
+            .get_subcommands()
+            .map(|c| c.get_name().to_string())
+            .collect();
+        let forwarded: Vec<String> = parse_justfile().into_values().collect();
+
+        let mut uncovered = Vec::new();
+        for sub in &cli_subcommands {
+            if !forwarded.iter().any(|f| f == sub) {
+                uncovered.push(sub.clone());
+            }
+        }
+        assert!(
+            uncovered.is_empty(),
+            "这些子命令没有对应的 just 配方（只敲 cargo xtask 就太长了）：\n  {}",
+            uncovered.join("\n  ")
+        );
+    }
+
+    #[test]
+    fn command_names_are_kebab_case() {
+        // justfile 的配方名与子命令同名，改名时两边一起改（见上面两条测试）
+        for sub in Cli::command().get_subcommands() {
+            let name = sub.get_name();
+            assert!(
+                name.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-'),
+                "子命令名 {name:?} 含大写或下划线，与 justfile 的配方名风格不一致"
+            );
+            assert!(!name.starts_with('-'), "子命令名 {name:?} 不该以连字符开头");
+        }
+    }
+}

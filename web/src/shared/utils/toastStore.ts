@@ -4,6 +4,11 @@ import { createSignal } from "solid-js";
 
 export type ToastType = "error" | "warning" | "success" | "info";
 
+export interface ToastAction {
+	label: string;
+	onClick: () => void;
+}
+
 export interface ToastItem {
 	id: number;
 	type: ToastType;
@@ -11,6 +16,14 @@ export interface ToastItem {
 	message: string;
 	/** 可选：错误码或额外详情 */
 	details?: string;
+	/**
+	 * 可选动作（典型是「撤销」）。
+	 *
+	 * 为什么 toast 需要它：失败后弹确认框，等于把"已经发生的事"变成一个需要用户
+	 * 裁决的决策 —— 而撤销才是符合直觉的（S5-k，Apple HIG 的拖拽契约也是这么写的）。
+	 * 带动作的 toast 应该给足停留时间，让用户来得及点。
+	 */
+	action?: ToastAction;
 	/** 自动消失的毫秒数，0 表示不自动消失 */
 	duration: number;
 	/** 是否正在离开（动画用） */
@@ -37,7 +50,8 @@ export function showToast(
 		...item,
 		id,
 		leaving: false,
-		duration: item.duration ?? DEFAULT_DURATION,
+		// 带动作的 toast 给 12 秒：默认 5 秒不够点「撤销」
+		duration: item.duration ?? (item.action ? 12_000 : DEFAULT_DURATION),
 	};
 
 	setToasts((prev) => [...prev, toast]);

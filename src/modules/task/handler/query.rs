@@ -86,6 +86,7 @@ pub async fn get_calendar_handler(
                 .into_iter()
                 .map(|(task, tw)| CalendarEvent {
                     task_id: task.id,
+                    window_id: tw.id,
                     title: task.title,
                     start: tw.start_time,
                     end: tw.end_time,

@@ -81,6 +81,8 @@ pub struct TreeNode {
 #[derive(Debug, Serialize)]
 pub struct CalendarEvent {
     pub task_id: i32,
+    /// 时间窗口自身的 id —— 拖拽落位要 PATCH 这条记录，没有它就只能说"大概是哪一段"
+    pub window_id: i32,
     pub title: String,
     pub start: DateTime<Utc>,
     pub end: DateTime<Utc>,
@@ -156,6 +158,7 @@ mod tests {
     fn calendar_event_serialize() {
         let ev = CalendarEvent {
             task_id: 1,
+            window_id: 7,
             title: "x".into(),
             start: chrono::Utc::now(),
             end: chrono::Utc::now(),

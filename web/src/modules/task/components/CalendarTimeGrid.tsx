@@ -52,6 +52,19 @@ const DAY_HEIGHT = minutesToPixels(MINUTES_PER_DAY);
 /** S5-a：打开就滚到当前时刻（或工作时段起点 09:00），取较早者 */
 const WORKDAY_START_MINUTE = 9 * 60;
 
+/** 点空白新建时给的默认时长（30 分钟：一格吸附、够放下一个会） */
+const DEFAULT_NEW_WINDOW_MINUTES = 30;
+
+/** 落位请求：块 + 移动前的位置（撤销要用） */
+export interface ScheduleMove {
+	windowId: number | null;
+	dayKey: string;
+	startMinute: number;
+	endMinute: number;
+	/** 移动前的起止（ISO）；新建时为 null */
+	previous: { start: string; end: string } | null;
+}
+
 interface AxisDayColumnProps {
 	day: Date;
 	dayIndex: number;
@@ -60,12 +73,7 @@ interface AxisDayColumnProps {
 	nowMinute: number | null;
 	onOpenTask: (taskId: number) => void;
 	/** 落位请求（拖完 / 键盘改完都走它）；`windowId` 为 null 表示"新建一条" */
-	onSchedule: (
-		windowId: number | null,
-		dayKeyValue: string,
-		startMinute: number,
-		endMinute: number,
-	) => void;
+	onSchedule: (move: ScheduleMove) => void;
 	/** 拖拽状态与拖影预览在这一层维护（每列各自一份） */
 	drag: DragState;
 	setDrag: (state: DragState) => void;
@@ -95,11 +103,36 @@ const AxisDayColumn: Component<AxisDayColumnProps> = (props) => {
 	};
 
 	return (
+		// biome-ignore lint/a11y/noStaticElementInteractions: 点空白新建的落点是一大片没有语义角色的背景（它是「轴上的空白」，不是控件）；键盘用户走事件块的 ↑/↓ 与 Enter（WCAG 2.5.7 的等价路径），这条只是鼠标的便捷入口
+		// biome-ignore lint/a11y/useKeyWithClickEvents: 同上 —— 键盘路径在事件块上（它们才是可聚焦的控件），背景本身不进 Tab 序
 		<div
 			class={styles.dayColumn}
 			classList={{
 				[styles.today]: props.today,
 				[styles.weekendCol]: props.dayIndex === 0 || props.dayIndex === 6,
+			}}
+			/* 点空白 → 在那儿新建一条（S5-8）。
+			   判定用「位移没超阈值」而不是「点在块上」：后者在块之间的缝隙上会误判，
+			   而且块自己 stopPropagation 之后这里收不到事件，两条路都不可靠。
+			   拖拽刚结束时这次 click 也会跟着来 —— 所以还要看当前不在拖拽中 */
+			onClick={(e) => {
+				if (originY() !== null || props.drag.phase === "dragging") {
+					return;
+				}
+				if (
+					e.target !== e.currentTarget &&
+					!(e.target as HTMLElement).classList.contains(styles.hourLine)
+				) {
+					return; // 点在块或刻度线上，不新建
+				}
+				const start = dragOffsetToMinute(localY(e));
+				props.onSchedule({
+					windowId: null,
+					dayKey: dayKey(props.day),
+					startMinute: start,
+					endMinute: start + DEFAULT_NEW_WINDOW_MINUTES,
+					previous: null,
+				});
 			}}
 			onPointerMove={(e) => {
 				if (originY() === null) {
@@ -128,12 +161,18 @@ const AxisDayColumn: Component<AxisDayColumnProps> = (props) => {
 					blocksOfDay(props.segments),
 				);
 				if (p.legal) {
-					props.onSchedule(
-						draggedId,
-						dayKey(props.day),
-						p.startMinute,
-						p.endMinute,
+					// 撤销要回到**这块刚才在哪儿**（拖拽起点的那个块），
+					// 而不是服务端此刻的样子
+					const from = props.segments.find(
+						(block) => block.taskId === draggedId,
 					);
+					props.onSchedule({
+						windowId: draggedId,
+						dayKey: dayKey(props.day),
+						startMinute: p.startMinute,
+						endMinute: p.endMinute,
+						previous: from ? { start: from.startIso, end: from.endIso } : null,
+					});
 				}
 				props.setDrag(cancelDrag());
 			}}
@@ -182,12 +221,13 @@ const AxisDayColumn: Component<AxisDayColumnProps> = (props) => {
 								undefined,
 								block.endMinute - block.startMinute,
 							);
-							props.onSchedule(
-								block.id,
-								dayKey(props.day),
-								next,
-								next + (block.endMinute - block.startMinute),
-							);
+							props.onSchedule({
+								windowId: block.id,
+								dayKey: dayKey(props.day),
+								startMinute: next,
+								endMinute: next + (block.endMinute - block.startMinute),
+								previous: { start: block.startIso, end: block.endIso },
+							});
 						}}
 						onRetime={(text) => {
 							const parsed = parseTimeInput(text);
@@ -195,12 +235,13 @@ const AxisDayColumn: Component<AxisDayColumnProps> = (props) => {
 								return;
 							}
 							const span = block.endMinute - block.startMinute;
-							props.onSchedule(
-								block.id,
-								dayKey(props.day),
-								parsed,
-								parsed + span,
-							);
+							props.onSchedule({
+								windowId: block.id,
+								dayKey: dayKey(props.day),
+								startMinute: parsed,
+								endMinute: parsed + span,
+								previous: { start: block.startIso, end: block.endIso },
+							});
 						}}
 						onOpenTask={props.onOpenTask}
 					/>
@@ -361,12 +402,7 @@ export interface CalendarTimeGridProps {
 	 * 落位（拖完 / 键盘改完都走它）。`windowId` 为 null 表示"在那儿新建一条"。
 	 * 服务端是最终裁决者（C001/C002），这里只把用户的意图传上去。
 	 */
-	onSchedule?: (
-		windowId: number | null,
-		dayKeyValue: string,
-		startMinute: number,
-		endMinute: number,
-	) => void;
+	onSchedule?: (move: ScheduleMove) => void;
 }
 
 export default function CalendarTimeGrid(props: CalendarTimeGridProps) {
@@ -386,7 +422,8 @@ export default function CalendarTimeGrid(props: CalendarTimeGridProps) {
 		m
 			.segmentsFor(dayKey(day))
 			.map((segment) => ({
-				id: segment.event.task_id,
+				// `id` 是**时间窗**的 id（落位要 PATCH 这条记录），不是任务 id
+				id: segment.event.window_id,
 				taskId: segment.event.task_id,
 				title: segment.event.title,
 				windowType: segment.event.window_type,
@@ -517,9 +554,7 @@ export default function CalendarTimeGrid(props: CalendarTimeGridProps) {
 								segments={blocksForDay(day)}
 								nowMinute={nowMinute()}
 								onOpenTask={(taskId) => props.onOpenTask?.(taskId)}
-								onSchedule={(windowId, key, start, end) =>
-									props.onSchedule?.(windowId, key, start, end)
-								}
+								onSchedule={(move) => props.onSchedule?.(move)}
 								drag={drag()}
 								setDrag={setDrag}
 							/>

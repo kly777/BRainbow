@@ -34,6 +34,8 @@ export interface TaskCalendarApi {
 	setGranularity: (value: CalendarGranularity) => void;
 	/** 当前粒度下要画的那些天（周视图 7 天、日视图 1 天） */
 	visibleDays: () => readonly Date[];
+	/** 重新取数（落位之后刷新日历） */
+	reload: () => void;
 	/** 月网格（含补位格）；周/日视图下为空数组 */
 	grid: () => readonly GridCell[];
 	/** 表头标签，按当前起始日取值 */
@@ -126,6 +128,9 @@ export function useTaskCalendar(weekParam?: () => string | undefined) {
 		onError: () => notifyError("获取日历事件失败"),
 	});
 
+	/** 重新取数（拖拽落位之后刷新日历用） */
+	const reload = () => void list.refetch();
+
 	/** 跨日切分后按天归组（同一份结果喂给事件条与徽标判定） */
 	const segmentsByDay = createMemo(() =>
 		segmentEventsByDay(list.items() ?? []),
@@ -182,6 +187,7 @@ export function useTaskCalendar(weekParam?: () => string | undefined) {
 		granularity,
 		setGranularity,
 		visibleDays,
+		reload,
 		weekdayLabels: () => orderedWeekdayLabels(firstDay()),
 		weekdayShortLabels: () => orderedWeekdayLabels(firstDay(), false),
 		isWeekendCol: (col: number) =>

@@ -3,9 +3,10 @@
 import { FilterGroup, LoadingSkeleton } from "@components/ui";
 import { createSignal, Show } from "solid-js";
 import { useTaskCalendar } from "../hooks/useTaskCalendar.ts";
+import { scheduleWindow } from "../lib/schedule.ts";
 import styles from "../TaskManager.module.css";
 import CalendarSettings from "./CalendarSettings.tsx";
-import CalendarTimeGrid from "./CalendarTimeGrid.tsx";
+import CalendarTimeGrid, { type ScheduleMove } from "./CalendarTimeGrid.tsx";
 import TaskCalendar from "./TaskCalendar.tsx";
 import TaskDag from "./TaskDag.tsx";
 import TaskDrawer from "./TaskDrawer.tsx";
@@ -26,6 +27,21 @@ export default function TaskPanel(props: TaskPanelProps) {
 	const [openTaskId, setOpenTaskId] = createSignal<number | null>(null);
 	// 日历状态建**一份**再传下去：网格与设置条共享，否则各自一份状态、各发一次请求
 	const calendar = useTaskCalendar();
+
+	// 落位（拖完 / 键盘改完）：新建走"一次请求建任务+窗口"，移动走 PATCH 那条时间窗。
+	// 失败时的反馈契约见 lib/schedule.ts 的注释
+	const handleSchedule = (move: ScheduleMove) => {
+		void scheduleWindow(
+			{
+				windowId: move.windowId,
+				dayKey: move.dayKey,
+				startMinute: move.startMinute,
+				endMinute: move.endMinute,
+				previous: move.previous,
+			},
+			() => calendar.reload(),
+		);
+	};
 
 	return (
 		<Show
@@ -62,6 +78,7 @@ export default function TaskPanel(props: TaskPanelProps) {
 											<CalendarTimeGrid
 												calendar={calendar}
 												onOpenTask={setOpenTaskId}
+												onSchedule={handleSchedule}
 											/>
 										}
 									>

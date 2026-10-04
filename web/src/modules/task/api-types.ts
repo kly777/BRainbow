@@ -54,6 +54,13 @@ export interface CreateTaskRequest {
 	due_at?: string | null;
 	priority?: TaskPriority | null;
 	tags?: string[];
+	/**
+	 * 初始 `planned` 时段：一次请求建任务 + 窗口，不留"任务建了但没排上"的半成功态。
+	 *
+	 * 只在"日历上点空白新建"那条路径用（用户自己点的，不违反"系统不自动落位"）；
+	 * 拖动已有的窗口走 PATCH。
+	 */
+	planned_window?: { start: string; end: string };
 }
 
 /**
@@ -95,6 +102,8 @@ export interface TaskDetail {
 
 export interface CalendarEvent {
 	task_id: number;
+	/** 时间窗自身的 id —— 拖拽落位要 PATCH 这条记录 */
+	window_id: number;
 	title: string;
 	start: string;
 	end: string;

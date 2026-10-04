@@ -24,6 +24,7 @@ const at = (y: number, m: number, d: number, h: number, min = 0) =>
 function event(over: Partial<CalendarEvent> = {}): CalendarEvent {
 	return {
 		task_id: 1,
+		window_id: 101,
 		title: "站会",
 		start: at(2024, 0, 15, 9),
 		end: at(2024, 0, 15, 10),

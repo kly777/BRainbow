@@ -20,9 +20,17 @@
 
 .axis-header-cell {
 	display: flex;
-	align-items: baseline;
+
+	/* 竖排，日号在上、星期在下。
+	   横排时右栏（split-view 给 21rem）里每列只有 ~48px，"28 周一" 一行放不下 ——
+	   flex 会把**词内**折行，"周一" 变成 "周" + 孤零零一个 "一"。而 "一/二/三"
+	   本身就是横线、双横线、三横线，看上去像表头下面掉了几个符号（日号只有一位的
+	   1/2/3/4 反而挤得下，于是同一行出现两种形态）。
+	   竖排后每个字都有整列宽度，48px 放两个字绰绰有余，也不再出现词内折行。 */
+	flex-direction: column;
+	align-items: center;
 	justify-content: center;
-	gap: var(--space-2xs);
+	gap: 0;
 	padding: var(--space-2xs);
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
@@ -37,6 +45,9 @@
 	font-weight: 600;
 	color: var(--t-color-ink);
 	font-variant-numeric: tabular-nums;
+
+	/* 两个 span 都加 nowrap：任何时候都不许词内折行（列再窄也只是溢出） */
+	white-space: nowrap;
 }
 
 .today .header-day {
@@ -45,6 +56,7 @@
 
 .header-weekday {
 	font-size: var(--text-xs);
+	white-space: nowrap;
 }
 
 /* ── 全天行（S5-3） ── */
@@ -102,6 +114,11 @@
 	position: relative;
 	min-width: 0;
 	border-right: 1px solid var(--t-color-border);
+
+	/* 建议块按**这一列**的宽度降级（见 SuggestionLayer.module.css 的 @container）。
+	   用容器查询而不是视口断点：窄不窄取决于右栏分到多少宽度与周/日几列，
+	   与浏览器窗口大小无关。 */
+	container-type: inline-size;
 }
 
 .day-column:last-child {

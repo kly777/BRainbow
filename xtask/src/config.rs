@@ -191,8 +191,8 @@ impl Config {
             database_url: lookup("DATABASE_URL")
                 .unwrap_or_else(|| format!("sqlite:{remote_dir}/data/{database_file}")),
             database_file,
-            backup_retain_days: number(&vars, "BACKUP_RETAIN_DAYS", 30)? as u32,
-            backup_retain_count: number(&vars, "BACKUP_RETAIN_COUNT", 20)? as usize,
+            backup_retain_days: number_u32(&vars, "BACKUP_RETAIN_DAYS", 30)?,
+            backup_retain_count: number_u32(&vars, "BACKUP_RETAIN_COUNT", 20)? as usize,
             build_target: lookup("BUILD_TARGET"),
             jwt_secret: lookup("JWT_SECRET"),
         })
@@ -335,13 +335,23 @@ fn lookup(vars: &BTreeMap<String, String>, key: &str) -> Option<String> {
     vars.get(key).cloned().and_then(non_empty)
 }
 
+/// 一个 `u16` 整数配置项（端口号）。
+///
+/// 只给端口用 —— 消息里写"端口号"，取值域也正好是端口的 1-65535。
+/// 其他整数项走 [`number_u32`]，别复用这个（否则备份保留天数写成 100000 时，
+/// 会得到一句风马牛不相及的"不是合法端口号"，而且卡在 65535）。
 fn number(vars: &BTreeMap<String, String>, key: &str, default: u16) -> Result<u16> {
+    number_u32(vars, key, default as u32).map(|n| n as u16)
+}
+
+/// 一个 `u32` 整数配置项（备份保留天数这类）。
+///
+/// 消息按"整数 / 取值域"说，不提端口 —— 调用方决定这串文案对不对得上它的用途。
+fn number_u32(vars: &BTreeMap<String, String>, key: &str, default: u32) -> Result<u32> {
     match lookup(vars, key) {
         None => Ok(default),
-        Some(raw) => raw.parse::<u16>().map_err(|_| {
-            Error::msg(format!(
-                "{key} 不是合法端口号：{raw:?}（应为 1-65535 的整数）"
-            ))
+        Some(raw) => raw.parse::<u32>().map_err(|_| {
+            Error::msg(format!("{key} 不是合法的整数：{raw:?}（应为 0 以上的整数）"))
         }),
     }
 }
@@ -635,7 +645,37 @@ mod tests {
             PathBuf::from("/repo"),
         )
         .expect_err("非法端口应当报错");
-        assert!(err.to_string().contains("不是合法端口号"), "{err}");
+        assert!(err.to_string().contains("不是合法的整数"), "{err}");
+        assert!(err.to_string().contains("SERVICE_PORT"), "{err}");
+    }
+
+    #[test]
+    fn backup_retention_accepts_more_than_a_port_and_says_so() {
+        // 保留天数/份数不是端口：文案不能提端口，取值也不能卡在 65535
+        // （一年多的天数就该合法 —— 保留 400 天完全合理）
+        let cfg = build(&[
+            ("REMOTE_HOST", "203.0.113.7"),
+            ("REMOTE_USER", "kly"),
+            ("APP_NAME", "brb"),
+            ("BACKUP_RETAIN_DAYS", "400"),
+            ("BACKUP_RETAIN_COUNT", "50"),
+        ])
+        .expect("400 天应当被接受");
+        assert_eq!(cfg.backup_retain_days, 400);
+        assert_eq!(cfg.backup_retain_count, 50);
+
+        // 不是整数时要指名是哪一项，且不说成"端口"
+        let mut pairs = minimal().into_iter().collect::<Vec<_>>();
+        pairs.push(("BACKUP_RETAIN_DAYS".into(), "很多天".into()));
+        let err = Config::from_vars(
+            pairs.into_iter().collect(),
+            PathBuf::from("/repo/.env.prod"),
+            PathBuf::from("/repo"),
+        )
+        .expect_err("非整数应当报错");
+        let text = err.to_string();
+        assert!(text.contains("BACKUP_RETAIN_DAYS"), "{text}");
+        assert!(!text.contains("端口"), "{text} —— 这不是端口");
     }
 
     #[test]

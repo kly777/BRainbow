@@ -351,7 +351,9 @@ fn number_u32(vars: &BTreeMap<String, String>, key: &str, default: u32) -> Resul
     match lookup(vars, key) {
         None => Ok(default),
         Some(raw) => raw.parse::<u32>().map_err(|_| {
-            Error::msg(format!("{key} 不是合法的整数：{raw:?}（应为 0 以上的整数）"))
+            Error::msg(format!(
+                "{key} 不是合法的整数：{raw:?}（应为 0 以上的整数）"
+            ))
         }),
     }
 }

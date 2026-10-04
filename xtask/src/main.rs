@@ -288,7 +288,10 @@ mod tests {
     }
 
     /// 把一条读完的配方记进表里；没有转发到 `cargo xtask` 的（`default:` 之类）略过。
-    fn finish_recipe(recipes: &mut BTreeMap<String, String>, recipe: Option<(String, Vec<String>)>) {
+    fn finish_recipe(
+        recipes: &mut BTreeMap<String, String>,
+        recipe: Option<(String, Vec<String>)>,
+    ) {
         let Some((name, body)) = recipe else {
             return;
         };
@@ -357,7 +360,8 @@ mod tests {
         for sub in Cli::command().get_subcommands() {
             let name = sub.get_name();
             assert!(
-                name.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-'),
+                name.chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-'),
                 "子命令名 {name:?} 含大写或下划线，与 justfile 的配方名风格不一致"
             );
             assert!(!name.starts_with('-'), "子命令名 {name:?} 不该以连字符开头");

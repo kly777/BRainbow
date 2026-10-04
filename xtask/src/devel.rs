@@ -116,25 +116,62 @@ pub fn run_e2e(cfg: &Config, args: &[String]) -> Result<()> {
 /// 只判"有没有"，不校验 revision：版本对不上时 Playwright 自己会要求重装，
 /// 这里负责的是把"完全没装"提前说清楚，省得对着一串路径报错发愣。
 fn playwright_browser_present() -> bool {
-    // 缓存目录按平台走（Playwright 自己的规则，见其 registry 的 `cacheDirectory`）：
-    // Windows 在 `%LOCALAPPDATA%\ms-playwright`，macOS 在 `~/Library/Caches/ms-playwright`，
-    // Linux 才是 `$XDG_CACHE_HOME`（缺省 `~/.cache`）。原来只认 `$HOME/.cache`，
-    // 在 Windows 上 `HOME` 通常没定义 —— 于是函数直接"当它装了"，
-    // 把缺浏览器这件事推给 Playwright 自己去报。
-    let cache_root = if cfg!(windows) {
-        std::env::var_os("LOCALAPPDATA").map(PathBuf::from)
-    } else if cfg!(target_os = "macos") {
-        std::env::var_os("HOME").map(|home| PathBuf::from(home).join("Library/Caches"))
-    } else {
-        std::env::var_os("XDG_CACHE_HOME")
-            .map(PathBuf::from)
-            .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".cache")))
-    };
-    // 认不出缓存目录就当它装了：宁可让 Playwright 自己报，也别误报"没装"。
-    let Some(cache_root) = cache_root else {
+    let Some(cache_root) = playwright_cache_root(HostPlatform::current(), |k| std::env::var_os(k))
+    else {
+        // 认不出缓存目录就当它装了：宁可让 Playwright 自己报，也别误报"没装"
         return true;
     };
-    std::fs::read_dir(cache_root.join("ms-playwright"))
+    dir_has_entries(&cache_root.join("ms-playwright"))
+}
+
+/// 宿主平台。抽出来是为了让"该去哪个目录找"能被测到 —— 写在函数里用 `cfg!` 的话，
+/// 一条测试只能验到本机那一种，三条分支里有两条永远没跑过。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum HostPlatform {
+    Windows,
+    MacOs,
+    Other,
+}
+
+impl HostPlatform {
+    fn current() -> Self {
+        if cfg!(windows) {
+            Self::Windows
+        } else if cfg!(target_os = "macos") {
+            Self::MacOs
+        } else {
+            Self::Other
+        }
+    }
+}
+
+/// Playwright 的缓存根目录（不含 `ms-playwright` 那一层）。
+///
+/// 规则是 Playwright 自己的（见其 registry 的 `cacheDirectory`）：
+/// Windows 在 `%LOCALAPPDATA%`，macOS 在 `~/Library/Caches`，
+/// Linux 依次看 `XDG_CACHE_HOME`、缺省 `~/.cache`。
+///
+/// 认不出来返回 `None` —— 由调用方决定"当它装了"还是"当它没装"。
+fn playwright_cache_root(
+    platform: HostPlatform,
+    var: impl Fn(&str) -> Option<std::ffi::OsString>,
+) -> Option<PathBuf> {
+    match platform {
+        HostPlatform::Windows => var("LOCALAPPDATA").map(PathBuf::from),
+        // 逐段 join 而不是 join("Library/Caches")：后者在 Windows 上会拼出
+        // `C:\Users\kly\Library/Caches` 这种混用分隔符的路径
+        HostPlatform::MacOs => {
+            var("HOME").map(|home| PathBuf::from(home).join("Library").join("Caches"))
+        }
+        HostPlatform::Other => var("XDG_CACHE_HOME")
+            .map(PathBuf::from)
+            .or_else(|| var("HOME").map(|home| PathBuf::from(home).join(".cache"))),
+    }
+}
+
+/// 目录里有没有至少一项（读不动当没有）。
+fn dir_has_entries(dir: &Path) -> bool {
+    std::fs::read_dir(dir)
         .map(|mut entries| entries.next().is_some())
         .unwrap_or(false)
 }
@@ -292,4 +329,99 @@ fn remove_dir(path: &Path) -> Result<()> {
     }
     ui::info(&format!("删除 {}", path.display()));
     std::fs::remove_dir_all(path).map_err(|e| Error::io(format!("删除 {}", path.display()), e))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ffi::OsString;
+
+    /// 注入式变量读取器：测试不碰真实环境，也不与其他测试抢 env。
+    fn vars<'a>(pairs: &'a [(&'a str, &'a str)]) -> impl Fn(&str) -> Option<OsString> + 'a {
+        move |key| {
+            pairs
+                .iter()
+                .find(|(k, _)| *k == key)
+                .map(|(_, v)| OsString::from(*v))
+        }
+    }
+
+    fn root(platform: HostPlatform, pairs: &[(&str, &str)]) -> Option<String> {
+        playwright_cache_root(platform, vars(pairs))
+            .map(|p| p.display().to_string().replace('\\', "/"))
+    }
+
+    /// 路径统一成 `/` 再比较：断言要钉的是"按平台该落到哪一层目录"，
+    /// 不是平台分隔符（`root()` 里已归一）。
+    #[track_caller]
+    fn assert_root(expected: &str, actual: Option<String>, platform: HostPlatform) {
+        assert_eq!(
+            actual.as_deref(),
+            Some(expected),
+            "{platform:?} 下应当落到 {expected}"
+        );
+    }
+
+    #[test]
+    fn playwright_cache_root_follows_each_platform() {
+        // 三个平台三条规则都要验到：写在函数里用 cfg! 的话，一条测试只跑得了一种
+        assert_root(
+            "C:/Users/kly/AppData/Local",
+            root(
+                HostPlatform::Windows,
+                &[("LOCALAPPDATA", r"C:\Users\kly\AppData\Local")],
+            ),
+            HostPlatform::Windows,
+        );
+        assert_root(
+            "/Users/kly/Library/Caches",
+            root(HostPlatform::MacOs, &[("HOME", "/Users/kly")]),
+            HostPlatform::MacOs,
+        );
+        assert_root(
+            "/xdg",
+            root(
+                HostPlatform::Other,
+                &[("XDG_CACHE_HOME", "/xdg"), ("HOME", "/home/kly")],
+            ),
+            HostPlatform::Other,
+        );
+        assert_root(
+            "/home/kly/.cache",
+            root(HostPlatform::Other, &[("HOME", "/home/kly")]),
+            HostPlatform::Other,
+        );
+    }
+
+    #[test]
+    fn playwright_cache_root_is_none_when_the_lookup_finds_nothing() {
+        // 认不出目录就返回 None —— 由调用方决定"当它装了"还是"当它没装"，
+        // 别在这里替它猜一个路径出来
+        assert_eq!(root(HostPlatform::Windows, &[("HOME", "/home/kly")]), None);
+        assert_eq!(root(HostPlatform::MacOs, &[]), None);
+        assert_eq!(root(HostPlatform::Other, &[]), None);
+    }
+
+    #[test]
+    fn playwright_cache_root_ignores_home_on_windows() {
+        // 这正是原来的 bug：Windows 上 HOME 常被定义（Git Bash 就设了），
+        // 于是按 Linux 规则去找 ~/.cache，永远找不到 → 误判成"没装浏览器"
+        assert_eq!(root(HostPlatform::Windows, &[("HOME", "/home/kly")]), None);
+    }
+
+    #[test]
+    fn dir_has_entries_separates_empty_absent_and_populated() {
+        let root = std::env::temp_dir().join(format!("xtask-dir-entries-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("nested")).expect("建目录");
+
+        assert!(dir_has_entries(&root), "建了子目录就该算有内容");
+        assert!(
+            !dir_has_entries(&root.join("nested")),
+            "空目录与不存在是两件事：这里当没有"
+        );
+        assert!(!dir_has_entries(&root.join("missing")), "读不动当没有");
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
 }

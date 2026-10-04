@@ -5,7 +5,8 @@ mod query;
 pub mod ranking;
 mod repository;
 mod response;
-pub(crate) mod service;
+pub mod service;
+pub mod slotting;
 
 #[cfg(test)]
 mod authz_tests;

@@ -47,6 +47,13 @@ pub fn run_lint(cfg: &Config) -> Result<()> {
 }
 
 /// `test`：后端测试（装了 cargo-nextest 就用它，快 2-3 倍）。
+///
+/// **`--workspace` 是必需的，别当成冗余**：根 `Cargo.toml` 的 `default-members` 只有
+/// 应用本体（为了不让日常循环连带编译 xtask），而裸 `cargo test` 就只跑那一个包 ——
+/// xtask 自己的 81 个测试会被整个跳过。改 `sh_quote` / 模板渲染 / 备份保留策略
+/// 全靠它们兜底，跳过等于门禁是空的。
+///
+/// 注意 nextest 分支同样要带：`cargo nextest run` 默认也只看 default-members。
 pub fn run_test(cfg: &Config, verbose: bool) -> Result<()> {
     let has_nextest = Cmd::new("cargo")
         .args(&["nextest", "--version"])
@@ -54,16 +61,16 @@ pub fn run_test(cfg: &Config, verbose: bool) -> Result<()> {
         .is_some();
     let args: Vec<&str> = if has_nextest {
         if verbose {
-            vec!["nextest", "run", "--no-capture"]
+            vec!["nextest", "run", "--workspace", "--no-capture"]
         } else {
-            vec!["nextest", "run"]
+            vec!["nextest", "run", "--workspace"]
         }
     } else {
         ui::warn("cargo-nextest 未安装，退回 cargo test（cargo install cargo-nextest）");
         if verbose {
-            vec!["test", "--", "--no-capture"]
+            vec!["test", "--workspace", "--", "--no-capture"]
         } else {
-            vec!["test"]
+            vec!["test", "--workspace"]
         }
     };
     Cmd::new("cargo").args(&args).cwd(&cfg.project_dir).run()

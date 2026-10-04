@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use sqlx::SqlitePool;
 
-use super::model::{ConvDetail, SearchResponse};
+use super::model::{ConvDetail, SearchResponse, SearchScope};
 use super::repository::ConvRepo;
 use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
@@ -28,9 +28,9 @@ impl ConvQueryService {
         q: &str,
         limit: i64,
         offset: i64,
-        search_type: &str,
+        scope: SearchScope,
     ) -> Result<SearchResponse, ServiceError> {
-        self.repo.search(actor, q, limit, offset, search_type).await
+        self.repo.search(actor, q, limit, offset, scope).await
     }
 
     /// 知识条目详情（标题 + 文章）
@@ -57,10 +57,10 @@ pub async fn search_conv(
     q: &str,
     limit: i64,
     offset: i64,
-    search_type: &str,
+    scope: SearchScope,
 ) -> Result<SearchResponse, ServiceError> {
     ConvRepo::new(pool.clone())
-        .search(&Actor::user(user_id), q, limit, offset, search_type)
+        .search(&Actor::user(user_id), q, limit, offset, scope)
         .await
 }
 
@@ -130,19 +130,23 @@ mod tests {
     async fn search_type_conv_only() {
         let pool = setup_test_db().await;
         // "中间件"只在文章中出现
-        let res_all = search_conv(&pool, 1, "中间件", 20, 0, "all").await.unwrap();
+        let res_all = search_conv(&pool, 1, "中间件", 20, 0, SearchScope::All)
+            .await
+            .unwrap();
         assert!(
             res_all.hits.iter().any(|h| h.match_field == "article"),
             "全部模式下应有文章匹配"
         );
 
-        let res_conv = search_conv(&pool, 1, "中间件", 20, 0, "conv")
+        let res_conv = search_conv(&pool, 1, "中间件", 20, 0, SearchScope::Conv)
             .await
             .unwrap();
         assert!(res_conv.hits.is_empty(), "conv 模式下不应有文章匹配");
 
         // "Go" 在对话和文章中都有
-        let res_article = search_conv(&pool, 1, "Go", 20, 0, "article").await.unwrap();
+        let res_article = search_conv(&pool, 1, "Go", 20, 0, SearchScope::Article)
+            .await
+            .unwrap();
         assert!(
             res_article.hits.iter().all(|h| h.match_field == "article"),
             "article 模式应只返回文章"
@@ -152,14 +156,16 @@ mod tests {
     #[tokio::test]
     async fn search_type_all() {
         let pool = setup_test_db().await;
-        let res = search_conv(&pool, 1, "Go", 20, 0, "all").await.unwrap();
+        let res = search_conv(&pool, 1, "Go", 20, 0, SearchScope::All)
+            .await
+            .unwrap();
         assert!(res.total >= 2, "all 模式应同时包含标题和文章命中");
     }
 
     #[tokio::test]
     async fn no_match_empty() {
         let pool = setup_test_db().await;
-        let res = search_conv(&pool, 1, "xyznonexistent", 20, 0, "all")
+        let res = search_conv(&pool, 1, "xyznonexistent", 20, 0, SearchScope::All)
             .await
             .unwrap();
         assert_eq!(res.total, 0);
@@ -168,7 +174,9 @@ mod tests {
     #[tokio::test]
     async fn search_returns_expected_hits() {
         let pool = setup_test_db().await;
-        let res = search_conv(&pool, 1, "Bash", 20, 0, "all").await.unwrap();
+        let res = search_conv(&pool, 1, "Bash", 20, 0, SearchScope::All)
+            .await
+            .unwrap();
         assert!(res.hits.iter().any(|h| h.title.contains("Bash")));
     }
 
@@ -185,7 +193,7 @@ mod tests {
             .await
             .unwrap();
 
-        let res = search_conv(&pool, 1, "测试内容", 20, 0, "all")
+        let res = search_conv(&pool, 1, "测试内容", 20, 0, SearchScope::All)
             .await
             .unwrap();
         eprintln!("\n── search_truncate_utf8 '测试内容' ──");

@@ -33,6 +33,23 @@ xtask = "run --quiet --package xtask --"
 # [build]
 # rustc-wrapper = "sccache"
 
+# ── Windows：环境变量 `CC` 必须是 MSVC 的 cl，别让它指向 MinGW 的 gcc ──
+#
+# `libsqlite3-sys` 要编一份 SQLite amalgamation，走的是 cc-rs。cc-rs 选编译器的
+# 顺序是 `CC_x86_64_pc_windows_msvc` > `HOST_CC` > `CC`，最后才是自己去找 MSVC。
+# 装了 MinGW（scoop 的 mingw-winlibs 之类）往往会顺手设一个全局 `CC=gcc`，
+# 于是 cc-rs 用它编出**符号按 MinGW 约定**的目标文件，MSVC 的 link.exe 链接时
+# 报一串看不懂的缺失符号（实测 `___chkstk_ms` / `__isnan` 两个，LNK2019），
+# 而这两个符号在 VC 与 SDK 的任何一个 .lib 里都不存在 —— 查半天查不到根因。
+#
+# 正确处理：**别设 `CC`**（也顺手看一眼 `CC_x86_64_pc_windows_msvc` / `HOST_CC`）。
+# 它的警告 `GNU compiler is not supported for this target` 是唯一的线索，别忽略。
+# cc-rs 找不到 `CC` 时会自己定位 MSVC、自己铺好 INCLUDE / LIB / PATH，
+# 不用开 vcvars —— 手工设 `CC=cl` 反而要求你已经进过 VS 开发者环境。
+#
+# 不要在这里用 `[env]` 写 `CC = "cl"` 来"修"它：`[env]` 对所有平台生效，
+# 会把 Linux 上的 C 编译一并弄坏（那边的 C 编译器就该是 gcc/cc）。
+
 # Uncomment to enable incremental compilation for release builds
 # Warning: May increase binary size slightly
 # [profile.release]

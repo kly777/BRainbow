@@ -8,8 +8,17 @@ import {
 	groupByStatus,
 } from "./task-group.ts";
 
-/** 只给关心的字段，其余走默认（Task 的必填字段较多） */
-const task = (id: number, over: Partial<Task> = {}): Task =>
+/**
+ * 只给关心的字段，其余走默认（Task 的必填字段较多）。
+ *
+ * `status` 单独放宽成 `string`：下面有两条用例**故意**传 union 之外的值，
+ * 验的是"运行时不认得就丢掉 / 归默认"这条兜底 —— 那正是类型系统保证不了、
+ * 只能在运行时测的部分（老库里可能存着后端已删掉的状态）。
+ */
+const task = (
+	id: number,
+	over: Partial<Omit<Task, "status">> & { status?: string } = {},
+): Task =>
 	({
 		id,
 		title: `t${id}`,

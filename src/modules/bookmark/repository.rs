@@ -6,7 +6,8 @@ use crate::shared::actor::Actor;
 use crate::shared::db_query::{like_contains, push_owner_scope};
 
 use super::model::{
-    Bookmark, BookmarkRow, BookmarkTag, BookmarkTagWithCount, GroupedBookmarksResponse, TagGroup,
+    Bookmark, BookmarkRow, BookmarkTag, BookmarkTagWithCount, GroupedBookmarksResponse, SortBy,
+    TagGroup,
 };
 
 /// 书签行公共 SELECT（含聚合标签子查询，按名称排序保证与 get_bookmark_tags 一致）
@@ -109,7 +110,7 @@ impl BookmarkRepo {
         limit: i64,
         offset: i64,
         tag: Option<&str>,
-        sort: &str,
+        sort: SortBy,
     ) -> Result<(Vec<Bookmark>, i64), sqlx::Error> {
         let mut count_builder = QueryBuilder::new("SELECT COUNT(*) FROM bookmark WHERE 1 = 1");
         push_owner_scope(&mut count_builder, actor, "user_id");
@@ -128,7 +129,7 @@ impl BookmarkRepo {
             tags_filter_clause(&mut fetch_builder, t);
         }
         fetch_builder.push(" ORDER BY ");
-        if sort == "visit_count" {
+        if sort.prefers_visit_count() {
             fetch_builder.push("visit_count DESC, ");
         }
         fetch_builder.push("created_at DESC LIMIT ");
@@ -443,7 +444,7 @@ impl BookmarkRepo {
         let keywords: Vec<&str> = query.split_whitespace().collect();
         if keywords.is_empty() {
             return self
-                .find_all_paginated(actor, limit, offset, tag, "created_at")
+                .find_all_paginated(actor, limit, offset, tag, SortBy::CreatedAt)
                 .await;
         }
 
@@ -784,7 +785,7 @@ mod tests {
         .unwrap();
 
         let (items, total) = repo
-            .find_all_paginated(&actor(), 10, 0, None, "created_at")
+            .find_all_paginated(&actor(), 10, 0, None, SortBy::CreatedAt)
             .await
             .unwrap();
         assert_eq!(total, 3);
@@ -813,14 +814,14 @@ mod tests {
         .unwrap();
 
         let (items, total) = repo
-            .find_all_paginated(&actor(), 10, 0, Some("编程"), "created_at")
+            .find_all_paginated(&actor(), 10, 0, Some("编程"), SortBy::CreatedAt)
             .await
             .unwrap();
         assert_eq!(total, 2);
         assert!(items.iter().all(|b| b.tags.contains(&"编程".to_string())));
 
         let (items, total) = repo
-            .find_all_paginated(&actor(), 10, 0, Some("不存在的"), "created_at")
+            .find_all_paginated(&actor(), 10, 0, Some("不存在的"), SortBy::CreatedAt)
             .await
             .unwrap();
         assert_eq!(total, 0);
@@ -836,7 +837,7 @@ mod tests {
                 .unwrap();
         }
         let (items, total) = repo
-            .find_all_paginated(&actor(), 3, 2, None, "created_at")
+            .find_all_paginated(&actor(), 3, 2, None, SortBy::CreatedAt)
             .await
             .unwrap();
         assert_eq!(total, 10);

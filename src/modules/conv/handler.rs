@@ -36,9 +36,11 @@ pub async fn search_handler(
 
     let limit = params.limit.unwrap_or(20).min(100);
     let offset = params.offset.unwrap_or(0);
-    let search_type = params.search_type.as_deref().unwrap_or("all");
 
-    match query.search(&actor, q, limit, offset, search_type).await {
+    match query
+        .search(&actor, q, limit, offset, params.search_type)
+        .await
+    {
         Ok(res) => Json(res).into_response(),
         Err(e) => e.into_response(),
     }

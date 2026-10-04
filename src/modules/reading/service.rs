@@ -1,7 +1,7 @@
 use sqlx::SqlitePool;
 use std::sync::Arc;
 
-use super::model::Article;
+use super::model::{Article, WordStatus};
 use super::repository::ReadingRepo;
 use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
@@ -76,17 +76,19 @@ impl ReadingService {
     }
 
     /// 标记单词
+    ///
+    /// 状态值域由 [`WordStatus`] 兜住（`MarkWordRequest.status` 反序列化时就已拒掉
+    /// 非法值），所以这里只校验单词本身非空 —— 原先那条
+    /// `matches!(status, "known" | "unknown" | "ignored")` 属于同一件事的第二份
+    /// 书写，删掉后校验只剩一处。
     pub async fn mark_word(
         &self,
         actor: &Actor,
         word: &str,
-        status: &str,
+        status: WordStatus,
     ) -> Result<(), ServiceError> {
         if word.trim().is_empty() {
             return Err(ServiceError::InvalidInput("单词不能为空".into()));
-        }
-        if !matches!(status, "known" | "unknown" | "ignored") {
-            return Err(ServiceError::InvalidInput("无效的单词状态".into()));
         }
         let word = word.trim();
         let repo = &self.repo;

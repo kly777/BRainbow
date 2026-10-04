@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use crate::shared::actor::Actor;
 
-use super::model::{Article, ArticleSummary, ArticleWordStatus, UnknownWord};
+use super::model::{Article, ArticleSummary, ArticleWordStatus, UnknownWord, WordStatus};
 
 // ── 行类型：命名 FromRow（列名与 SELECT 别名一一对应，避免元组列序错误） ──
 
@@ -198,7 +198,13 @@ impl ReadingRepo {
             .into_iter()
             .map(|r| ArticleWordStatus {
                 word: r.word,
-                status: r.status,
+                // `status` 列没有 CHECK 约束，理论上能被写成别的字面量。解不出来就
+                // 当 unknown —— 与上面那句 `COALESCE(uw.status, 'unknown')` 对 NULL
+                // 的处理是同一个意思（不认识就显示不认识）。
+                // 别把这看成"静默吞掉非法输入"：写路径已经没有 `_` 兜底了，
+                // 能落库的只有这三个值。这里兜的是**读**路径上的历史脏数据，
+                // 代价只是这一个词显示成"不认识"，不该让整篇文章读不出来。
+                status: WordStatus::from_db(&r.status).unwrap_or(WordStatus::Unknown),
             })
             .collect())
     }
@@ -293,14 +299,19 @@ impl ReadingRepo {
 
     // ── 用户词库 ──
 
+    /// 写一个词的认识状态。
+    ///
+    /// 三个分支穷尽，**没有 `_` 兜底了** —— 原来那个 `_` 会把任何没见过的值当成
+    /// `'unknown'` 落库（不认识词计数照加），等于把不认得的输入悄悄改写成另一种
+    /// 状态。现在传不进来的东西在到达这里之前就被 serde 拒掉了。
     pub async fn upsert_user_word(
         &self,
         user_id: i32,
         word: &str,
-        status: &str,
+        status: WordStatus,
     ) -> Result<(), sqlx::Error> {
         match status {
-            "known" => {
+            WordStatus::Known => {
                 sqlx::query!(
                     r#"
                     INSERT INTO reading_user_word (word, user_id, status, known_count, unknown_count, updated_at)
@@ -316,7 +327,7 @@ impl ReadingRepo {
                 .execute(&*self.pool)
                 .await?;
             }
-            "ignored" => {
+            WordStatus::Ignored => {
                 sqlx::query!(
                     r#"
                     INSERT INTO reading_user_word (word, user_id, status, known_count, unknown_count, updated_at)
@@ -331,7 +342,7 @@ impl ReadingRepo {
                 .execute(&*self.pool)
                 .await?;
             }
-            _ => {
+            WordStatus::Unknown => {
                 sqlx::query!(
                     r#"
                     INSERT INTO reading_user_word (word, user_id, status, unknown_count, known_count, updated_at)
@@ -573,8 +584,8 @@ mod tests {
 
         let statuses = repo.get_article_word_statuses(id).await.unwrap();
         assert_eq!(statuses.len(), 2);
-        assert_eq!(statuses[0].status, "unknown");
-        assert_eq!(statuses[1].status, "unknown");
+        assert_eq!(statuses[0].status, WordStatus::Unknown);
+        assert_eq!(statuses[1].status, WordStatus::Unknown);
     }
 
     #[tokio::test]
@@ -582,15 +593,15 @@ mod tests {
         let repo = setup_db().await;
         let id = insert_article(&repo, "Test", "hello world").await;
 
-        repo.upsert_user_word(TEST_USER_ID, "world", "known")
+        repo.upsert_user_word(TEST_USER_ID, "world", WordStatus::Known)
             .await
             .unwrap();
 
         let statuses = repo.get_article_word_statuses(id).await.unwrap();
         let hello = statuses.iter().find(|w| w.word == "hello").unwrap();
         let world = statuses.iter().find(|w| w.word == "world").unwrap();
-        assert_eq!(hello.status, "unknown");
-        assert_eq!(world.status, "known");
+        assert_eq!(hello.status, WordStatus::Unknown);
+        assert_eq!(world.status, WordStatus::Known);
     }
 
     // ── known ratio ──
@@ -608,10 +619,10 @@ mod tests {
         let repo = setup_db().await;
         let id = insert_article(&repo, "Test", "hello world foo").await;
 
-        repo.upsert_user_word(TEST_USER_ID, "hello", "known")
+        repo.upsert_user_word(TEST_USER_ID, "hello", WordStatus::Known)
             .await
             .unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "foo", "known")
+        repo.upsert_user_word(TEST_USER_ID, "foo", WordStatus::Known)
             .await
             .unwrap();
 
@@ -624,7 +635,7 @@ mod tests {
     #[tokio::test]
     async fn test_upsert_user_word_new_unknown() {
         let repo = setup_db().await;
-        repo.upsert_user_word(TEST_USER_ID, "hello", "unknown")
+        repo.upsert_user_word(TEST_USER_ID, "hello", WordStatus::Unknown)
             .await
             .unwrap();
 
@@ -638,10 +649,10 @@ mod tests {
     #[tokio::test]
     async fn test_upsert_user_word_twice_increments_count() {
         let repo = setup_db().await;
-        repo.upsert_user_word(TEST_USER_ID, "hello", "unknown")
+        repo.upsert_user_word(TEST_USER_ID, "hello", WordStatus::Unknown)
             .await
             .unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "hello", "unknown")
+        repo.upsert_user_word(TEST_USER_ID, "hello", WordStatus::Unknown)
             .await
             .unwrap();
 
@@ -653,10 +664,10 @@ mod tests {
     #[tokio::test]
     async fn test_upsert_user_word_switch_to_known() {
         let repo = setup_db().await;
-        repo.upsert_user_word(TEST_USER_ID, "hello", "unknown")
+        repo.upsert_user_word(TEST_USER_ID, "hello", WordStatus::Unknown)
             .await
             .unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "hello", "known")
+        repo.upsert_user_word(TEST_USER_ID, "hello", WordStatus::Known)
             .await
             .unwrap();
 
@@ -681,16 +692,16 @@ mod tests {
     #[tokio::test]
     async fn test_get_unknown_words_ordered_by_count() {
         let repo = setup_db().await;
-        repo.upsert_user_word(TEST_USER_ID, "rare", "unknown")
+        repo.upsert_user_word(TEST_USER_ID, "rare", WordStatus::Unknown)
             .await
             .unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "common", "unknown")
+        repo.upsert_user_word(TEST_USER_ID, "common", WordStatus::Unknown)
             .await
             .unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "common", "unknown")
+        repo.upsert_user_word(TEST_USER_ID, "common", WordStatus::Unknown)
             .await
             .unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "common", "unknown")
+        repo.upsert_user_word(TEST_USER_ID, "common", WordStatus::Unknown)
             .await
             .unwrap();
 
@@ -709,10 +720,10 @@ mod tests {
         let id = insert_article(&repo, "Test", "alice bob charlie dave").await;
 
         // 标记 alice 为 ignored，bob 为 known
-        repo.upsert_user_word(TEST_USER_ID, "alice", "ignored")
+        repo.upsert_user_word(TEST_USER_ID, "alice", WordStatus::Ignored)
             .await
             .unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "bob", "known")
+        repo.upsert_user_word(TEST_USER_ID, "bob", WordStatus::Known)
             .await
             .unwrap();
 
@@ -727,7 +738,7 @@ mod tests {
         // status should reflect 'ignored'
         let statuses = repo.get_article_word_statuses(id).await.unwrap();
         let alice = statuses.iter().find(|w| w.word == "alice").unwrap();
-        assert_eq!(alice.status, "ignored");
+        assert_eq!(alice.status, WordStatus::Ignored);
 
         // unknown_count should not include alice
         let summaries = repo.get_all_article_summaries(&actor()).await.unwrap();
@@ -742,7 +753,7 @@ mod tests {
         let repo = setup_db().await;
         let _id = insert_article(&repo, "Test", "hello world foo").await;
 
-        repo.upsert_user_word(TEST_USER_ID, "hello", "known")
+        repo.upsert_user_word(TEST_USER_ID, "hello", WordStatus::Known)
             .await
             .unwrap();
 
@@ -770,27 +781,27 @@ mod tests {
         let id3 = insert_article(&repo, "C", "one two three").await;
 
         // article B: 4/5 = 80%
-        repo.upsert_user_word(TEST_USER_ID, "hello", "known")
+        repo.upsert_user_word(TEST_USER_ID, "hello", WordStatus::Known)
             .await
             .unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "world", "known")
+        repo.upsert_user_word(TEST_USER_ID, "world", WordStatus::Known)
             .await
             .unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "alpha", "known")
+        repo.upsert_user_word(TEST_USER_ID, "alpha", WordStatus::Known)
             .await
             .unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "beta", "known")
+        repo.upsert_user_word(TEST_USER_ID, "beta", WordStatus::Known)
             .await
             .unwrap();
 
         // article C: 3/3 = 100%
-        repo.upsert_user_word(TEST_USER_ID, "one", "known")
+        repo.upsert_user_word(TEST_USER_ID, "one", WordStatus::Known)
             .await
             .unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "two", "known")
+        repo.upsert_user_word(TEST_USER_ID, "two", WordStatus::Known)
             .await
             .unwrap();
-        repo.upsert_user_word(TEST_USER_ID, "three", "known")
+        repo.upsert_user_word(TEST_USER_ID, "three", WordStatus::Known)
             .await
             .unwrap();
 

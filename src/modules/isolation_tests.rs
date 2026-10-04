@@ -13,6 +13,7 @@ use sqlx::SqlitePool;
 use std::sync::Arc;
 
 use crate::db;
+use crate::modules::bookmark::model::SortBy;
 use crate::shared::actor::Actor;
 
 async fn setup(pool: &SqlitePool) {
@@ -143,7 +144,7 @@ async fn bookmark_isolation_between_users() {
         .unwrap();
 
     let (_, total) = qsvc
-        .list(&Actor::user(2), 10, 0, None, "created_at")
+        .list(&Actor::user(2), 10, 0, None, SortBy::CreatedAt)
         .await
         .unwrap();
     assert_eq!(total, 0, "B 不应看到 A 的书签");

@@ -153,6 +153,7 @@ impl SearchPort for ReadingQueryService {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
+    use crate::modules::reading::model::WordStatus;
     use crate::modules::reading::service::ReadingService;
     use sqlx::SqlitePool;
 
@@ -187,13 +188,13 @@ mod tests {
         // B: 75% 认识（距离 0.15），C: 100% 认识（距离 0.1），A: 0%（距离 0.9）
         for word in ["alpha", "beta", "gamma"] {
             service
-                .mark_word(&Actor::user(1), word, "known")
+                .mark_word(&Actor::user(1), word, WordStatus::Known)
                 .await
                 .unwrap();
         }
         for word in ["one", "two"] {
             service
-                .mark_word(&Actor::user(1), word, "known")
+                .mark_word(&Actor::user(1), word, WordStatus::Known)
                 .await
                 .unwrap();
         }

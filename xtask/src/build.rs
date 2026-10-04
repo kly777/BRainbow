@@ -79,31 +79,24 @@ pub fn run_build_backend(cfg: &Config, target_flag: Option<&str>) -> Result<()> 
 }
 
 /// 开发时要跑哪一半（对应老 Makefile 的 dev / dev-backend / dev-backend-fast / dev-web）。
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+///
+/// 合法值交给 clap 的 `ValueEnum` 解析，别在旁边再写一份手写 `match`：那份对不上
+/// 就是"`--help` 里列的能选，一跑就报不认识"。别名（both / check / frontend）也
+/// 挂在 `#[value(alias)]` 上，跟正式名同处一份定义。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
 pub enum DevMode {
     /// 后端 + 前端并排跑（Ctrl-C 一起退出）
+    #[value(name = "all", alias = "both")]
     All,
     /// 只跑后端 watcher（编译 + 启动服务）
+    #[value(name = "backend")]
     Backend,
     /// 只跑后端 watcher，但只做 `cargo check`（不启动服务，适合多窗口开发）
+    #[value(name = "backend-check", alias = "check")]
     BackendCheck,
     /// 只跑前端 vite
+    #[value(name = "web", alias = "frontend")]
     Web,
-}
-
-impl DevMode {
-    /// 从命令行参数解析（缺省 `all`）。
-    pub fn parse(text: Option<&str>) -> Result<Self> {
-        match text.unwrap_or("all") {
-            "all" | "both" => Ok(Self::All),
-            "backend" => Ok(Self::Backend),
-            "backend-check" | "check" => Ok(Self::BackendCheck),
-            "web" | "frontend" => Ok(Self::Web),
-            other => Err(Error::msg(format!(
-                "不认识的开发模式 {other:?}（可选 all / backend / backend-check / web）"
-            ))),
-        }
-    }
 }
 
 /// 后端 watcher 的命令行。

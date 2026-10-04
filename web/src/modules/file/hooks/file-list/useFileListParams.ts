@@ -3,10 +3,19 @@
 // 从 useFileList 里切出来的第一块：这一整块只做"URL 参数 ↔ 语义化访问器"的翻译，
 // 与取数、上传、批量操作无关。
 
-import { numParam, strParam, useUrlParams } from "@shared/utils";
-import type { SortOrder } from "../../api.ts";
+import { enumParam, numParam, strParam, useUrlParams } from "@shared/utils";
+import type { FileCategoryFilter, SortOrder } from "../../api.ts";
+import { CATEGORIES } from "../../lib/category.ts";
 
-const VALID_CATEGORIES = ["", "image", "video", "audio", "document", "other"];
+/**
+ * 分类筛选的全部取值：`""`（全部）+ 五个真实分类。
+ *
+ * 五个真实分类从 `lib/category.ts` 的 `CATEGORY_LABEL` 派生 —— 那张表是
+ * `Record<FileCategory, string>`，新增一个分类时它会编译失败逼着人补，
+ * 这里跟着自动长出来。原先这里另抄了一份字面量清单，与 api 的 `FileCategory`、
+ * `FileList.tsx` 的 `CATEGORY_TABS` 是三份互不相关的抄写。
+ */
+const CATEGORY_FILTERS: readonly FileCategoryFilter[] = ["", ...CATEGORIES];
 
 const SORT_ORDERS = [
 	"created_desc",
@@ -15,14 +24,16 @@ const SORT_ORDERS = [
 	"size_asc",
 	"name_asc",
 	"name_desc",
-] as const;
+] as const satisfies readonly SortOrder[];
 
 /** 列表视图模式 */
 export type FileView = "grid" | "list";
 
 export function useFileListParams() {
 	const params = useUrlParams({
-		category: strParam(""),
+		// category 走 enumParam：URL 里手写的分类（拼错、大小写不同）一律退回"全部"，
+		// 与改造前 `VALID_CATEGORIES.includes(...)` 的行为一致，但取值清单只有一份
+		category: enumParam(CATEGORY_FILTERS, ""),
 		tag: strParam(""),
 		q: strParam(""),
 		sort: strParam("created_desc"),
@@ -30,12 +41,10 @@ export function useFileListParams() {
 		page: numParam(1, { min: 1 }),
 	});
 
-	const category = () =>
-		VALID_CATEGORIES.includes(params.get("category"))
-			? params.get("category")
-			: "";
+	const category = (): FileCategoryFilter => params.get("category");
 	// 筛选变化一律回到第 1 页，否则可能停在一个不存在的页码上
-	const setCategory = (t: string) => params.set({ category: t, page: 1 });
+	const setCategory = (t: FileCategoryFilter) =>
+		params.set({ category: t, page: 1 });
 	const tag = () => params.get("tag") || "";
 	const setTag = (t: string) => params.set({ tag: t, page: 1 });
 	const search = () => params.get("q") || "";

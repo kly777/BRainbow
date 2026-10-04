@@ -5,7 +5,7 @@ use crate::shared::db_query::like_contains;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{SearchHit, SearchTarget};
 
-use super::model::{ArticleItem, ConvDetail, SearchResponse};
+use super::model::{ArticleItem, ConvDetail, SearchResponse, SearchScope};
 use super::scoring;
 
 #[derive(FromRow)]
@@ -76,11 +76,11 @@ impl ConvRepo {
         q: &str,
         limit: i64,
         _offset: i64,
-        search_type: &str,
+        scope: SearchScope,
     ) -> Result<SearchResponse, ServiceError> {
         let pool = &self.pool;
-        let search_titles = search_type == "all" || search_type == "conv";
-        let search_articles = search_type == "all" || search_type == "article";
+        let search_titles = scope.searches_conv();
+        let search_articles = scope.searches_articles();
 
         let keywords: Vec<&str> = q.split_whitespace().filter(|k| !k.is_empty()).collect();
         if keywords.is_empty() {

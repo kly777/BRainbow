@@ -1,6 +1,6 @@
 import { useListResource } from "@shared/utils";
 import { createResource } from "solid-js";
-import type { FileItem, SortOrder } from "../api.ts";
+import type { FileCategoryFilter, FileItem, SortOrder } from "../api.ts";
 import { type FileStats, getFileStats, listFiles } from "../api.ts";
 import { useFileBatch } from "./file-list/useFileBatch.ts";
 import { useFileItemOps } from "./file-list/useFileItemOps.ts";
@@ -16,8 +16,8 @@ const PAGE_SIZE = 24;
 export type { FileView, UploadTask };
 
 export interface FileListApi {
-	category: () => string;
-	setCategory: (type: string) => void;
+	category: () => FileCategoryFilter;
+	setCategory: (type: FileCategoryFilter) => void;
 	tag: () => string;
 	setTag: (tag: string) => void;
 	search: () => string;
@@ -65,7 +65,7 @@ export interface FileListApi {
 
 /** 列表请求键：任一字段变化即重取（与 URL 参数一一对应，页码单独传） */
 interface FileListKey {
-	cat: string;
+	cat: FileCategoryFilter;
 	t: string;
 	q: string;
 	s: SortOrder;

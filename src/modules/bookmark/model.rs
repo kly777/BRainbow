@@ -2,6 +2,30 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
+/// 书签列表的排序方式。
+///
+/// 值域以前只写在 handler 的字段注释里（`/// 排序方式：created_at（默认）/ visit_count`），
+/// 之后经 `query.list(… sort: &str)` 一路透传到 repository，那边靠
+/// `if sort == "visit_count"` 决定加不加那一段 `ORDER BY`。
+/// 于是任何别的值（含拼错的、大小写不同的）都被当成 `created_at` —— 不报错，
+/// 只是悄悄地按另一种顺序返回。收成枚举后拼错的值在反序列化时就被拒。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SortBy {
+    /// 按创建时间倒序（缺省）
+    #[default]
+    CreatedAt,
+    /// 按访问次数倒序，创建时间作次级排序键
+    VisitCount,
+}
+
+impl SortBy {
+    /// 是否要在 `created_at DESC` 之前先按访问次数排。
+    pub fn prefers_visit_count(self) -> bool {
+        matches!(self, Self::VisitCount)
+    }
+}
+
 /// 网页书签
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Bookmark {

@@ -20,6 +20,7 @@ import {
 	Show,
 } from "solid-js";
 import {
+	type FileCategoryFilter,
 	type FileItem,
 	type FileTag,
 	listFileTags,
@@ -39,17 +40,20 @@ import { useFileDropZone, usePasteFiles } from "./hooks/useFileDropZone.ts";
 import { useFileList } from "./hooks/useFileList.ts";
 import { useImageLightbox } from "./hooks/useImageLightbox.ts";
 import { useListScroll } from "./hooks/useListScroll.ts";
+import { CATEGORIES, categoryLabel } from "./lib/category.ts";
 
 /** 列表滚动位置的 sessionStorage 键（从详情返回时恢复） */
 const SCROLL_KEY = "file-list-scroll-top";
 
-const CATEGORY_TABS = [
+/**
+ * 分类筛选项：`""`（全部）+ 五个真实分类。
+ *
+ * 中文名来自 `lib/category.ts`，不在这里重抄一遍 —— 那份表是
+ * `Record<FileCategory, string>`，是"分类 → 中文名"的唯一来源。
+ */
+const CATEGORY_TABS: readonly { value: FileCategoryFilter; label: string }[] = [
 	{ value: "", label: "全部" },
-	{ value: "image", label: "图片" },
-	{ value: "video", label: "视频" },
-	{ value: "audio", label: "音频" },
-	{ value: "document", label: "文档" },
-	{ value: "other", label: "其他" },
+	...CATEGORIES.map((value) => ({ value, label: categoryLabel(value) })),
 ];
 
 /** 排序选项（与后端 SortOrder 枚举一致） */

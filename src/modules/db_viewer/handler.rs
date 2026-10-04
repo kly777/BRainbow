@@ -8,7 +8,7 @@ use serde::Deserialize;
 /// 数据契约（查询结果与读取选项）在 `dto.rs`：repository/service 不该反向依赖本文件
 use super::dto::{FilterOp, TableData, TableFilter, TableReadOptions};
 use super::service::DbViewerQueryService;
-use crate::shared::db_query::sanitize_table_name;
+use crate::shared::db_query::{SortDir, sanitize_table_name};
 use crate::shared::error_types::{self as error, ServiceError};
 use crate::shared::pagination::Pagination;
 
@@ -22,10 +22,12 @@ pub struct TableDataQuery {
     pub id: Option<String>,
     /// 跳转过滤：目标表中的列名（由后端元数据生成，仅接受合法标识符）
     pub ref_col: Option<String>,
-    /// 排序列
+    /// 排序列。**保持 `String`**：这是用户点的那一列的名字，来自后端元数据
+    /// （合法标识符校验在 `TableReadOptions` 那一侧），不是有限值域的东西。
     pub sort: Option<String>,
-    /// 排序方向：asc / desc
-    pub order: Option<String>,
+    /// 排序方向：asc（缺省）/ desc；拼错的值会被 serde 拒掉
+    #[serde(default)]
+    pub order: SortDir,
     /// 多条件筛选列（可重复）
     #[serde(default)]
     pub fcol: Vec<String>,
@@ -78,7 +80,7 @@ fn options_from_query(query: &TableDataQuery) -> TableReadOptions {
         filter_id: query.id.as_deref().and_then(|s| s.parse::<i64>().ok()),
         filter_col: query.ref_col.clone().filter(|s| !s.trim().is_empty()),
         sort_col: query.sort.clone().filter(|s| !s.trim().is_empty()),
-        sort_desc: query.order.as_deref() == Some("desc"),
+        sort_desc: query.order.is_desc(),
         search_col: None,
         search: None,
         filters,
@@ -314,7 +316,7 @@ mod tests {
             id: None,
             ref_col: None,
             sort: None,
-            order: None,
+            order: SortDir::Asc,
             fcol: vec!["id".into(), "name".into()],
             fop: vec!["gt".into(), "prefix".into()],
             fval: vec!["1".into(), "ali".into()],
@@ -337,7 +339,7 @@ mod tests {
             id: None,
             ref_col: None,
             sort: None,
-            order: None,
+            order: SortDir::Asc,
             fcol: vec!["name".into()],
             fop: Vec::new(),
             fval: Vec::new(),

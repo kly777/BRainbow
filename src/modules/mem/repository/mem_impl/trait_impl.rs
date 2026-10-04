@@ -213,26 +213,23 @@ impl MemRepository for super::super::MemRepo {
             }
         }
 
-        // 排序
-        match query.sort.as_deref() {
-            Some("difficulty") => {
+        // 排序。现在是穷尽 match：加一个排序列而漏了分支，编译器会拦
+        match query.sort {
+            MemSortField::Difficulty => {
                 qb.push(" ORDER BY m.difficulty");
             }
-            Some("cue.created_at") => {
+            MemSortField::CueCreatedAt => {
                 qb.push(" ORDER BY cc.created_at");
             }
-            Some("state") => {
+            MemSortField::State => {
                 qb.push(" ORDER BY m.state");
             }
-            _ => {
+            MemSortField::DueAt => {
                 qb.push(" ORDER BY m.due_at");
             }
         }
-        if query.order.as_deref() == Some("desc") {
-            qb.push(" DESC");
-        } else {
-            qb.push(" ASC");
-        }
+        qb.push(" ");
+        qb.push(query.order.sql());
 
         qb.push(" LIMIT ");
         qb.push_bind(limit);
@@ -327,29 +324,25 @@ impl MemRepository for super::super::MemRepo {
         query: &MemQuery,
     ) -> Result<i64, ServiceError> {
         // 构建排序字段 + 目标记录的值（子查询 join chunk 处理 cue.created_at）
-        let (sort_field, target_subquery) = match query.sort.as_deref() {
-            Some("difficulty") => (
+        let (sort_field, target_subquery) = match query.sort {
+            MemSortField::Difficulty => (
                 "COALESCE(m.difficulty, 0)",
                 "SELECT COALESCE(m2.difficulty, 0) FROM mem m2 WHERE m2.id = ",
             ),
-            Some("state") => (
+            MemSortField::State => (
                 "COALESCE(m.state, '')",
                 "SELECT COALESCE(m2.state, '') FROM mem m2 WHERE m2.id = ",
             ),
-            Some("cue.created_at") => (
+            MemSortField::CueCreatedAt => (
                 "COALESCE(cc.created_at, '')",
                 "SELECT COALESCE(cc2.created_at, '') FROM mem m2 LEFT JOIN chunk cc2 ON m2.cue_chunk_id = cc2.id WHERE m2.id = ",
             ),
-            _ => (
+            MemSortField::DueAt => (
                 "COALESCE(m.due_at, '')",
                 "SELECT COALESCE(m2.due_at, '') FROM mem m2 WHERE m2.id = ",
             ),
         };
-        let order_dir = if query.order.as_deref() == Some("desc") {
-            "DESC"
-        } else {
-            "ASC"
-        };
+        let order_dir = query.order.sql();
 
         let mut qb: QueryBuilder<sqlx::Sqlite> = QueryBuilder::new(
             "SELECT COUNT(*) FROM mem m LEFT JOIN chunk cc ON m.cue_chunk_id = cc.id LEFT JOIN chunk ct ON m.target_chunk_id = ct.id WHERE 1 = 1",

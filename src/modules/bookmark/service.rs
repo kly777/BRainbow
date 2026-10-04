@@ -453,6 +453,7 @@ fn extract_host_from_url(url: &str) -> Option<String> {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
+    use crate::modules::bookmark::model::SortBy;
     use crate::modules::bookmark::query::BookmarkQueryService;
     use sqlx::SqlitePool;
 
@@ -488,7 +489,7 @@ mod tests {
         assert_eq!(bm.tags, str_vec(&["编程"]));
 
         let (items, total) = qsvc
-            .list(&Actor::user(1), 10, 0, None, "created_at")
+            .list(&Actor::user(1), 10, 0, None, SortBy::CreatedAt)
             .await
             .unwrap();
         assert_eq!(total, 1);
@@ -513,7 +514,7 @@ mod tests {
             .unwrap();
 
         let (items, total) = qsvc
-            .list(&Actor::user(1), 10, 0, Some("编程"), "created_at")
+            .list(&Actor::user(1), 10, 0, Some("编程"), SortBy::CreatedAt)
             .await
             .unwrap();
         assert_eq!(total, 1);
@@ -628,7 +629,7 @@ mod tests {
 
         // 危险 scheme 不入库
         let (items, total) = qsvc
-            .list(&Actor::user(1), 10, 0, None, "created_at")
+            .list(&Actor::user(1), 10, 0, None, SortBy::CreatedAt)
             .await
             .unwrap();
         assert_eq!(total, 1);
@@ -751,13 +752,16 @@ mod tests {
 
         // ── 他人（B）：读不到 ──
         assert_eq!(
-            qsvc.list(&b, 10, 0, None, "created_at").await.unwrap().1,
+            qsvc.list(&b, 10, 0, None, SortBy::CreatedAt)
+                .await
+                .unwrap()
+                .1,
             0,
             "B 不该列出 A 的书签"
         );
         assert!(qsvc.by_id(&b, bm.id).await.unwrap().is_none());
         assert_eq!(
-            qsvc.list(&b, 10, 0, Some("编程"), "created_at")
+            qsvc.list(&b, 10, 0, Some("编程"), SortBy::CreatedAt)
                 .await
                 .unwrap()
                 .1,
@@ -826,7 +830,13 @@ mod tests {
         assert_eq!(untouched.tags, str_vec(&["编程"]));
 
         // ── 自己（A）：读写都行 ──
-        assert_eq!(qsvc.list(&a, 10, 0, None, "created_at").await.unwrap().1, 1);
+        assert_eq!(
+            qsvc.list(&a, 10, 0, None, SortBy::CreatedAt)
+                .await
+                .unwrap()
+                .1,
+            1
+        );
         assert_eq!(qsvc.search(&a, "A 的书签", None, 10, 0).await.unwrap().1, 1);
         assert_eq!(qsvc.grouped_by_tag(&a).await.unwrap().groups.len(), 1);
         let edited = svc
@@ -846,7 +856,7 @@ mod tests {
 
         // ── admin：全都能 ──
         assert_eq!(
-            qsvc.list(&admin, 10, 0, None, "created_at")
+            qsvc.list(&admin, 10, 0, None, SortBy::CreatedAt)
                 .await
                 .unwrap()
                 .1,
@@ -966,7 +976,7 @@ mod tests {
         let result = svc.import_netscape_html(&b, &html).await.unwrap();
         assert_eq!((result.created, result.merged), (1, 0));
         assert!(svc.check_url(&b, url).await.unwrap().exists);
-        let (_, total_a) = qsvc.list(&a, 10, 0, None, "created_at").await.unwrap();
+        let (_, total_a) = qsvc.list(&a, 10, 0, None, SortBy::CreatedAt).await.unwrap();
         assert_eq!(total_a, 1, "A 只有自己那一份");
         assert_eq!(
             qsvc.by_id(&a, 1).await.unwrap().unwrap().tags,
@@ -977,7 +987,7 @@ mod tests {
         // A 再导入一次同一 URL：并入自己的那份（标签取并集）
         let result = svc.import_netscape_html(&a, &html).await.unwrap();
         assert_eq!((result.created, result.merged), (0, 1));
-        let (_, total_a) = qsvc.list(&a, 10, 0, None, "created_at").await.unwrap();
+        let (_, total_a) = qsvc.list(&a, 10, 0, None, SortBy::CreatedAt).await.unwrap();
         assert_eq!(total_a, 1);
     }
 
@@ -996,14 +1006,17 @@ mod tests {
         let a = Actor::user(1);
         let admin = Actor::admin(3);
         assert_eq!(
-            qsvc.list(&a, 10, 0, None, "created_at").await.unwrap().1,
+            qsvc.list(&a, 10, 0, None, SortBy::CreatedAt)
+                .await
+                .unwrap()
+                .1,
             0,
             "普通用户看不到无主行"
         );
         assert_eq!(qsvc.search(&a, "老书签", None, 10, 0).await.unwrap().1, 0);
         assert_eq!(svc.delete(&a, 1).await.unwrap(), 0, "普通用户删不掉无主行");
         assert_eq!(
-            qsvc.list(&admin, 10, 0, None, "created_at")
+            qsvc.list(&admin, 10, 0, None, SortBy::CreatedAt)
                 .await
                 .unwrap()
                 .1,

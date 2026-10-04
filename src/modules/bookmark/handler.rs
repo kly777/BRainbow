@@ -14,7 +14,7 @@ use super::service::BookmarkService;
 
 use super::model::{
     Bookmark, CheckUrlQuery, CreateBookmarkRequest, FetchUrlRequest, SetBookmarkTagsRequest,
-    UpdateBookmarkRequest,
+    SortBy, UpdateBookmarkRequest,
 };
 
 #[derive(Debug, Serialize)]
@@ -98,8 +98,9 @@ pub struct ListBookmarksQuery {
     pub page_size: Option<i64>,
     /// 按标签名过滤
     pub tag: Option<String>,
-    /// 排序方式：created_at（默认）/ visit_count
-    pub sort: Option<String>,
+    /// 排序方式：created_at（缺省）/ visit_count；拼错的值会被 serde 拒掉
+    #[serde(default)]
+    pub sort: SortBy,
 }
 
 impl ListBookmarksQuery {
@@ -119,7 +120,7 @@ pub async fn get_bookmarks_handler(
         .as_deref()
         .map(str::trim)
         .filter(|s| !s.is_empty());
-    let sort = params.sort.as_deref().unwrap_or("created_at");
+    let sort = params.sort;
     let result = query
         .list(&actor, pagination.limit(), pagination.offset(), tag, sort)
         .await
@@ -450,4 +451,37 @@ pub async fn grouped_by_tag_handler(
     Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
     error::ok_or(query.grouped_by_tag(&actor).await, "获取分组书签")
+}
+
+#[cfg(test)]
+mod sort_by_tests {
+    use super::*;
+
+    #[test]
+    fn default_sort_is_by_creation_time() {
+        // 缺省必须是 created_at —— 列表默认按它排，别让它悄悄变成按访问次数
+        let q: ListBookmarksQuery = serde_json::from_str("{}").unwrap();
+        assert_eq!(q.sort, SortBy::CreatedAt);
+        assert!(!q.sort.prefers_visit_count());
+    }
+
+    #[test]
+    fn each_sort_decides_the_order_by_prefix() {
+        for (raw, by_visits) in [("created_at", false), ("visit_count", true)] {
+            let q: ListBookmarksQuery =
+                serde_json::from_str(&format!(r#"{{"sort":"{raw}"}}"#)).unwrap();
+            assert_eq!(q.sort.prefers_visit_count(), by_visits, "{raw}");
+        }
+    }
+
+    #[test]
+    fn an_unrecognised_sort_is_rejected_instead_of_falling_back_silently() {
+        // 改造前：任何别的值都走 `if sort == "visit_count"` 的 else 分支，
+        // 结果按 created_at 排 —— 不报错，只是顺序与请求的不一样
+        for bad in [r#""visits""#, r#""Visit_Count""#, r#""""#] {
+            let parsed: Result<ListBookmarksQuery, _> =
+                serde_json::from_str(&format!(r#"{{"sort":{bad}}}"#));
+            assert!(parsed.is_err(), "{bad} 本该被拒");
+        }
+    }
 }

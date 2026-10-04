@@ -54,19 +54,41 @@
 	flex-direction: column;
 }
 
+/* 行悬停：整行一个极轻的底，让"当前在读哪一行"有落点（参考产品的通行做法） */
+
 .task-item {
 	display: flex;
 	flex-direction: column;
-	padding: var(--space-lg) 0;
+
+	/* 行内补属性展开时（:focus-within）给一点横向留白，图标不至于贴到边框 */
+	padding: var(--space-md) var(--space-sm);
 	border-bottom: 1px solid var(--t-color-surface-raised);
 	transition: background var(--t-transition-fast);
 }
 
+/*
+ * ── 行解剖 ──
+ *
+ *   (○) 标题 ......................... 截止 优先级 标签       [操作]
+ *
+ * 状态在**行首**（参考产品一致的做法：Things / Todoist / Linear 都是点最左边的圆点），
+ * 操作在行尾且悬停才现。以前状态是行尾一个常驻的大下拉，一屏下来每行右边都堆着
+ * 四个控件 —— 那是表单不是列表。
+ */
 .task-row {
 	display: flex;
-	justify-content: space-between;
 	align-items: flex-start;
-	gap: var(--space-xl);
+	gap: var(--space-sm);
+}
+
+/* 行首状态位：宽度固定，标题左沿因此对齐成一列 */
+.task-lead {
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+
+	/* 与标题第一行光学对齐：标题 14px × leading-normal ≈ 21px 的行盒，圆点 18px */
+	height: calc(var(--text-sm) * var(--leading-normal));
 }
 
 .task-main {
@@ -84,21 +106,22 @@
 }
 
 .task-description {
-	margin: 0 0 var(--space-sm);
+	margin: 0 0 var(--space-xs);
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
 	line-height: var(--leading-normal);
 }
 
+/*
+ * 元信息一行、弱化到 --text-xs：标题是 --text-sm/600，元信息不该和它同号
+ * （否则一行的视觉重心会被日历图标抢走）。
+ */
 .task-meta {
 	display: flex;
 	gap: var(--space-md);
 	align-items: center;
 	flex-wrap: wrap;
-}
-
-.date-badge {
-	font-size: var(--text-sm);
+	font-size: var(--text-xs);
 	color: var(--t-color-ink-muted);
 }
 
@@ -113,30 +136,46 @@
 	vertical-align: middle;
 }
 
+/*
+ * ── 行尾操作组 ──
+ *
+ * 整组默认透明，悬停行或键盘聚焦（:focus-within）才显形 —— 与上面 .inline-actions 同一口径，
+ * 也和参考产品一致（Linear / Things 的次要动作都是 hover 才现）。
+ * 用 opacity 而不是 display/visibility：否则这些控件会被踢出 Tab 序，
+ * "悬停才显形"就变成"只有鼠标能用"。
+ *
+ * 触摸设备没有 hover（`hover: none`），那里必须常驻 —— 否则编辑/删除永远摸不到。
+ */
 .task-actions {
 	display: flex;
 	gap: var(--space-xs);
 	align-items: center;
 	flex-shrink: 0;
+	opacity: 0;
+	transition: opacity var(--t-transition-fast);
+}
+
+/* 展开编辑时额外锁住可见：鼠标移向编辑器时不至于整组淡掉 */
+.task-actions:has(.inline-actions-open),
+.task-item:hover .task-actions,
+.task-item:focus-within .task-actions {
+	opacity: 1;
+}
+
+@media (hover: none) {
+	.task-actions {
+		opacity: 1;
+	}
 }
 
 /* ── 行内补属性（标签 / 截止时间） ──
-   默认透明：密集列表里不该全是图标；悬停或键盘聚焦（:focus-within）时显形。
-   用 opacity 而不是 display/visibility —— 后者会把它们踢出 Tab 序，
-   键盘用户就永远碰不到（那样"悬停显形"等于"只有鼠标能用"）。 */
+   与外层 .task-actions 同一套显隐；展开时（inline-actions-open）额外锁住可见，
+   免得鼠标移向编辑器时整组淡掉。 */
 
 .inline-actions {
 	display: flex;
 	gap: var(--space-xs);
 	align-items: center;
-	opacity: 0;
-	transition: opacity var(--t-transition-fast);
-}
-
-.task-item:hover .inline-actions,
-.task-item:focus-within .inline-actions,
-.inline-actions-open {
-	opacity: 1;
 }
 
 .inline-button {
@@ -191,12 +230,68 @@
 	text-decoration: underline;
 }
 
+/*
+ * ── 状态：行首的圆点 ──
+ *
+ * 还是一个原生 `<select>`（键盘、读屏、原生下拉全都照旧），只是把它**画成**圆点：
+ * `appearance: none` 去掉原生外观，文字透明、尺寸收到 1.125rem。
+ *
+ * 形状按状态分四档（`data-status`）：○ 待办 / ◉ 进行中 / ✓ 已完成 / — 归档。
+ * 用 mask-image 而不是 background-image —— mask 只取形状，颜色走 `background-color`，
+ * 于是能跟着主题令牌走（data URI 里的 SVG 引用不了 CSS 变量，直接画成图就写死了颜色）。
+ *
+ * 形状（而不只是颜色）承载状态是硬要求：WCAG 1.4.1 不允许颜色成为唯一通道。
+ */
 .status-select {
-	padding: var(--space-xs) var(--space-xl) var(--space-xs) var(--space-md);
-	background: var(--t-color-surface)
-		url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%239ca3af' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E")
-		no-repeat right 0.5rem center;
 	appearance: none;
+	flex-shrink: 0;
+
+	/* 命中区守 24px（WCAG 2.5.8，本项目调研 §3.2 定的线），视觉圆点靠 mask-size 收到 18px。
+	   全局还有一条把表单控件统一撑到 36px 的 min-height，要显式压回去。 */
+	width: 1.5rem;
+	height: 1.5rem;
+	min-height: 1.5rem;
+	padding: 0;
+	border: none;
+	border-radius: var(--radius-full);
+	background-color: var(--t-color-ink-faint);
+	color: transparent; /* 选中项的文字藏起来，圆点取代它 */
+	cursor: pointer;
+	mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Ccircle cx='9' cy='9' r='7.2' fill='none' stroke='black' stroke-width='2'/%3E%3C/svg%3E");
+	mask-size: 1.125rem 1.125rem;
+	mask-repeat: no-repeat;
+	mask-position: center;
+	transition: background-color var(--t-transition-fast);
+}
+
+/* 原生下拉里的选项要照常可读 —— 上面的 color: transparent 会被 option 继承，
+   不覆盖这一条的话弹出的菜单是一片空白。 */
+.status-select option {
+	color: var(--t-color-ink);
+}
+
+/* 进行中：环 + 中心实点 */
+.status-select[data-status="active"] {
+	background-color: var(--t-color-accent);
+	mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Ccircle cx='9' cy='9' r='7.2' fill='none' stroke='black' stroke-width='2'/%3E%3Ccircle cx='9' cy='9' r='3.2' fill='black'/%3E%3C/svg%3E");
+}
+
+/* 已完成：实心 + 白勾（勾用 evenodd 挖空，形状与其余三档一眼可分） */
+.status-select[data-status="completed"] {
+	background-color: var(--t-color-success);
+	mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath fill-rule='evenodd' fill='black' d='M9 0a9 9 0 1 0 0 18A9 9 0 0 0 9 0Zm-1.2 12.6L4.4 9.2l1.5-1.5 1.9 1.9 4.3-4.3 1.5 1.5-5.8 5.8Z'/%3E%3C/svg%3E");
+}
+
+/* 归档：一道短横 */
+.status-select[data-status="archived"] {
+	mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Crect x='2.5' y='7.5' width='13' height='3' rx='1.5' fill='black'/%3E%3C/svg%3E");
+}
+
+/* 选中项文字是透明的，原生焦点样式由 tokens.css 的全局 select:focus 提供，
+   这里只补一个"看得见"的环（否则 18px 的圆点上焦点几乎察觉不到） */
+.status-select:focus-visible {
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: 2px;
 }
 
 .edit-button {
@@ -296,14 +391,24 @@
 	border-top: 1px solid var(--t-color-surface-raised);
 }
 
+/*
+ * 行悬停。
+ *
+ * 用 `surface-raised` 而不是 `surface`：paper 主题下 surface 是 99.5%、页面底是 100%，
+ * 差 0.5% 肉眼看不见（实测这个悬停态等于没有反馈）。raised 是 95.5%，才是"这一行亮了"。
+ */
 .task-item:hover {
-	background: var(--t-color-surface);
+	background: var(--t-color-surface-raised);
 }
 
+/*
+ * 窄屏：操作组落到第二行、右对齐，但**状态圆点仍与标题同行**。
+ * 原来这里是 `flex-direction: column`（整行纵向堆叠）—— 那时行首没有东西，
+ * 纵向没问题；现在圆点在最前面，纵向会让它孤零零飘在标题上面一行。
+ */
 @media (width <= 768px) {
 	.task-row {
-		flex-direction: column;
-		gap: var(--space-sm);
+		flex-wrap: wrap;
 	}
 }
 
@@ -359,23 +464,24 @@
 	color: var(--t-color-ink-muted);
 }
 
-.due-badge {
+/* 元信息里的"图标 + 文字"：行内 flex 让 12px 的线稿图标与文字基线齐平
+   （直接放在 span 里会按文字的基线对齐，图标显得飘高） */
+.due-badge,
+.effort-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2xs);
 	font-size: var(--text-xs);
 	color: var(--t-color-ink-muted);
 	font-variant-numeric: tabular-nums;
 }
 
-/* 逾期：⚠ 图标 + 描边（不是只换个颜色 —— WCAG 1.4.1 要求不能只有颜色通道） */
+/* 逾期：图标 + 文字 + 点下划线（不是只换个颜色 —— WCAG 1.4.1 要求不能只有颜色通道） */
 .due-overdue {
 	color: var(--t-color-danger);
 	font-weight: 600;
 	text-decoration: underline dotted;
 	text-underline-offset: 0.2em;
-}
-
-.effort-badge {
-	font-size: var(--text-xs);
-	color: var(--t-color-ink-muted);
 }
 
 .tag-chip {

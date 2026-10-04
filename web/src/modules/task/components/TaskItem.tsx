@@ -1,10 +1,16 @@
 import { Input, Select, Tooltip } from "@components/ui";
-import { Pencil, Trash2 } from "@components/ui/icons";
+import {
+	AlertTriangle,
+	Calendar,
+	Clock,
+	Pencil,
+	Tag,
+	Trash2,
+} from "@components/ui/icons";
 // TagInput 不走 barrel（见 @components/ui 顶部说明：它会把首屏撑大）
 import TagInput, {
 	type TagOption,
 } from "@components/ui/molecules/TagInput.tsx";
-import { fmtFull } from "@shared/utils";
 import { type Component, createSignal, For, Show } from "solid-js";
 import type { Task } from "../api.ts";
 import { getTagsE } from "../api.ts";
@@ -34,13 +40,9 @@ const TaskTitle: Component<{ title: string; isSubTask: boolean }> = (props) => (
 	</h3>
 );
 
-const DateBadge: Component<{ createdAt?: string }> = (props) => (
-	<Show when={props.createdAt}>
-		<span class={styles.dateBadge}>📅 {fmtFull(props.createdAt || "")}</span>
-	</Show>
-);
-
-/** 截止时间徽章：相对时间 + 逾期标记（**不靠颜色单独承载信息**，WCAG 1.4.1） */
+/** 截止时间徽章：相对时间 + 逾期标记（**不靠颜色单独承载信息**，WCAG 1.4.1）
+ *  图标走 @components/ui/icons（那儿的规矩是不许用 emoji 当图标），
+ *  "逾期/明天"这些字本身承担信息，图标只是冗余线索。 */
 const DueBadge: Component<{ dueAt: string | null }> = (props) => (
 	<Show when={formatDue(props.dueAt)}>
 		{(due) => (
@@ -48,7 +50,9 @@ const DueBadge: Component<{ dueAt: string | null }> = (props) => (
 				class={styles.dueBadge}
 				classList={{ [styles.dueOverdue]: due().overdue }}
 			>
-				{due().overdue ? "⚠ " : "⏰ "}
+				<Show when={due().overdue} fallback={<Clock size={12} />}>
+					<AlertTriangle size={12} />
+				</Show>
 				{due().text}
 			</span>
 		)}
@@ -101,6 +105,31 @@ function TaskItem(props: TaskItemProps) {
 	return (
 		<div class={styles.taskItem}>
 			<div class={styles.taskRow}>
+				{/*
+				 * 状态放在行首（参考产品一致的做法）：它是这一行最主要的动作 ——
+				 * Things / Todoist / Linear 都是"点最左边的圆点"完成任务。
+				 * 原生 <select> 保留：键盘与读屏行为不做任何改动，只把它画成一个圆点
+				 * （见 TaskList.module.css 的 .status-select，形状按状态分四档）。
+				 */}
+				<div class={styles.taskLead}>
+					<Select
+						value={props.task.status || TaskStatus.BACKLOG}
+						onChange={(e) =>
+							props.onStatusChange(
+								props.task.id,
+								toTaskStatus(e.currentTarget.value),
+							)
+						}
+						class={styles.statusSelect}
+						data-status={props.task.status || TaskStatus.BACKLOG}
+						aria-label={`任务状态：${props.task.title}`}
+					>
+						<option value={TaskStatus.BACKLOG}>待办</option>
+						<option value={TaskStatus.ACTIVE}>进行中</option>
+						<option value={TaskStatus.COMPLETED}>已完成</option>
+						<option value={TaskStatus.ARCHIVED}>归档</option>
+					</Select>
+				</div>
 				<div class={styles.taskMain}>
 					<TaskTitle
 						title={props.task.title}
@@ -109,18 +138,25 @@ function TaskItem(props: TaskItemProps) {
 					<Show when={props.task.description}>
 						<p class={styles.taskDescription}>{props.task.description}</p>
 					</Show>
+					{/*
+					 * 元信息一行、弱化到 --text-xs：按"用户下一步会动什么"排
+					 * （截止 → 优先级 → 时长 → 标签）。
+					 * 创建时间**不在这里** —— 它不可操作，而且顶着 📅 会被读成"截止"。
+					 */}
 					<div class={styles.taskMeta}>
-						<PriorityBadge priority={props.task.priority} />
 						<DueBadge dueAt={props.task.due_at} />
+						<PriorityBadge priority={props.task.priority} />
 						<Show when={props.task.effort_estimate_minutes}>
 							{(minutes) => (
-								<span class={styles.effortBadge}>⏱ {minutes()}m</span>
+								<span class={styles.effortBadge}>
+									<Clock size={12} />
+									{minutes()}m
+								</span>
 							)}
 						</Show>
 						<For each={props.task.tags}>
 							{(tag) => <span class={styles.tagChip}>#{tag.name}</span>}
 						</For>
-						<DateBadge createdAt={props.task.created_at} />
 					</div>
 					{/* 排序理由（P8）：常驻可见，不藏进 tooltip —— 它是"为什么排这儿"的唯一解释 */}
 					<Show when={props.task.reason}>
@@ -147,7 +183,7 @@ function TaskItem(props: TaskItemProps) {
 										setDateEditorOpen(false);
 									}}
 								>
-									🏷
+									<Tag size={14} />
 								</button>
 							</Tooltip>
 							<Tooltip label="截止时间">
@@ -161,27 +197,11 @@ function TaskItem(props: TaskItemProps) {
 										setTagEditorOpen(false);
 									}}
 								>
-									🗓
+									<Calendar size={14} />
 								</button>
 							</Tooltip>
 						</div>
 					</Show>
-					<Select
-						value={props.task.status || TaskStatus.BACKLOG}
-						onChange={(e) =>
-							props.onStatusChange(
-								props.task.id,
-								toTaskStatus(e.currentTarget.value),
-							)
-						}
-						class={styles.statusSelect}
-						aria-label={`任务状态：${props.task.title}`}
-					>
-						<option value={TaskStatus.BACKLOG}>待办</option>
-						<option value={TaskStatus.ACTIVE}>进行中</option>
-						<option value={TaskStatus.COMPLETED}>已完成</option>
-						<option value={TaskStatus.ARCHIVED}>归档</option>
-					</Select>
 					<Tooltip label="编辑">
 						<button
 							type="button"

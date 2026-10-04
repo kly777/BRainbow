@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -325,32 +326,38 @@ impl TaskQueryService {
             .map_err(ServiceError::Db)?;
 
         // ② 硬占用：`planned` + `actual`（循环窗口展开后计入，上限 52 段）。
-        //    `feasible` **不算** —— 它是"我大概有空"的软信息（见 slotting.rs §3.5）
-        let busy = self
+        //    `feasible` **不算** —— 它是"我大概有空"的软信息（见 slotting.rs §3.5）。
+        //    顺带记下"这段时间里已经安排过的任务"：同一个区间不重复建议同一个任务
+        //    （采纳一条之后图层里就该少一条，而不是在同一天的另一格又冒出来）
+        let mut already_scheduled: HashSet<i32> = HashSet::new();
+        let mut busy: Vec<(DateTime<Utc>, DateTime<Utc>)> = Vec::new();
+        for (task, window) in self
             .repo
             .find_calendar_events(actor, Some(from), Some(to), None)
             .await
             .map_err(ServiceError::Db)?
-            .into_iter()
-            .filter(|(_, window)| {
-                matches!(
-                    window.window_type,
-                    TimeWindowType::Planned | TimeWindowType::Actual
-                )
-            })
-            .flat_map(|(_, window)| {
+        {
+            if !matches!(
+                window.window_type,
+                TimeWindowType::Planned | TimeWindowType::Actual
+            ) {
+                continue;
+            }
+            already_scheduled.insert(task.id);
+            busy.extend(
                 slotting::expand_capped(&window, from)
                     .into_iter()
                     .map(|seg| {
                         // 裁到区间内：展开函数给的是"从 from 起的若干段"
                         (seg.0.max(from), seg.1.min(to))
-                    })
-            })
-            .collect::<Vec<_>>();
+                    }),
+            );
+        }
 
         // ③ 候选装配：阻塞信息从依赖边里取（`ranking` 已经用它算过因子，这里只取文案）
         let candidates = tasks
             .iter()
+            .filter(|task| !already_scheduled.contains(&task.id))
             .filter_map(|task| {
                 let ranked = ranked.get(&task.id)?;
                 let deps = edges.get(&task.id);
@@ -710,11 +717,21 @@ mod sorted_tests {
         let ctx = setup().await;
         let actor = Actor::user(1);
 
+        // 两个任务：一个已经排过（不参与建议），一个空着（会被建议）
         let mut task_req = req("写周报");
         task_req.due_at = Some(Utc::now() + Duration::days(1));
         task_req.effort_estimate_minutes = Some(60);
-        let task = ctx.svc.create(&actor, task_req).await.unwrap();
-        planned(&ctx, task.id, Utc::now(), Utc::now() + Duration::hours(1)).await;
+        let scheduled = ctx.svc.create(&actor, task_req).await.unwrap();
+        planned(
+            &ctx,
+            scheduled.id,
+            Utc::now(),
+            Utc::now() + Duration::hours(1),
+        )
+        .await;
+        let mut free_req = req("读论文");
+        free_req.effort_estimate_minutes = Some(60);
+        ctx.svc.create(&actor, free_req).await.unwrap();
 
         let from = Utc::now();
         let to = from + Duration::days(3);
@@ -737,22 +754,29 @@ mod sorted_tests {
     async fn suggestions_avoid_existing_plans() {
         let ctx = setup().await;
         let actor = Actor::user(1);
-        let task = ctx.svc.create(&actor, req("写周报")).await.unwrap();
+
+        // 占一整天工作时段的是 A；被建议的是 B —— B 的落点不能压到 A 上
+        let busy_task = ctx.svc.create(&actor, req("开会")).await.unwrap();
         planned(
             &ctx,
-            task.id,
+            busy_task.id,
             Utc::now() + Duration::days(1),
             Utc::now() + Duration::days(1) + Duration::hours(8),
         )
         .await;
+        let mut free_req = req("写周报");
+        free_req.effort_estimate_minutes = Some(60);
+        let free_task = ctx.svc.create(&actor, free_req).await.unwrap();
 
         let from = Utc::now();
         let to = from + Duration::days(3);
         let result = ctx.qsvc.suggestions(&actor, from, to).await.unwrap();
-        // 区间内确实有建议（默认工作时段里还有空档），且没有一条与占用重叠
+        assert!(!result.suggestions.is_empty(), "至少该给出一条");
+        // 建议里只有 B，且没有一条与占用重叠
         let busy_start = Utc::now() + Duration::days(1);
         let busy_end = busy_start + Duration::hours(8);
         for s in &result.suggestions {
+            assert_eq!(s.task_id, free_task.id);
             assert!(
                 s.end <= busy_start || s.start >= busy_end,
                 "建议与已有安排重叠：{:?} – {:?}",
@@ -760,6 +784,37 @@ mod sorted_tests {
                 s.end
             );
         }
+    }
+
+    /// 已经排在这段区间里的任务不再被建议（也不进 unscheduled）——
+    /// 采纳一条之后图层里就该少一条（S6-c），而不是同一任务在同一天又冒出来
+    #[tokio::test]
+    async fn already_scheduled_task_is_not_suggested_again() {
+        let ctx = setup().await;
+        let actor = Actor::user(1);
+        let mut task_req = req("写周报");
+        task_req.effort_estimate_minutes = Some(60);
+        let task = ctx.svc.create(&actor, task_req).await.unwrap();
+        planned(
+            &ctx,
+            task.id,
+            Utc::now() + Duration::days(1),
+            Utc::now() + Duration::days(1) + Duration::hours(1),
+        )
+        .await;
+
+        let from = Utc::now();
+        let to = from + Duration::days(3);
+        let result = ctx.qsvc.suggestions(&actor, from, to).await.unwrap();
+
+        assert!(
+            result.suggestions.iter().all(|s| s.task_id != task.id),
+            "已经排过的任务又被建议了一次"
+        );
+        assert!(
+            result.unscheduled.iter().all(|u| u.task_id != task.id),
+            "已经排过的任务不该出现在「排不下」里"
+        );
     }
 
     /// 区间起止颠倒 → 400（不是 500）

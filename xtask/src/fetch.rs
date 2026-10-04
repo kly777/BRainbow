@@ -162,6 +162,11 @@ fn find_extracted(extract: &Path) -> Result<PathBuf> {
     )))
 }
 
+/// 给解出来的二进制补执行位。
+///
+/// Windows 没有执行位这回事，那边的实现就是空操作 —— 显式 allow 掉未使用参数，
+/// 免得每个 Windows 构建都捎上一条 `unused_variables` 告警（告警一多就没人看了）。
+#[cfg_attr(not(unix), allow(unused_variables))]
 fn make_executable(path: &Path) -> Result<()> {
     #[cfg(unix)]
     {

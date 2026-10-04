@@ -105,11 +105,23 @@ impl Config {
         // 而且这种错是静默的（服务照跑，文件不见了）。
         let root = vars("BRAINBOW_ROOT").ok().map(PathBuf::from);
         let db_file = vars("DATABASE_FILE").unwrap_or_else(|_| "brainbow.db".into());
-        let under_root = |suffix: &str| root.as_ref().map(|r| r.join(suffix));
+        // 按**组件**逐段 join（而不是 `join("data/x.db")`）：`Path::join` 只会补一个
+        // 平台分隔符，把 `"data/{db_file}"` 整串塞进去会在 Windows 上拼出
+        // `C:\brb\data/x.db` 这种混用分隔符的路径。逐段 join 在两个平台都得到该平台
+        // 自己的形态，Linux 上的结果与从前逐字节相同。
+        let under_root = |parts: &[&str]| {
+            root.as_ref().map(|r| {
+                let mut path = r.clone();
+                for part in parts {
+                    path.push(part);
+                }
+                path
+            })
+        };
 
         Self {
             database_url: vars("DATABASE_URL").unwrap_or_else(|_| {
-                under_root(&format!("data/{db_file}"))
+                under_root(&["data", &db_file])
                     .map(|p| format!("sqlite:{}", p.display()))
                     .unwrap_or_else(|| "sqlite:brainbow.db".into())
             }),
@@ -150,7 +162,7 @@ impl Config {
             upload_dir: vars("UPLOAD_DIR")
                 .map(PathBuf::from)
                 .ok()
-                .or_else(|| under_root("data/uploads"))
+                .or_else(|| under_root(&["data", "uploads"]))
                 .unwrap_or_else(|| PathBuf::from("uploads")),
 
             ffmpeg_path: vars("FFMPEG_PATH").ok().map(PathBuf::from),
@@ -160,7 +172,7 @@ impl Config {
             backup_dir: vars("BACKUP_DIR")
                 .map(PathBuf::from)
                 .ok()
-                .or_else(|| under_root("backup")),
+                .or_else(|| under_root(&["backup"])),
         }
     }
 }
@@ -190,6 +202,15 @@ pub fn resolve_ffmpeg(
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
+
+    /// 把路径统一成 `/` 分隔再比较。
+    ///
+    /// 根目录级联是用 `Path` 逐段 join 出来的，Windows 上得到的是 `\` 分隔的形态
+    /// （Linux 上就是 `/`）。这些断言要钉的是"派生出来的路径长什么样"（`{root}/data/<库文件>`），
+    /// 不是平台分隔符，所以比较前归一化 —— 否则每条断言都得写两份。
+    fn slashed(path: impl std::fmt::Display) -> String {
+        path.to_string().replace('\\', "/")
+    }
 
     /// 注入式变量读取器：测试不触碰全局 env，可并行运行
     fn vars_with<'a>(
@@ -249,11 +270,17 @@ mod tests {
     fn root_dir_derives_the_data_paths() {
         // 部署时只需要给一个根：数据一律落在 `{root}/data/` 下
         let cfg = Config::from_vars(vars_with(&[("BRAINBOW_ROOT", "/opt/brb")]));
-        assert_eq!(cfg.database_url, "sqlite:/opt/brb/data/brainbow.db");
-        assert_eq!(cfg.upload_dir, PathBuf::from("/opt/brb/data/uploads"));
-        assert_eq!(cfg.file_upload_dir(), "/opt/brb/data/uploads/file");
+        assert_eq!(
+            slashed(&cfg.database_url),
+            "sqlite:/opt/brb/data/brainbow.db"
+        );
+        assert_eq!(slashed(cfg.upload_dir.display()), "/opt/brb/data/uploads");
+        assert_eq!(slashed(cfg.file_upload_dir()), "/opt/brb/data/uploads/file");
         // 备份在 `{root}/backup`（部署工具往那儿写，应用只读来报大小）
-        assert_eq!(cfg.backup_dir, Some(PathBuf::from("/opt/brb/backup")));
+        assert_eq!(
+            cfg.backup_dir.map(|p| slashed(p.display())),
+            Some("/opt/brb/backup".to_string())
+        );
     }
 
     #[test]
@@ -279,7 +306,7 @@ mod tests {
         // 文件名与部署工具共用同一个变量（改一处两边都跟着走）
         let vars = vars_with(&[("BRAINBOW_ROOT", "/opt/brb"), ("DATABASE_FILE", "prod.db")]);
         let cfg = Config::from_vars(vars);
-        assert_eq!(cfg.database_url, "sqlite:/opt/brb/data/prod.db");
+        assert_eq!(slashed(&cfg.database_url), "sqlite:/opt/brb/data/prod.db");
     }
 
     #[test]

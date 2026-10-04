@@ -1,0 +1,258 @@
+/* 周/日时间轴：小时刻度 + 事件块 + 全天行 */
+
+.axis-view {
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	overflow: hidden;
+}
+
+/* ── 表头 ── */
+
+.axis-header {
+	display: grid;
+	border-bottom: 1px solid var(--t-color-border);
+	background: var(--t-color-surface-raised);
+}
+
+.axis-header-cell {
+	display: flex;
+	align-items: baseline;
+	justify-content: center;
+	gap: var(--space-2xs);
+	padding: var(--space-2xs);
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	border-right: 1px solid var(--t-color-border);
+}
+
+.axis-header-cell:last-child {
+	border-right: none;
+}
+
+.header-day {
+	font-weight: 600;
+	color: var(--t-color-ink);
+	font-variant-numeric: tabular-nums;
+}
+
+.today .header-day {
+	color: var(--t-color-accent);
+}
+
+.header-weekday {
+	font-size: var(--text-xs);
+}
+
+/* ── 全天行（S5-3） ── */
+
+.all-day-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-2xs);
+	padding: var(--space-2xs) var(--space-2xs);
+	border-bottom: 1px solid var(--t-color-border);
+}
+
+.all-day-chip {
+	padding: 0 var(--space-2xs);
+	background: var(--t-color-accent-soft);
+	border-radius: var(--radius-2xs);
+	font-size: var(--text-xs);
+	white-space: nowrap;
+}
+
+/* ── 滚动体 ── */
+
+.axis-scroller {
+	display: flex;
+	height: 26rem;
+	overflow: hidden auto;
+}
+
+.hour-gutter {
+	position: relative;
+	flex-shrink: 0;
+	width: 3rem;
+	border-right: 1px solid var(--t-color-border);
+}
+
+.hour-label {
+	position: absolute;
+	right: var(--space-2xs);
+	transform: translateY(-50%);
+	font-size: var(--text-2xs);
+	color: var(--t-color-ink-faint);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.day-columns {
+	display: grid;
+	flex: 1;
+	min-width: 0;
+}
+
+/* ── 一天一列 ── */
+
+.day-column {
+	position: relative;
+	min-width: 0;
+	border-right: 1px solid var(--t-color-border);
+}
+
+.day-column:last-child {
+	border-right: none;
+}
+
+/* 周末弱化：靠底色而不是只靠表头（表头只是标签，轴上也得能看出来） */
+.weekend-col {
+	background: color-mix(
+		in oklch,
+		var(--t-color-ink-faint) 3%,
+		var(--t-color-surface)
+	);
+}
+
+.today {
+	background: color-mix(
+		in oklch,
+		var(--t-color-accent) 4%,
+		var(--t-color-surface)
+	);
+}
+
+/* 小时横线：纯背景，事件块叠在上面 */
+.hour-lines {
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+}
+
+.hour-line {
+	position: absolute;
+	left: 0;
+	right: 0;
+	border-top: 1px solid var(--t-color-border);
+}
+
+/* ── 事件块 ── */
+
+.event-block {
+	position: absolute;
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	overflow: hidden;
+	padding: 1px 2px;
+	border: none;
+	border-left: 3px solid transparent;
+	border-radius: var(--radius-2xs);
+	font-size: var(--text-2xs);
+	text-align: left;
+	cursor: pointer;
+
+	/* 并排时相邻列之间留缝，否则两块看起来连成一块 */
+	box-shadow: 0 0 0 1px var(--t-color-surface);
+}
+
+.event-block:focus-visible {
+	outline: var(--t-ring-accent, 0 0 0 3px var(--t-color-accent-ring));
+	outline-offset: -2px;
+	z-index: 2;
+}
+
+.block-time {
+	flex-shrink: 0;
+	font-variant-numeric: tabular-nums;
+	opacity: 0.75;
+}
+
+.block-title {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/* 极短的块（<30 分钟，够不到 24px 下限）放不下时间前缀 —— 只留标题，
+   时间靠 hover 的 tooltip 给（**不靠缩字号硬塞**，那会读不出来） */
+.size-tiny .block-time {
+	display: none;
+}
+
+/* ── 三通道语义（与月网格同一套） ── */
+
+.type-planned {
+	border-left-style: solid;
+	border-left-color: var(--t-color-accent);
+}
+
+.type-actual {
+	border-left: 4px solid var(--t-color-success);
+}
+
+.status-active {
+	background: color-mix(in oklch, var(--t-color-accent) 6%, transparent);
+	color: var(--t-color-ink);
+}
+
+.status-backlog {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+.status-completed {
+	background: none;
+	color: var(--t-color-ink-faint);
+}
+
+.status-completed .block-title {
+	text-decoration: line-through;
+}
+
+/* ── 当前时间线 ── */
+
+.now-line {
+	position: absolute;
+	left: 0;
+	right: 0;
+	height: 0;
+	border-top: 2px solid var(--t-color-danger);
+	pointer-events: none;
+	z-index: 3;
+}
+
+/* ── 高对比度 / 强制颜色 ── */
+
+@media (forced-colors: active) {
+	.event-block {
+		border-left-width: 3px;
+		background: Canvas;
+		color: CanvasText;
+	}
+
+	.now-line {
+		border-top-color: Highlight;
+	}
+}
+
+@media (prefers-contrast: more) {
+	.event-block {
+		border-left-width: 4px;
+	}
+}
+
+/* ── 窄屏 ── */
+
+@media (width <= 768px) {
+	.axis-scroller {
+		height: 20rem;
+	}
+
+	.hour-gutter {
+		width: 2.5rem;
+	}
+}

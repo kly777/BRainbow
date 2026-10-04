@@ -17,13 +17,24 @@ import {
 	segmentEventsByDay,
 	setCalendarDensity,
 	setWeekStartSetting,
+	startOfDay,
+	startOfWeek,
 	type Weekday,
 } from "../lib/calendar.ts";
+
+/** 视图粒度。当前粒度是**信息**不是命令 —— 用户必须随时知道自己在看哪一层，
+ *  所以它常驻在日历那一行（06-日历视图 §2） */
+export type CalendarGranularity = "month" | "week" | "day";
 
 export interface TaskCalendarApi {
 	currentDate: () => Date;
 	monthTitle: () => string;
-	/** 月网格（含补位格） */
+	/** 视图粒度：月网格 / 周时间轴 / 日时间轴 */
+	granularity: () => CalendarGranularity;
+	setGranularity: (value: CalendarGranularity) => void;
+	/** 当前粒度下要画的那些天（周视图 7 天、日视图 1 天） */
+	visibleDays: () => readonly Date[];
+	/** 月网格（含补位格）；周/日视图下为空数组 */
 	grid: () => readonly GridCell[];
 	/** 表头标签，按当前起始日取值 */
 	weekdayLabels: () => readonly string[];
@@ -52,6 +63,8 @@ export interface TaskCalendarApi {
 
 export function useTaskCalendar(weekParam?: () => string | undefined) {
 	const [currentDate, setCurrentDate] = createSignal<Date>(new Date());
+	const [granularity, setGranularity] =
+		createSignal<CalendarGranularity>("month");
 	const [density, setDensitySignal] = createSignal<CalendarDensity>(
 		getCalendarDensity(),
 	);
@@ -67,17 +80,42 @@ export function useTaskCalendar(weekParam?: () => string | undefined) {
 	});
 	const weekendDays = createMemo(() => new Set(localeWeekendDays()));
 
+	/** 当前粒度下要画的那些天（周 7 天、日 1 天；月视图用不到这个） */
+	const visibleDays = createMemo<readonly Date[]>(() => {
+		const date = currentDate();
+		if (granularity() === "day") {
+			return [startOfDay(date)];
+		}
+		if (granularity() === "week") {
+			const start = startOfWeek(date, firstDay());
+			return Array.from({ length: 7 }, (_, i) => {
+				const day = new Date(start);
+				day.setDate(day.getDate() + i);
+				return day;
+			});
+		}
+		return [];
+	});
+
 	const monthRange = createMemo(() => {
 		const d = currentDate();
-		const y = d.getFullYear();
-		const m = d.getMonth();
-		return {
-			start: new Date(y, m, 1).toISOString(),
-			// 上界给**下月 1 号零点**：后端是 `start_time < end AND end_time > start` 的
-			// 半开重叠查询，所以跨到下月头一天的时段（以及 1 号当天结束的）都在范围内。
-			// 给"本月最后一刻"反而会漏掉落在下月 1 号凌晨的那一段。
-			end: new Date(y, m + 1, 1).toISOString(),
-		};
+		// 周/日视图按那一段取；上界给**区间末日 +1 天的零点**：后端是
+		// `start_time < end AND end_time > start` 的半开重叠查询，所以跨到区间外
+		// 头一天的时段（以及末日当天结束的）都在范围内。
+		if (granularity() === "month") {
+			const y = d.getFullYear();
+			const m = d.getMonth();
+			return {
+				start: new Date(y, m, 1).toISOString(),
+				end: new Date(y, m + 1, 1).toISOString(),
+			};
+		}
+		const days = visibleDays();
+		const first = days[0] ?? startOfDay(d);
+		const last = days[days.length - 1] ?? startOfDay(d);
+		const end = new Date(last);
+		end.setDate(end.getDate() + 1);
+		return { start: first.toISOString(), end: end.toISOString() };
 	});
 
 	// 月份区间即请求键；端点给数组，交原语归一（错误经 onError 提示，
@@ -136,8 +174,14 @@ export function useTaskCalendar(weekParam?: () => string | undefined) {
 		},
 		grid: () => {
 			const date = currentDate();
+			if (granularity() !== "month") {
+				return [];
+			}
 			return monthGrid(date.getFullYear(), date.getMonth(), firstDay());
 		},
+		granularity,
+		setGranularity,
+		visibleDays,
 		weekdayLabels: () => orderedWeekdayLabels(firstDay()),
 		weekdayShortLabels: () => orderedWeekdayLabels(firstDay(), false),
 		isWeekendCol: (col: number) =>

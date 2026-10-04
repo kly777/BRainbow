@@ -11,7 +11,10 @@
 
 import { Select } from "@components/ui";
 import { For } from "solid-js";
-import type { TaskCalendarApi } from "../hooks/useTaskCalendar.ts";
+import type {
+	CalendarGranularity,
+	TaskCalendarApi,
+} from "../hooks/useTaskCalendar.ts";
 import type { CalendarDensity, Weekday } from "../lib/calendar.ts";
 import styles from "./TaskCalendar.module.css";
 
@@ -35,11 +38,39 @@ const DENSITY_OPTIONS: readonly { value: CalendarDensity; label: string }[] = [
 	{ value: "standard", label: "标准（每格 5 条）" },
 ];
 
+/** 粒度常驻：它是信息不是命令（06-日历视图 §2） */
+const GRANULARITY_OPTIONS: readonly {
+	value: CalendarGranularity;
+	label: string;
+}[] = [
+	{ value: "month", label: "月" },
+	{ value: "week", label: "周" },
+	{ value: "day", label: "日" },
+];
+
 export default function CalendarSettings(props: { calendar: TaskCalendarApi }) {
 	const m = () => props.calendar;
 
 	return (
 		<div class={styles.settingsBar}>
+			{/* 粒度常驻在最左：用户必须随时知道自己在看哪一层 */}
+			<span class={styles.settingsItem}>
+				<label class={styles.settingsLabel} for="calendar-granularity">
+					视图
+				</label>
+				<Select
+					id="calendar-granularity"
+					value={m().granularity()}
+					onChange={(e) =>
+						m().setGranularity(e.currentTarget.value as CalendarGranularity)
+					}
+				>
+					<For each={GRANULARITY_OPTIONS}>
+						{(option) => <option value={option.value}>{option.label}</option>}
+					</For>
+				</Select>
+			</span>
+
 			<span class={styles.settingsItem}>
 				{/* label 用 for 关联而不是包住控件：包裹式 label 会在 Select
 				    渲染出真实 <select> 时被 lint 判成"没有关联控件"，也读屏上

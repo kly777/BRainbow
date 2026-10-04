@@ -5,6 +5,7 @@ import { createSignal, Show } from "solid-js";
 import { useTaskCalendar } from "../hooks/useTaskCalendar.ts";
 import styles from "../TaskManager.module.css";
 import CalendarSettings from "./CalendarSettings.tsx";
+import CalendarTimeGrid from "./CalendarTimeGrid.tsx";
 import TaskCalendar from "./TaskCalendar.tsx";
 import TaskDag from "./TaskDag.tsx";
 import TaskDrawer from "./TaskDrawer.tsx";
@@ -54,10 +55,21 @@ export default function TaskPanel(props: TaskPanelProps) {
 								<Show when={props.rightTab === "calendar"}>
 									{/* 设置条放在日历自己上方，不占主工具条的常驻控件预算 */}
 									<CalendarSettings calendar={calendar} />
-									<TaskCalendar
-										calendar={calendar}
-										onOpenTask={setOpenTaskId}
-									/>
+									{/* 月网格 / 周·日时间轴共用同一份状态（见 hooks/useTaskCalendar） */}
+									<Show
+										when={calendar.granularity() === "month"}
+										fallback={
+											<CalendarTimeGrid
+												calendar={calendar}
+												onOpenTask={setOpenTaskId}
+											/>
+										}
+									>
+										<TaskCalendar
+											calendar={calendar}
+											onOpenTask={setOpenTaskId}
+										/>
+									</Show>
 									<TaskDrawer
 										taskId={openTaskId()}
 										onClose={() => setOpenTaskId(null)}

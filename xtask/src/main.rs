@@ -79,7 +79,7 @@ enum Command {
     Dev {
         /// all（默认）/ backend / backend-check（只编译校验）/ web
         #[arg(default_value = "all", value_name = "MODE")]
-        mode: String,
+        mode: build::DevMode,
     },
     /// 全量部署到远端（停服 → 备份 → 同步 → 起服 → 自检 → 同步 Caddy）
     Deploy,
@@ -136,7 +136,7 @@ enum Command {
     /// 打印渲染结果（排障用）：unit 或 caddy
     Render {
         /// 渲染目标：unit 或 caddy
-        what: String,
+        what: cmd::ops::RenderTarget,
     },
 
     // ── 本地开发循环 ──
@@ -196,7 +196,7 @@ fn run(cli: Cli) -> Result<()> {
         Command::Build { target } => build::run_build(&cfg, target.as_deref()),
         Command::BuildWeb => build::run_build_web(&cfg),
         Command::BuildBackend { target } => build::run_build_backend(&cfg, target.as_deref()),
-        Command::Dev { mode } => build::run_dev(&cfg, build::DevMode::parse(Some(&mode))?),
+        Command::Dev { mode } => build::run_dev(&cfg, mode),
         Command::Deploy => deploy::run(&mut cfg, &remote),
         Command::Check => cmd::check::run(&cfg, &remote),
         Command::Status => cmd::status::run_status(&cfg, &remote),
@@ -214,7 +214,7 @@ fn run(cli: Cli) -> Result<()> {
         Command::DbPull => cmd::ops::run_db_pull(&cfg, &remote),
         Command::DbPush { source, yes } => cmd::ops::run_db_push(&cfg, &remote, source, yes),
         Command::FetchFfmpeg => fetch::run(&cfg),
-        Command::Render { what } => cmd::ops::run_render(&mut cfg, &what),
+        Command::Render { what } => cmd::ops::run_render(&mut cfg, what),
         Command::Fmt => devel::run_fmt(&cfg),
         Command::Lint => devel::run_lint(&cfg),
         Command::Test { verbose } => devel::run_test(&cfg, verbose),

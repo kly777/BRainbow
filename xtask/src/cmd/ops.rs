@@ -32,27 +32,35 @@ pub fn run_caddy(cfg: &Config, remote: &Remote) -> Result<()> {
 
 // ── 渲染结果（排障） ──────────────────────────────────────────────
 
+/// `render` 的渲染目标。合法值交给 clap 的 `ValueEnum`（见 `main.rs`）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, clap::ValueEnum)]
+pub enum RenderTarget {
+    /// systemd unit
+    #[value(name = "unit")]
+    Unit,
+    /// Caddyfile
+    #[value(name = "caddy")]
+    Caddy,
+}
+
 /// `render <unit|caddy>`：把渲染结果打到 stdout（只有内容，没有横幅与提示）。
 ///
 /// 想知道"部署到底会往 /etc 里写什么"时用它，例如与现网配置逐字节 diff：
 ///   cargo xtask render caddy | diff - <(ssh <host> 'cat /etc/caddy/Caddyfile')
-pub fn run_render(cfg: &mut Config, what: &str) -> Result<()> {
+pub fn run_render(cfg: &mut Config, what: RenderTarget) -> Result<()> {
     match what {
-        "caddy" => {
+        RenderTarget::Caddy => {
             // 不换行、不加任何前后缀：输出要能直接拿去 diff
             print!("{}", render::caddyfile(cfg)?);
             Ok(())
         }
-        "unit" => {
+        RenderTarget::Unit => {
             let secret = cfg.require_jwt_secret(false)?;
             let unit = render::systemd_unit(cfg, &secret)?;
             // 密钥打码：要看的是结构，不是密钥本身
             print!("{}", unit.replace(&secret, "<已隐藏>"));
             Ok(())
         }
-        other => Err(Error::msg(format!(
-            "不认识的目标 {other:?}（可选 unit / caddy）"
-        ))),
     }
 }
 

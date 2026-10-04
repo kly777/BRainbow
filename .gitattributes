@@ -1,0 +1,30 @@
+# 换行符：仓库里一律 LF，检出时也不许转成 CRLF。
+#
+# 为什么必须显式写：Windows 上 Git for Windows 的 `core.autocrlf` 默认是 `true`，
+# 没有这条规则时它会把整个工作区检出成 CRLF。而 `web/biome.json` 的 formatter
+# 期望的是 LF —— 于是 `pnpm run check` 会对**每一个**前端文件报格式错误
+# （实测 103 处），看着像"整仓库没格式化过"，其实只差一个换行符；
+# stylelint 与 diff 噪音同理。
+#
+# `eol=lf` 优先于 `core.autocrlf`：无论开发机怎么配，检出来的都是 LF，
+# Linux / macOS / Windows 三个工作区逐字节一致。
+* text=auto eol=lf
+
+# 二进制：不做任何转换（text=auto 本来也能识别，这里是显式兜底）
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.avif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.xz binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.db binary
+*.sqlite binary

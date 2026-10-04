@@ -116,3 +116,37 @@ export function applyFontScale(name: FontScaleName) {
 export function initFontScale() {
 	applyFontScale(getFontScale());
 }
+
+/* ════════════════════════════════════════════════════════════
+ * 动效开关（认知辅助功能）
+ *
+ * 系统偏好 `prefers-reduced-motion` 已经覆盖了大部分场景，但只有它不够：
+ * 有些人的"动效敏感"不是系统级的（不是从系统设置里开的），也有人在**需要**动画
+ * 的场合临时想关掉。所以留一个显式开关 —— Google 也把「开/关动画」列在
+ * 认知辅助功能里（S5-15）。
+ *
+ * 落成 `<html data-motion="reduced">`，各组件的 CSS 侧据此关掉过渡/动效；
+ * 系统偏好那一路由 CSS 的 `@media (prefers-reduced-motion: reduce)` 兜底。
+ * ════════════════════════════════════════════════════════════ */
+
+const MOTION_KEY = "brainbow_motion";
+
+/** 用户显式选择：`reduced` = 关动画；`null` = 跟随系统 */
+export function getMotionPreference(): "reduced" | null {
+	return localStorage.getItem(MOTION_KEY) === "reduced" ? "reduced" : null;
+}
+
+export function applyMotionPreference(value: "reduced" | null): void {
+	const root = document.documentElement;
+	if (value === "reduced") {
+		root.dataset.motion = "reduced";
+		localStorage.setItem(MOTION_KEY, "reduced");
+	} else {
+		delete root.dataset.motion;
+		localStorage.removeItem(MOTION_KEY);
+	}
+}
+
+export function initMotionPreference() {
+	applyMotionPreference(getMotionPreference());
+}

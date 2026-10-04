@@ -36,18 +36,25 @@ function event(over: Partial<CalendarEvent> = {}): CalendarEvent {
 	};
 }
 
-function mount() {
+function mount(onSchedule?: (move: unknown) => void) {
 	document.body.innerHTML = "";
 	const host = document.createElement("div");
 	document.body.appendChild(host);
 	createRoot((dispose) => {
 		const calendar = useTaskCalendar();
 		calendar.setGranularity("week");
-		render(() => <CalendarTimeGrid calendar={calendar} />, host);
+		render(
+			() => <CalendarTimeGrid calendar={calendar} onSchedule={onSchedule} />,
+			host,
+		);
 		disposers.push(dispose);
 	});
 	return host;
 }
+
+/** 带落位回调的挂载（键盘路径的测试要用） */
+const mountWithSchedule = (moves: unknown[]) =>
+	mount((move) => moves.push(move));
 
 async function flush() {
 	await vi.advanceTimersByTimeAsync(1);
@@ -219,5 +226,96 @@ describe("CalendarTimeGrid", () => {
 
 		// 时间线是唯一带这个 class 的元素，出现次数 = 1（今天是周一 = 第一列）
 		expect(host.querySelectorAll('[class*="nowLine"]').length).toBe(1);
+	});
+});
+
+describe("CalendarTimeGrid：键盘与焦点（S5-j / S5-f / S5-13）", () => {
+	beforeEach(() => {
+		localStorage.clear();
+		vi.useFakeTimers();
+		vi.setSystemTime(new Date(2024, 0, 15, 9, 0));
+		getCalendarEventsE.mockResolvedValue([]);
+	});
+	afterEach(() => {
+		while (disposers.length > 0) {
+			disposers.pop()?.();
+		}
+		vi.useRealTimers();
+	});
+
+	it("S5-j：整个时间轴只占一个 Tab 停靠点（roving tabindex）", async () => {
+		getCalendarEventsE.mockResolvedValue([
+			event({ task_id: 1, window_id: 101, title: "A" }),
+			event({
+				task_id: 2,
+				window_id: 102,
+				title: "B",
+				start: at(2024, 0, 15, 11),
+				end: at(2024, 0, 15, 12),
+			}),
+			event({
+				task_id: 3,
+				window_id: 103,
+				title: "C",
+				start: at(2024, 0, 15, 14),
+				end: at(2024, 0, 15, 15),
+			}),
+		]);
+		const host = mount();
+		await flush();
+
+		const focusable = blocksOf(host).filter(
+			(b) => b.getAttribute("tabindex") === "0",
+		);
+		expect(focusable.length).toBeLessThanOrEqual(1);
+		// 其余的必须是 -1（可被脚本聚焦、但 Tab 走不到）
+		for (const block of blocksOf(host)) {
+			expect(["0", "-1"]).toContain(block.getAttribute("tabindex"));
+		}
+	});
+
+	it("S5-f：↑/↓ 是改时间，←/→ 是事件间移动焦点", async () => {
+		getCalendarEventsE.mockResolvedValue([
+			event({ task_id: 1, window_id: 101, title: "A" }),
+			event({
+				task_id: 2,
+				window_id: 102,
+				title: "B",
+				start: at(2024, 0, 15, 11),
+				end: at(2024, 0, 15, 12),
+			}),
+		]);
+		const moves: unknown[] = [];
+		const host = mountWithSchedule(moves);
+		await flush();
+
+		const a = blockByTitle(host, "A");
+		expect(a).toBeTruthy();
+
+		// ↑↓ 不冒泡成"移动焦点"，而是发一次落位（上移一格 = 15 分钟）
+		a?.dispatchEvent(
+			new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true }),
+		);
+		expect(moves).toHaveLength(1);
+		expect(moves[0]).toMatchObject({
+			windowId: 101,
+			startMinute: 8 * 60 + 45, // 09:00 - 15 分钟
+		});
+
+		// ←/→ 不发落位，只移动焦点
+		moves.length = 0;
+		a?.dispatchEvent(
+			new KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }),
+		);
+		expect(moves).toHaveLength(0);
+	});
+
+	it("事件块带完整的可访问名（不是只有标题）", async () => {
+		getCalendarEventsE.mockResolvedValue([event()]);
+		const host = mount();
+		await flush();
+		expect(blockByTitle(host, "站会")?.getAttribute("aria-label")).toBe(
+			"站会 09:00 到 10:00",
+		);
 	});
 });

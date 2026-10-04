@@ -9,6 +9,7 @@
 import { Button, Select } from "@components/ui";
 import {
 	type Component,
+	createEffect,
 	createResource,
 	createSignal,
 	For,
@@ -43,6 +44,21 @@ export default function TaskDrawer(props: TaskDrawerProps) {
 		setEditing(false);
 		props.onClose();
 	};
+
+	// S5-13：焦点归还 —— 记住打开抽屉时焦点在哪，关掉后还回去。
+	// 抽屉是**并排**而不是模态（不挡日历），所以不还焦点等于让键盘用户
+	// 关掉之后不知道自己回到了哪儿（同一个问题在命令面板那轮已经修过一次）
+	let opener: HTMLElement | null = null;
+	createEffect(() => {
+		if (props.taskId !== null) {
+			opener = (document.activeElement as HTMLElement) ?? null;
+			return;
+		}
+		if (opener && document.contains(opener)) {
+			opener.focus();
+		}
+		opener = null;
+	});
 
 	return (
 		<Show when={props.taskId !== null}>

@@ -157,6 +157,15 @@
 
 	/* 并排时相邻列之间留缝，否则两块看起来连成一块 */
 	box-shadow: 0 0 0 1px var(--t-color-surface);
+
+	/* 出现动效；「减少动画」开关或系统偏好下由本文件末尾的规则整体关掉（S5-15） */
+	animation: block-in var(--t-transition-fast) ease-out;
+}
+
+@keyframes block-in {
+	from {
+		opacity: 0;
+	}
 }
 
 .event-block:focus-visible {
@@ -297,4 +306,25 @@
 	.hour-gutter {
 		width: 2.5rem;
 	}
+}
+
+/* ── S5-15：减少动画 ──
+   两条降级路径：系统的 `prefers-reduced-motion`，以及用户显式打开的开关
+   （写在 <html data-motion="reduced"> 上，见 shared/styles/theme.ts 的
+   applyMotionPreference）。Google 把「开/关动画」列在认知辅助功能里，
+   我们也留着这个开关 —— 有些人的动效敏感不是系统级的。
+
+   放在文件末尾：这两条要压过上面所有 .event-block / .drop-preview 的动效声明。 */
+@media (prefers-reduced-motion: reduce) {
+	.event-block,
+	.drop-preview {
+		animation: none;
+		transition: none;
+	}
+}
+
+:root[data-motion="reduced"] .event-block,
+:root[data-motion="reduced"] .drop-preview {
+	animation: none;
+	transition: none;
 }

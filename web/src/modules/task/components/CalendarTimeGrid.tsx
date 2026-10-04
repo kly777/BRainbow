@@ -72,6 +72,11 @@ interface AxisDayColumnProps {
 	segments: readonly AxisBlock[];
 	nowMinute: number | null;
 	onOpenTask: (taskId: number) => void;
+	/** roving tabindex：当前吃焦点的块（null = 还没进过这个网格） */
+	focusedId: () => number | null;
+	setFocusedId: (id: number | null) => void;
+	/** `←/→` 在事件间移动焦点 */
+	moveFocus: (delta: -1 | 1) => void;
 	/** 落位请求（拖完 / 键盘改完都走它）；`windowId` 为 null 表示"新建一条" */
 	onSchedule: (move: ScheduleMove) => void;
 	/** 拖拽状态与拖影预览在这一层维护（每列各自一份） */
@@ -204,6 +209,9 @@ const AxisDayColumn: Component<AxisDayColumnProps> = (props) => {
 					<EventBlock
 						block={block}
 						dragging={draggingId() === block.taskId}
+						isFocused={props.focusedId() === block.id}
+						onFocus={() => props.setFocusedId(block.id)}
+						onMoveFocus={(delta) => props.moveFocus(delta)}
 						onGrab={(y) => {
 							setOriginY(y);
 							setDraggingId(block.taskId);
@@ -284,6 +292,11 @@ const EventBlock: Component<{
 	block: LaidOutBlock;
 	/** 正在被拖（半透明，让用户看见自己拖的是哪一块） */
 	dragging: boolean;
+	/** roving tabindex：只有它 tabindex=0，整个网格才占一个 Tab 停靠点 */
+	isFocused: boolean;
+	onFocus: () => void;
+	/** `←/→` 在事件间移动焦点 */
+	onMoveFocus: (delta: -1 | 1) => void;
 	/** 开始拖（记录起点 Y；位移判定在 lib/dragSchedule） */
 	onGrab: (clientY: number) => void;
 	/** 键盘上移下移一格 */
@@ -332,8 +345,10 @@ const EventBlock: Component<{
 					width: `${(1 / props.block.columns) * 100}%`,
 				}}
 				role="button"
-				tabindex={0}
+				tabindex={props.isFocused ? 0 : -1}
+				data-block-id={props.block.id}
 				aria-label={`${props.block.title} ${clock(props.block.startMinute)} 到 ${clock(props.block.endMinute)}`}
+				onFocus={props.onFocus}
 				onClick={() => {
 					// 位移不足时 pointerup 会把它判回点击 —— 这里才打开详情（S5-i）
 					if (!props.dragging) {
@@ -355,6 +370,12 @@ const EventBlock: Component<{
 					if (e.key === "ArrowUp" || e.key === "ArrowDown") {
 						e.preventDefault();
 						props.onNudge(e.key === "ArrowUp" ? -1 : 1);
+					}
+					// ←/→ 在事件间移动焦点（APG §6.4 的"焦点层"）——
+					//  ↑↓ 让位给了"改时间"，这里补上事件间的移动，两条路都在
+					if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+						e.preventDefault();
+						props.onMoveFocus(e.key === "ArrowLeft" ? -1 : 1);
 					}
 					// Enter 进改时间（键盘等价路径之二）
 					if (e.key === "Enter") {
@@ -410,6 +431,36 @@ export default function CalendarTimeGrid(props: CalendarTimeGridProps) {
 	let scrollerRef: HTMLDivElement | undefined;
 	// 每列各自一份拖拽状态（一次只拖一块）
 	const [drag, setDrag] = createSignal<DragState>(INITIAL_DRAG);
+
+	/**
+	 * roving tabindex：整个时间轴只占**一个** Tab 停靠点，方向键在块之间移动
+	 * （APG Grid）。42 个块按 42 次 Tab 是不可用的。
+	 */
+	const [focusedId, setFocusedId] = createSignal<number | null>(null);
+
+	/** `←/→` 在事件间移动焦点（APG §6.4 的"焦点层"）。
+	 *  `↑/↓` 留给"改时间"（S5-f 明确要求的拖拽键盘等价）—— 文档里这两处对 ↑↓
+	 *  的说法不一致，这里按"硬要求优先"取舍：它保证键盘用户能改时间，而 ←→ 同样
+	 *  能完成事件间的移动，两条路都在。 */
+	const moveFocus = (blocks: readonly AxisBlock[], delta: -1 | 1) => {
+		if (blocks.length === 0) {
+			return;
+		}
+		const sorted = [...blocks].sort((a, b) => a.startMinute - b.startMinute);
+		const current = sorted.findIndex((b) => b.id === focusedId());
+		const next =
+			current === -1
+				? delta > 0
+					? 0
+					: sorted.length - 1
+				: Math.min(Math.max(current + delta, 0), sorted.length - 1);
+		setFocusedId(sorted[next].id);
+		// 焦点真正移过去（否则 roving 只改了 tabindex，键盘焦点还留在原地）
+		const node = document.querySelector<HTMLElement>(
+			`[data-block-id="${sorted[next].id}"]`,
+		);
+		node?.focus();
+	};
 
 	const today = new Date();
 	const nowMinute = () => {
@@ -554,6 +605,9 @@ export default function CalendarTimeGrid(props: CalendarTimeGridProps) {
 								segments={blocksForDay(day)}
 								nowMinute={nowMinute()}
 								onOpenTask={(taskId) => props.onOpenTask?.(taskId)}
+								focusedId={focusedId}
+								setFocusedId={setFocusedId}
+								moveFocus={(delta) => moveFocus(blocksForDay(day), delta)}
 								onSchedule={(move) => props.onSchedule?.(move)}
 								drag={drag()}
 								setDrag={setDrag}

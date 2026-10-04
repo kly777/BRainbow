@@ -71,7 +71,7 @@ pub async fn mark_word(
     Path(word): Path<String>,
     Json(body): Json<MarkWordRequest>,
 ) -> impl IntoResponse {
-    match service.mark_word(&actor, &word, &body.status).await {
+    match service.mark_word(&actor, &word, body.status).await {
         Ok(()) => response::ok().into_response(),
         Err(e) => e.into_response(),
     }

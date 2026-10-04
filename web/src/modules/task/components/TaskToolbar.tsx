@@ -33,8 +33,7 @@ const SORT_OPTIONS: readonly { value: TaskSortKey; label: string }[] = [
 ];
 
 export default function TaskToolbar(props: TaskToolbarProps) {
-	const { add, search, reload, tasks, sort, setSort, filter, setFilter } =
-		useTasks();
+	const { add, tasks, sort, setSort, filter, setFilter } = useTasks();
 	const [filterOpen, setFilterOpen] = createSignal(false);
 
 	// 筛选面板里的标签补全与录入框共用同一套端点与去抖
@@ -51,9 +50,15 @@ export default function TaskToolbar(props: TaskToolbarProps) {
 			}, 200);
 		});
 
+	/**
+	 * 搜索：**只写 URL**，不在这里发请求。
+	 *
+	 * URL 是搜索词的唯一来源（项目一贯口径，见 TaskManager 与 file 模块的 useFileListParams），
+	 * 落进数据层的责任收在 TaskPanel 的一处 effect 里。原先这里直接 `search(q)`，
+	 * 于是"带着 `?q=` 刷新或从别处深链进来"时，URL 说要搜、列表却是全量 ——
+	 * 搜索框里显示着词、结果对不上。收成一处之后刷新 / 前进后退都跟着走。
+	 */
 	const doSearch = (q: string) => {
-		if (q) search(q);
-		else reload();
 		props.onSearchChange(q);
 	};
 

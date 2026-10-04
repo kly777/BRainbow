@@ -38,6 +38,8 @@ export default function TaskManager() {
 					viewMode={viewMode()}
 					rightTab={rightTab()}
 					onRightTabChange={setRightTab}
+					searchQuery={searchQuery()}
+					onClearSearch={() => params.set({ q: "" })}
 				/>
 			</div>
 		</TaskProvider>

@@ -58,7 +58,8 @@ interface TaskCtxValue {
 	removeTask(id: number): Promise<void>;
 	updateTaskE(id: number, updates: Partial<Task>): Promise<void>;
 	addSubTask(parentId: number, title: string): Promise<void>;
-	search(query: string): Promise<void>;
+	/** 应用搜索词（来自 URL）：改词即重取，与 `reload` 走同一条加载路径 */
+	setQuery(query: string): void;
 }
 
 const TaskCtx = createContext<TaskCtxValue>();
@@ -89,23 +90,55 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		void reload();
 	};
 
-	const reload = async () => {
+	/**
+	 * 当前搜索词。**它是加载口径的一部分**，所以归 provider 持有。
+	 *
+	 * 原先 `search(q)` 与 `reload()` 是两个各自发请求、各自 `setTasks` 的加载器，
+	 * 于是有两类静默错：① 两者并发时，慢的那个最后落地 —— 全量响应盖掉搜索结果
+	 * （实测：搜"zzzznotexist"接口返回 0 条，界面仍列着全部任务）；
+	 * ② `reload()` 不带搜索词，所以"搜索状态下改个状态 / 换排序"会把列表变回全量。
+	 * 收成一处之后只有 `load()` 一个写入者。
+	 */
+	const [query, setQuerySignal] = createSignal("");
+	/** 最近一次发出的请求口径；响应回来时对不上就丢弃（overlapping 请求的老结果不许落地） */
+	let requested: string | null = null;
+
+	const load = async () => {
+		const q = query();
+		requested = q;
 		setLoading(true);
 		// 拉全量（后端分页缺省 20 条，只取第一页会让第 21 条起在界面上消失）
 		const result = await tryAsync(() =>
-			fetchAllTasks((page, size) => getTasksE(page, size, sort())),
+			fetchAllTasks((page, size) =>
+				q ? searchTasksE(q, page, size) : getTasksE(page, size, sort()),
+			),
 		);
+		// 期间又发了新请求（输入框还在打字、或换了排序）→ 这次的结果已经过期
+		if (requested !== q) {
+			return;
+		}
 		if (result.ok) {
 			setTasks(result.value.items);
 			if (result.value.truncated) {
 				notifyWarning(
-					`任务过多：只载入前 ${result.value.items.length} 条（共 ${result.value.total} 条）`,
+					`${q ? "匹配" : "任务"}过多：只载入前 ${result.value.items.length} 条（共 ${result.value.total} 条）`,
 				);
 			}
 		} else {
 			notifyError("加载任务失败", result.error);
 		}
 		setLoading(false);
+	};
+
+	const reload = () => load();
+
+	/** 搜索词来自 URL（TaskPanel 那个 effect）；改词即重取，且与 reload 共用同一条加载路径 */
+	const setQuery = (next: string) => {
+		if (next === query()) {
+			return;
+		}
+		setQuerySignal(next);
+		void load();
 	};
 
 	const reloadStats = async () => {
@@ -200,29 +233,6 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		}
 	};
 
-	const handleSearch = async (query: string) => {
-		if (!query) {
-			await reload();
-			return;
-		}
-		setLoading(true);
-		// 搜索结果同样逐页取全（后端缺省 20 条，只取第一页会漏掉靠后的匹配）
-		const result = await tryAsync(() =>
-			fetchAllTasks((page, size) => searchTasksE(query, page, size)),
-		);
-		if (result.ok) {
-			setTasks(result.value.items);
-			if (result.value.truncated) {
-				notifyWarning(
-					`匹配过多：只载入前 ${result.value.items.length} 条（共 ${result.value.total} 条）`,
-				);
-			}
-		} else {
-			notifyError("搜索任务失败", result.error);
-		}
-		setLoading(false);
-	};
-
 	const ctx: TaskCtxValue = {
 		tasks,
 		loading,
@@ -238,7 +248,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		removeTask,
 		updateTaskE,
 		addSubTask,
-		search: handleSearch,
+		setQuery,
 	};
 
 	return <TaskCtx.Provider value={ctx}>{props.children}</TaskCtx.Provider>;
@@ -265,7 +275,7 @@ export function useTasks() {
 			removeTask: async () => {},
 			updateTaskE: async () => {},
 			addSubTask: async () => {},
-			search: async () => {},
+			setQuery: () => {},
 		};
 	}
 	return ctx;

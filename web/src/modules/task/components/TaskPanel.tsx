@@ -1,11 +1,12 @@
 // 任务主视图：列表 + 右栏（日历/依赖图）或看板（从 TaskManager.tsx 下钻）
 
 import { FilterGroup, LoadingSkeleton, showConfirm } from "@components/ui";
-import { createSignal, Show } from "solid-js";
+import { createEffect, createSignal, Show } from "solid-js";
 import { useSuggestions } from "../hooks/useSuggestions.ts";
 import { useTaskCalendar } from "../hooks/useTaskCalendar.ts";
 import { startOfDay } from "../lib/calendar.ts";
 import { scheduleWindow } from "../lib/schedule.ts";
+import { EMPTY_FILTER, isFilterEmpty } from "../lib/task-filter.ts";
 import styles from "../TaskManager.module.css";
 import CalendarSettings from "./CalendarSettings.tsx";
 import CalendarTimeGrid, { type ScheduleMove } from "./CalendarTimeGrid.tsx";
@@ -13,6 +14,7 @@ import { adoptSuggestion } from "./SuggestionLayer.tsx";
 import TaskCalendar from "./TaskCalendar.tsx";
 import TaskDag from "./TaskDag.tsx";
 import TaskDrawer from "./TaskDrawer.tsx";
+import { TaskEmpty } from "./TaskEmpty.tsx";
 import TaskKanban from "./TaskKanban.tsx";
 import TaskList from "./TaskList.tsx";
 import { useTasks } from "./TaskProvider.tsx";
@@ -21,11 +23,48 @@ export interface TaskPanelProps {
 	viewMode: "list" | "kanban";
 	rightTab: "calendar" | "dag";
 	onRightTabChange: (t: "calendar" | "dag") => void;
+	/** 搜索词（URL 参数）：空态要靠它区分"筛空"与"真的没任务" */
+	searchQuery: string;
+	/** 清掉搜索词（筛选由面板自己清，两者分属 URL 与 provider） */
+	onClearSearch: () => void;
 }
 
 export default function TaskPanel(props: TaskPanelProps) {
-	const { tasks, loading, updateStatus, removeTask, updateTaskE, addSubTask } =
-		useTasks();
+	const {
+		tasks,
+		loading,
+		updateStatus,
+		removeTask,
+		updateTaskE,
+		addSubTask,
+		filter,
+		setFilter,
+		setQuery,
+	} = useTasks();
+
+	// 空态分两种（见 TaskEmpty）：有筛选或搜索 → 空是用户自己造成的；
+	// 都没有还空 → 收件箱真的空
+	const filtered = () =>
+		!isFilterEmpty(filter()) || props.searchQuery.trim() !== "";
+	const clearFilters = () => {
+		setFilter(EMPTY_FILTER);
+		props.onClearSearch();
+	};
+
+	/**
+	 * 搜索词落进数据层 —— **只在这一处**。
+	 *
+	 * 工具条只把它写进 URL（见 TaskToolbar 的 doSearch），由这里统一应用：
+	 * 输入框防抖之后、带着 `?q=` 首屏进来、刷新、前进后退，走的是同一条路径。
+	 * 初值给 ""（provider 的 onMount 已经拉过一次全量），否则首屏会多打一次请求。
+	 */
+	let appliedQuery = "";
+	createEffect(() => {
+		const q = props.searchQuery;
+		if (q === appliedQuery) return;
+		appliedQuery = q;
+		setQuery(q);
+	});
 	// 点日历事件 → 抽屉。抽屉与日历**并排**而非叠放（S4-e：模态会盖掉日历这个参照物）
 	const [openTaskId, setOpenTaskId] = createSignal<number | null>(null);
 	// 日历状态建**一份**再传下去：网格与设置条共享，否则各自一份状态、各发一次请求
@@ -97,13 +136,25 @@ export default function TaskPanel(props: TaskPanelProps) {
 				<>
 					<Show when={props.viewMode === "list"}>
 						<div class={styles.splitView}>
-							<TaskList
-								tasks={tasks()}
-								onStatusChange={updateStatus}
-								onDelete={removeTask}
-								onUpdate={updateTaskE}
-								onAddSubTask={addSubTask}
-							/>
+							{/* 空态落在列表本该占的那一列里（右栏不受影响：日历/依赖图与有没有任务无关） */}
+							<Show
+								when={tasks().length > 0}
+								fallback={
+									<TaskEmpty
+										filtered={filtered()}
+										onClear={clearFilters}
+										class={styles.listEmpty}
+									/>
+								}
+							>
+								<TaskList
+									tasks={tasks()}
+									onStatusChange={updateStatus}
+									onDelete={removeTask}
+									onUpdate={updateTaskE}
+									onAddSubTask={addSubTask}
+								/>
+							</Show>
 							<div class={styles.rightPanel}>
 								<FilterGroup
 									options={[
@@ -158,7 +209,15 @@ export default function TaskPanel(props: TaskPanelProps) {
 						</div>
 					</Show>
 					<Show when={props.viewMode === "kanban"}>
-						<TaskKanban />
+						{/* 看板整板为空时给同一份空态 —— 否则四列各说一句"拖拽任务到此列" */}
+						<Show
+							when={tasks().length > 0}
+							fallback={
+								<TaskEmpty filtered={filtered()} onClear={clearFilters} />
+							}
+						>
+							<TaskKanban />
+						</Show>
 					</Show>
 				</>
 			}

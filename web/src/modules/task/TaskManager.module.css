@@ -82,6 +82,11 @@
 	gap: var(--space-sm);
 }
 
+/* 空态落在列表那一列：给它一点上留白，别贴着工具条 */
+.list-empty {
+	margin-top: var(--space-2xl);
+}
+
 /* 响应式 */
 @media (width <= 768px) {
 	.task-manager {

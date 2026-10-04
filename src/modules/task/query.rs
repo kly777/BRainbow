@@ -326,32 +326,31 @@ impl TaskQueryService {
             .map_err(ServiceError::Db)?;
 
         // ② 硬占用：`planned` + `actual`（循环窗口展开后计入，上限 52 段）。
-        //    `feasible` **不算** —— 它是"我大概有空"的软信息（见 slotting.rs §3.5）。
+        //    `feasible` 不进这里 —— 它是"我大概有空"的软信息，只作为加成（见 §3.5）。
         //    顺带记下"这段时间里已经安排过的任务"：同一个区间不重复建议同一个任务
         //    （采纳一条之后图层里就该少一条，而不是在同一天的另一格又冒出来）
         let mut already_scheduled: HashSet<i32> = HashSet::new();
         let mut busy: Vec<(DateTime<Utc>, DateTime<Utc>)> = Vec::new();
+        let mut feasible: Vec<(DateTime<Utc>, DateTime<Utc>)> = Vec::new();
         for (task, window) in self
             .repo
             .find_calendar_events(actor, Some(from), Some(to), None)
             .await
             .map_err(ServiceError::Db)?
         {
-            if !matches!(
-                window.window_type,
-                TimeWindowType::Planned | TimeWindowType::Actual
-            ) {
-                continue;
+            let segments = slotting::expand_capped(&window, from)
+                .into_iter()
+                .map(|seg| {
+                    // 裁到区间内：展开函数给的是"从 from 起的若干段"
+                    (seg.0.max(from), seg.1.min(to))
+                });
+            match window.window_type {
+                TimeWindowType::Planned | TimeWindowType::Actual => {
+                    already_scheduled.insert(task.id);
+                    busy.extend(segments);
+                }
+                TimeWindowType::Feasible => feasible.extend(segments),
             }
-            already_scheduled.insert(task.id);
-            busy.extend(
-                slotting::expand_capped(&window, from)
-                    .into_iter()
-                    .map(|seg| {
-                        // 裁到区间内：展开函数给的是"从 from 起的若干段"
-                        (seg.0.max(from), seg.1.min(to))
-                    }),
-            );
         }
 
         // ③ 候选装配：阻塞信息从依赖边里取（`ranking` 已经用它算过因子，这里只取文案）
@@ -381,6 +380,7 @@ impl TaskQueryService {
             busy,
             working_hours: self.working_hours().await,
             candidates,
+            feasible,
         };
         Ok(slotting::suggest(&ctx, from, to, Utc::now()))
     }
@@ -693,6 +693,20 @@ mod sorted_tests {
         .unwrap();
     }
 
+    /// 建一条 feasible 窗口（同上，绕过 service 的 C001）
+    async fn feasible(ctx: &Ctx, task_id: i32, start: DateTime<Utc>, end: DateTime<Utc>) {
+        sqlx::query(
+            "INSERT INTO time_window (start_time, end_time, type, task_id, user_id)
+             VALUES (?, ?, 'feasible', ?, 1)",
+        )
+        .bind(start)
+        .bind(end)
+        .bind(task_id)
+        .execute(&*ctx.pool)
+        .await
+        .unwrap();
+    }
+
     async fn count_windows(ctx: &Ctx) -> i64 {
         sqlx::query_scalar("SELECT COUNT(*) FROM time_window")
             .fetch_one(&*ctx.pool)
@@ -857,5 +871,35 @@ mod sorted_tests {
         }
         let qsvc = TaskQueryService::new(ctx.pool.clone()).with_settings(Arc::new(BadSettings));
         assert!(qsvc.suggestions(&Actor::user(1), from, to).await.is_ok());
+    }
+
+    /// `feasible` 从库里一路走到建议上（§3.5 的软偏好）：`planned`/`actual` 之外的
+    /// 窗口类型不能被漏掉，也不能被当成占用把它从空闲集里扣掉
+    #[tokio::test]
+    async fn feasible_windows_boost_but_do_not_block() {
+        let ctx = setup().await;
+        let actor = Actor::user(1);
+        let now = Utc::now();
+        // 没 due、没优先级、有工时估计 → 基础置信度 low
+        let mut task_req = req("写周报");
+        task_req.effort_estimate_minutes = Some(60);
+        let task = ctx.svc.create(&actor, task_req).await.unwrap();
+        // 整个区间都声明成"我大概有空"
+        feasible(&ctx, task.id, now, now + Duration::days(3)).await;
+
+        let result = ctx
+            .qsvc
+            .suggestions(&actor, now, now + Duration::days(3))
+            .await
+            .unwrap();
+
+        let s = result.suggestions.first().expect("feasible 不该把它挡住");
+        assert_eq!(
+            s.confidence,
+            crate::modules::task::slotting::Confidence::Medium,
+            "落进 feasible 该升一档"
+        );
+        assert!(s.reason.contains("在你标记的可做时段内"));
+        assert_eq!(result.capacity.used_minutes, 0, "feasible 不算占用");
     }
 }

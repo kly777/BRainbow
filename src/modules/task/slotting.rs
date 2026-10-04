@@ -124,7 +124,7 @@ pub struct SlottingResult {
     pub capacity: Capacity,
 }
 
-/// 建议算法的输入（三样，缺一不可 —— P10）
+/// 建议算法的输入（②③④ 缺一不可 —— P10；`feasible` 是软偏好，缺了只是少个加成）
 #[derive(Debug, Default, Clone)]
 pub struct SlotContext {
     /// ① 硬占用：`planned` + `actual`（**`feasible` 不算**，它是软信息，见 §3.5）
@@ -133,6 +133,9 @@ pub struct SlotContext {
     pub working_hours: WorkingHours,
     /// ③ 候选任务（已按 score 排好序）
     pub candidates: Vec<Candidate>,
+    /// ④ 用户手工声明的"我大概有空"（`feasible`）。**不进空闲集**（那只扣 `busy`），
+    ///    只用来给落在里面的建议升一档置信度并写明理由 —— 用户已经表达过偏好（§3.5）
+    pub feasible: Vec<(DateTime<Utc>, DateTime<Utc>)>,
 }
 
 /// 一条候选（任务 + 它的排序结果）
@@ -207,14 +210,23 @@ pub fn suggest(
         };
 
         // f. 采纳到建议里，并从空闲集扣掉
-        let confidence = confidence_of(candidate, estimated, truncated, now);
+        let mut confidence = confidence_of(candidate, estimated, truncated, now);
+        // §3.5：落在用户标记的 `feasible` 里 → 升一档 + 写明理由。
+        // 用户手工声明过"这段我能做这件事"，那是比打分更高的信号。
+        let in_feasible = ctx
+            .feasible
+            .iter()
+            .any(|(fs, fe)| *fs <= start && end <= *fe);
+        if in_feasible {
+            confidence = bump(confidence);
+        }
         suggestions.push(Suggestion {
             task_id: candidate.task_id,
             title: candidate.title.clone(),
             start,
             end,
             effort_minutes: minutes,
-            reason: candidate.ranked.summary(),
+            reason: reason_text(candidate, estimated, in_feasible),
             score: candidate.ranked.score,
             confidence,
         });
@@ -304,6 +316,31 @@ fn confidence_of(
     } else {
         Confidence::Low
     }
+}
+
+/// 落到 `feasible` 里升一档（05 §3.5）。already-high 就停在 high
+fn bump(confidence: Confidence) -> Confidence {
+    match confidence {
+        Confidence::Low => Confidence::Medium,
+        Confidence::Medium | Confidence::High => Confidence::High,
+    }
+}
+
+/// 理由行：打分给的那条 + 落在 `feasible` 里的加成 + **时长是估的**这条诚实。
+///
+/// 「时长是估的」本来由前端按 `low` 显示，但 `feasible` 加成会把这种建议抬到
+/// `medium` —— 抬一档不能把"这个时长是我猜的"一并抹掉，所以它跟着理由一起走。
+/// 顺序：先写能改变用户判断的那句，打分理由殿后（界面那一行会截断）。
+fn reason_text(candidate: &Candidate, estimated: bool, in_feasible: bool) -> String {
+    let mut notes: Vec<String> = Vec::new();
+    if estimated {
+        notes.push("时长是估的".into());
+    }
+    if in_feasible {
+        notes.push("在你标记的可做时段内".into());
+    }
+    notes.push(candidate.ranked.summary());
+    notes.join(" · ")
 }
 
 /// 空闲集：工作时段 ∩ [from, to] − busy
@@ -561,6 +598,7 @@ mod tests {
             working_hours: all_day_hours(),
             busy: vec![(local_ts(5, 9, 0), local_ts(5, 12, 0))],
             candidates: vec![cand(1, "写周报", ranked(1))],
+            feasible: vec![],
         };
         let result = suggest(&ctx, from, to, ts(2026, 10, 5, 0, 0));
         assert_eq!(result.suggestions.len(), 1);
@@ -704,6 +742,7 @@ mod tests {
             working_hours: all_day_hours(),
             busy: vec![(local_ts(5, 9, 0), local_ts(5, 9, 30))],
             candidates: vec![candidate],
+            feasible: vec![],
         };
         let result = suggest(&ctx, from, to, ts(2026, 10, 5, 0, 0));
         // 一天 × 9 小时工作时段 = 540 总容量；已占 30；建议 60
@@ -740,10 +779,73 @@ mod tests {
             working_hours: all_day_hours(),
             busy: vec![(local_ts(5, 9, 0), local_ts(5, 10, 0))],
             candidates: vec![cand(1, "写周报", ranked(1))],
+            feasible: vec![],
         };
         let result = suggest(&ctx, from, to, ts(2026, 10, 5, 0, 0));
         // 第一个可用空档是 10:00，紧接上一个占用之后
         assert_eq!(result.suggestions[0].start, local_ts(5, 10, 0));
+    }
+
+    // ── `feasible` 软偏好（05 §3.5）：不进空闲集，只加成 ──
+
+    #[test]
+    fn feasible_boosts_confidence_and_shows_up_in_reason() {
+        let (from, to) = range_for(5, 6);
+        // 候选什么都没有 → 基础置信度是 low（没有 due 也没有优先级）
+        let ctx = SlotContext {
+            working_hours: all_day_hours(),
+            busy: vec![],
+            candidates: vec![cand(1, "写周报", ranked(1))],
+            feasible: vec![(local_ts(5, 8, 0), local_ts(5, 12, 0))],
+        };
+        let result = suggest(&ctx, from, to, ts(2026, 10, 5, 0, 0));
+
+        let s = &result.suggestions[0];
+        // 落点在 09:00 起，而 feasible 从 08:00 起 —— 整段都在里面
+        assert_eq!(s.start, local_ts(5, 9, 0));
+        assert!(s.end <= local_ts(5, 12, 0), "落点该在 feasible 之内");
+        assert_eq!(s.confidence, Confidence::Medium, "low 升一档到 medium");
+        assert!(s.reason.contains("在你标记的可做时段内"));
+    }
+
+    #[test]
+    fn outside_feasible_changes_nothing() {
+        let (from, to) = range_for(5, 6);
+        let ctx = SlotContext {
+            working_hours: all_day_hours(),
+            busy: vec![],
+            candidates: vec![cand(1, "写周报", ranked(1))],
+            // feasible 只在 14:00 之后，而最早的空档是 09:00
+            feasible: vec![(local_ts(5, 14, 0), local_ts(5, 18, 0))],
+        };
+        let result = suggest(&ctx, from, to, ts(2026, 10, 5, 0, 0));
+
+        let s = &result.suggestions[0];
+        assert_eq!(s.start, local_ts(5, 9, 0));
+        assert_eq!(s.confidence, Confidence::Low, "没落进去就不加成");
+        assert!(!s.reason.contains("在你标记的可做时段内"));
+    }
+
+    /// 升一档不能把"时长是估的"抹掉 —— `low` 的诚实提示跟着理由一起走
+    #[test]
+    fn feasible_bonus_keeps_the_estimated_duration_note() {
+        let (from, to) = range_for(5, 6);
+        // 没填 effort → 估一个（本来该是 low 且界面上写"时长是估的"）
+        let ctx = SlotContext {
+            working_hours: all_day_hours(),
+            busy: vec![],
+            candidates: vec![cand(1, "写周报", ranked(1))],
+            feasible: vec![(local_ts(5, 8, 0), local_ts(5, 18, 0))],
+        };
+        let result = suggest(&ctx, from, to, ts(2026, 10, 5, 0, 0));
+
+        let s = &result.suggestions[0];
+        assert_eq!(s.confidence, Confidence::Medium);
+        assert!(
+            s.reason.contains("时长是估的"),
+            "升档把估时长的诚实提示弄丢了：{}",
+            s.reason
+        );
     }
 
     #[test]

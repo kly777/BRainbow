@@ -18,6 +18,15 @@ import {
 
 export type FileCategory = "image" | "video" | "audio" | "document" | "other";
 
+/**
+ * 分类筛选值：`""` 表示"全部"。
+ *
+ * URL 参数里"全部"就是用空串表达的（`?category=`），所以筛选口径是
+ * `FileCategory | ""` 而不是 `FileCategory | "all"` —— 别为好看在中间
+ * 加一层翻译，那会让"URL 是唯一来源"这条断掉。
+ */
+export type FileCategoryFilter = FileCategory | "";
+
 /** 列表排序方式（与后端 SortOrder 枚举对应） */
 export type SortOrder =
 	| "created_desc"
@@ -64,7 +73,7 @@ export interface UploadResult extends FileItem {
 }
 
 export interface CategoryStat {
-	category: string;
+	category: FileCategory;
 	count: number;
 	bytes: number;
 }
@@ -205,7 +214,7 @@ export const uploadFile = (
 
 /** 文件列表（缓存 30 秒） */
 export const listFiles = (params?: {
-	category?: string;
+	category?: FileCategoryFilter;
 	tag?: string;
 	q?: string;
 	sort?: SortOrder;

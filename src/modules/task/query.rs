@@ -140,8 +140,10 @@ impl TaskQueryService {
         &self,
         tasks: Vec<Task>,
     ) -> Result<Vec<super::response::TaskResponse>, ServiceError> {
-        let mut items: Vec<super::response::TaskResponse> =
-            tasks.into_iter().map(super::response::TaskResponse::from).collect();
+        let mut items: Vec<super::response::TaskResponse> = tasks
+            .into_iter()
+            .map(super::response::TaskResponse::from)
+            .collect();
         self.attach_tags(&mut items).await?;
         Ok(items)
     }
@@ -421,6 +423,7 @@ mod sorted_tests {
             due_at: None,
             priority: None,
             tags: None,
+            planned_window: None,
         }
     }
 
@@ -472,12 +475,19 @@ mod sorted_tests {
         let ctx = setup().await;
         let actor = Actor::user(1);
         for i in 1..=5 {
-            ctx.svc.create(&actor, req(&format!("任务 {i}"))).await.unwrap();
+            ctx.svc
+                .create(&actor, req(&format!("任务 {i}")))
+                .await
+                .unwrap();
         }
 
         let mut collected = Vec::new();
         for page in 0..3 {
-            let (tasks, _, _) = ctx.qsvc.list_sorted(&actor, TaskSort::Smart, 2, page * 2).await.unwrap();
+            let (tasks, _, _) = ctx
+                .qsvc
+                .list_sorted(&actor, TaskSort::Smart, 2, page * 2)
+                .await
+                .unwrap();
             collected.extend(titles(&tasks));
         }
         assert_eq!(collected.len(), 5);
@@ -507,21 +517,41 @@ mod sorted_tests {
 
         let names = |tasks: &[Task]| titles(tasks);
 
-        let (by_due, _, _) = ctx.qsvc.list_sorted(&actor, TaskSort::Due, 50, 0).await.unwrap();
+        let (by_due, _, _) = ctx
+            .qsvc
+            .list_sorted(&actor, TaskSort::Due, 50, 0)
+            .await
+            .unwrap();
         assert_eq!(names(&by_due), vec!["先到期", "后到期", "什么都没填"]);
 
-        let (by_effort, _, _) = ctx.qsvc.list_sorted(&actor, TaskSort::Effort, 50, 0).await.unwrap();
+        let (by_effort, _, _) = ctx
+            .qsvc
+            .list_sorted(&actor, TaskSort::Effort, 50, 0)
+            .await
+            .unwrap();
         assert_eq!(names(&by_effort), vec!["后到期", "先到期", "什么都没填"]);
 
-        let (by_priority, _, _) = ctx.qsvc.list_sorted(&actor, TaskSort::Priority, 50, 0).await.unwrap();
+        let (by_priority, _, _) = ctx
+            .qsvc
+            .list_sorted(&actor, TaskSort::Priority, 50, 0)
+            .await
+            .unwrap();
         assert_eq!(names(&by_priority), vec!["后到期", "先到期", "什么都没填"]);
 
         // created 是倒序：最后建的排最前
-        let (by_created, _, _) = ctx.qsvc.list_sorted(&actor, TaskSort::Created, 50, 0).await.unwrap();
+        let (by_created, _, _) = ctx
+            .qsvc
+            .list_sorted(&actor, TaskSort::Created, 50, 0)
+            .await
+            .unwrap();
         assert_eq!(names(&by_created), vec!["什么都没填", "后到期", "先到期"]);
 
         // 非 smart 的排序没有"理由"可言（不是为了省事，是不该编）
-        let (_, _, ranked) = ctx.qsvc.list_sorted(&actor, TaskSort::Due, 50, 0).await.unwrap();
+        let (_, _, ranked) = ctx
+            .qsvc
+            .list_sorted(&actor, TaskSort::Due, 50, 0)
+            .await
+            .unwrap();
         assert!(ranked.is_empty());
     }
 }

@@ -107,6 +107,7 @@ async fn task_isolation_between_users() {
                 due_at: None,
                 priority: None,
                 tags: None,
+                planned_window: None,
             },
         )
         .await
@@ -381,6 +382,7 @@ async fn time_window_follows_its_parent_task() {
                 due_at: None,
                 priority: None,
                 tags: None,
+                planned_window: None,
             },
         )
         .await

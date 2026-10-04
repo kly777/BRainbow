@@ -139,12 +139,7 @@ impl RankContext {
 
     /// 从 `task_id` 出发沿依赖边走，遇到重复节点或超过深度上限即判定成环
     fn reaches_cycle(&self, task_id: i32) -> bool {
-        fn walk(
-            ctx: &RankContext,
-            current: i32,
-            path: &mut HashSet<i32>,
-            depth: usize,
-        ) -> bool {
+        fn walk(ctx: &RankContext, current: i32, path: &mut HashSet<i32>, depth: usize) -> bool {
             if depth > MAX_DEP_DEPTH {
                 return true; // 太深了，当作环（而不是当作没问题）
             }
@@ -455,16 +450,8 @@ mod tests {
         let now = ts(0, 12);
         let empty = RankContext::default();
         // 同分（都无信息）：older created_at 在前（GTD：先进先清）
-        let older = task_score(
-            &task(1, |t| t.created_at = ts(-3, 0)),
-            now,
-            &empty,
-        );
-        let newer = task_score(
-            &task(2, |t| t.created_at = ts(-1, 0)),
-            now,
-            &empty,
-        );
+        let older = task_score(&task(1, |t| t.created_at = ts(-3, 0)), now, &empty);
+        let newer = task_score(&task(2, |t| t.created_at = ts(-1, 0)), now, &empty);
         let mut items = vec![newer, older.clone()];
         sort_ranked(&mut items);
         assert_eq!(items[0].task_id, 1, "同分时最早进收件箱的排前面");
@@ -488,7 +475,9 @@ mod tests {
         let now = ts(0, 12);
         let empty = RankContext::default();
         // 完全同分同时间：靠 id ASC 兜底，顺序与输入顺序无关
-        let items = (1..=5).map(|id| task_score(&task(id, |_| {}), now, &empty)).collect::<Vec<_>>();
+        let items = (1..=5)
+            .map(|id| task_score(&task(id, |_| {}), now, &empty))
+            .collect::<Vec<_>>();
         let mut forward = items.clone();
         let mut backward = items.into_iter().rev().collect::<Vec<_>>();
         sort_ranked(&mut forward);
@@ -556,9 +545,8 @@ mod tests {
     fn deep_chain_hits_depth_cap_without_panicking() {
         let now = ts(0, 12);
         // 40 级长的链（不构成环）会撞上 MAX_DEP_DEPTH —— 判成环，不是"未阻塞"
-        let edges: Vec<(i32, i32, &str, bool)> = (1..40)
-            .map(|id| (id, id + 1, "下游", false))
-            .collect();
+        let edges: Vec<(i32, i32, &str, bool)> =
+            (1..40).map(|id| (id, id + 1, "下游", false)).collect();
         let ctx = ctx_with(edges);
         let ranked = task_score(&task(1, |_| {}), now, &ctx);
         assert!(ranked.reasons.iter().any(|r| r.detail == "依赖成环"));

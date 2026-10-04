@@ -30,3 +30,21 @@ pub trait TaskTimeWindowValidator: Send + Sync {
     /// 两条都指向 `Actor` 的同一套判据，见 `doc/design/authorization.md` §3.1。
     async fn ensure_task_owned(&self, actor: &Actor, task_id: i32) -> Result<(), ServiceError>;
 }
+
+/// 建时间窗口的能力：task 侧「点日历空白 → 一次请求建任务 + 窗口」要用。
+///
+/// **为什么是端口而不是直接调 `TimeWindowService`**：业务域之间禁止互相用对方实现
+/// （`AGENTS.md` 的依赖方向），task 要落到 time_window 的规则（C001/C002 校验、
+/// 归属）只能经这层接缝 —— 与 `TaskTimeWindowValidator` 反向的同一形状。
+#[async_trait]
+pub trait TaskTimeWindowCreator: Send + Sync {
+    /// 给已有任务建一个时间窗口（走完整校验：归属 + C001 + C002）。
+    async fn create_window(
+        &self,
+        actor: &Actor,
+        task_id: i32,
+        start_time: chrono::DateTime<chrono::Utc>,
+        end_time: chrono::DateTime<chrono::Utc>,
+        window_type: super::model::TimeWindowType,
+    ) -> Result<TimeWindow, ServiceError>;
+}

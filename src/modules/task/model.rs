@@ -134,9 +134,8 @@ impl FromStr for TaskPriority {
 impl<'r> Decode<'r, Sqlite> for TaskPriority {
     fn decode(value: SqliteValueRef<'r>) -> Result<Self, sqlx::error::BoxDynError> {
         let s = <&str as Decode<'r, Sqlite>>::decode(value)?;
-        <TaskPriority as std::str::FromStr>::from_str(s).map_err(|_| {
-            Box::new(sqlx::error::Error::Decode("Invalid task priority".into())) as _
-        })
+        <TaskPriority as std::str::FromStr>::from_str(s)
+            .map_err(|_| Box::new(sqlx::error::Error::Decode("Invalid task priority".into())) as _)
     }
 }
 

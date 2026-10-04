@@ -86,6 +86,7 @@ fn mk(title: &str) -> CreateTaskRequest {
         due_at: None,
         priority: None,
         tags: None,
+        planned_window: None,
     }
 }
 

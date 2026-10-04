@@ -70,8 +70,7 @@ impl TaskRepository {
                 .execute(&mut *tx)
                 .await?;
         } else {
-            let mut qb =
-                sqlx::QueryBuilder::new("DELETE FROM task_tag_rel WHERE task_id = ");
+            let mut qb = sqlx::QueryBuilder::new("DELETE FROM task_tag_rel WHERE task_id = ");
             qb.push_bind(task_id);
             qb.push(" AND tag_id NOT IN (");
             let mut separated = qb.separated(", ");

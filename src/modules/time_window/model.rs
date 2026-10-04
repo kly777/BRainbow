@@ -303,11 +303,17 @@ pub struct UpdateTimeWindowRequest {
     pub window_type: Option<TimeWindowType>,
 
     /// 用户ID（可选；`null` = 清空）
-    #[serde(default, deserialize_with = "crate::shared::serde_utils::double_option")]
+    #[serde(
+        default,
+        deserialize_with = "crate::shared::serde_utils::double_option"
+    )]
     pub user_id: Option<Option<i32>>,
 
     /// 循环规则（可选；`null` = 清空）
-    #[serde(default, deserialize_with = "crate::shared::serde_utils::double_option")]
+    #[serde(
+        default,
+        deserialize_with = "crate::shared::serde_utils::double_option"
+    )]
     pub recurrence_rule: Option<Option<RecurrenceRule>>,
 }
 

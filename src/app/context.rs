@@ -24,7 +24,7 @@ use crate::modules::onto::OntoState;
 use crate::modules::reading::ReadingState;
 use crate::modules::search::service::SearchQueryService;
 use crate::modules::sign::SignState;
-use crate::modules::task::TaskState;
+use crate::modules::task::{self, TaskState};
 use crate::modules::text::TextState;
 use crate::modules::time_window::query::TimeWindowQueryService;
 use crate::modules::time_window::service::TimeWindowService;
@@ -209,7 +209,7 @@ impl AppState {
 
     pub fn new(db: &Arc<SqlitePool>, config: &Config, mem_config: MemConfig) -> Self {
         // 使用模块构造器构建简单模块
-        let task = TaskState::new(db.clone());
+        // （task 不在这里建：它要与 time_window 双向接线，见下方「需要特殊构造的模块」）
         let card = CardState::new(db.clone());
         // 书签的 favicon 缓存与文件服务共用上传根（别再写死相对路径）
         let bookmark = BookmarkState::new(db.clone(), &config.upload_dir);
@@ -240,10 +240,22 @@ impl AppState {
         let chat_query = ChatQueryService::new(db.as_ref().clone());
 
         // 需要特殊构造的模块
+        // task 的 service 建一次：time_window 的校验器要用它（克隆进 Arc），
+        // 反向接缝建好后同一个实例再接上 —— 不要为接线建第二个 service
+        let task_service = crate::modules::task::TaskService::new(db.clone());
         let task_validator: Arc<dyn crate::modules::time_window::port::TaskTimeWindowValidator> =
-            Arc::new(task.service.clone());
+            Arc::new(task_service.clone());
         let time_window = TimeWindowService::new(db.clone(), task_validator);
         let time_window_query = TimeWindowQueryService::new(db.clone());
+
+        // 反向接缝：建任务时要顺带建 `planned` 窗口（日历上点空白新建那一条路径）。
+        // 业务域之间不直接用对方实现，经 port 进来 —— 与上面那个校验端口同一形状。
+        let window_creator: Arc<dyn crate::modules::time_window::port::TaskTimeWindowCreator> =
+            Arc::new(time_window.clone());
+        let task = task::from_services(
+            task_service.with_window_creator(window_creator),
+            task::TaskQueryService::new(db.clone()),
+        );
 
         let mem = MemService::new(
             mem_repo,

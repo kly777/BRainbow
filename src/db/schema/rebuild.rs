@@ -101,11 +101,10 @@ async fn copy_into_declared_shape(
         .filter(|column| live.contains(column))
         .collect();
     let list = shared.join(", ");
-    let before: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
-        "SELECT COUNT(*) FROM {table}"
-    )))
-    .fetch_one(&mut *tx)
-    .await?;
+    let before: i64 =
+        sqlx::query_scalar(sqlx::AssertSqlSafe(format!("SELECT COUNT(*) FROM {table}")))
+            .fetch_one(&mut *tx)
+            .await?;
 
     exec(
         &mut tx,
@@ -133,12 +132,11 @@ async fn copy_into_declared_shape(
 /// 表在不在（重建清单里的表在老库上可能压根没有，那时交给 reconcile 建）
 async fn table_exists(conn: &mut SqliteConnection, table: &str) -> Result<bool, sqlx::Error> {
     let safe_table = sanitize_table_name(table)?;
-    let count: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?1",
-    )
-    .bind(safe_table)
-    .fetch_one(&mut *conn)
-    .await?;
+    let count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?1")
+            .bind(safe_table)
+            .fetch_one(&mut *conn)
+            .await?;
     Ok(count > 0)
 }
 
@@ -220,7 +218,10 @@ mod tests {
 
         // 退回到老形状 → 版本也跟着退（重建按版本门控）
         task_without_v24_constraints(&pool).await;
-        sqlx::query("PRAGMA user_version = 23").execute(&pool).await.unwrap();
+        sqlx::query("PRAGMA user_version = 23")
+            .execute(&pool)
+            .await
+            .unwrap();
 
         let actions = run(&pool, 23).await.unwrap();
         assert!(

@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
+use async_trait::async_trait;
+
 use crate::shared::actor::Actor;
 
 use super::model::{CreateTimeWindowRequest, TimeWindow, UpdateTimeWindowRequest};
-use super::port::TaskTimeWindowValidator;
+use super::port::{TaskTimeWindowCreator, TaskTimeWindowValidator};
 use super::repository::TimeWindowRepository;
 
 #[derive(Clone)]
@@ -64,6 +66,30 @@ impl TimeWindowService {
             })?;
 
         self.repo.create(request).await.map_err(ServiceError::Db)
+    }
+
+    /// 给 `TaskTimeWindowCreator` 用的薄封装：把裸参数装成请求再走 `create`
+    /// （校验、归属、C001/C002 全都复用同一条路径，不另开一套）。
+    pub async fn create_for_task(
+        &self,
+        actor: &Actor,
+        task_id: i32,
+        start_time: chrono::DateTime<chrono::Utc>,
+        end_time: chrono::DateTime<chrono::Utc>,
+        window_type: super::model::TimeWindowType,
+    ) -> Result<TimeWindow, ServiceError> {
+        self.create(
+            actor,
+            CreateTimeWindowRequest {
+                start_time,
+                end_time,
+                window_type,
+                task_id,
+                user_id: None,
+                recurrence_rule: None,
+            },
+        )
+        .await
     }
 
     pub async fn update(
@@ -140,6 +166,22 @@ impl TimeWindowService {
         };
         self.task.ensure_task_owned(actor, existing.task_id).await?;
         self.repo.delete(id).await.map_err(ServiceError::Db)
+    }
+}
+
+/// task 侧要建窗口时经这层接缝进来（业务域之间不直接用对方实现）
+#[async_trait]
+impl TaskTimeWindowCreator for TimeWindowService {
+    async fn create_window(
+        &self,
+        actor: &Actor,
+        task_id: i32,
+        start_time: chrono::DateTime<chrono::Utc>,
+        end_time: chrono::DateTime<chrono::Utc>,
+        window_type: super::model::TimeWindowType,
+    ) -> Result<TimeWindow, ServiceError> {
+        self.create_for_task(actor, task_id, start_time, end_time, window_type)
+            .await
     }
 }
 

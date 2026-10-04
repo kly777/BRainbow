@@ -39,6 +39,19 @@ pub struct CreateTaskRequest {
     /// 标签名数组（可选，服务端按用户 upsert）
     #[serde(default)]
     pub tags: Option<Vec<String>>,
+
+    /// 初始 `planned` 时段（可选）。**这是本设计唯一一处"创建即带窗口"**：
+    /// 日历上点空白建任务时用它，一次请求建任务 + 窗口，避免"任务建了但没排上"的
+    /// 半成功状态（用户是自己点的，不违反 P9 的"系统不自动落位"）。
+    #[serde(default)]
+    pub planned_window: Option<PlannedWindowInput>,
+}
+
+/// 随任务一起建的时段（半开区间 `[start, end)`）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PlannedWindowInput {
+    pub start: DateTime<Utc>,
+    pub end: DateTime<Utc>,
 }
 
 /// 快速创建任务请求体（仅标题）
@@ -130,12 +143,33 @@ mod tests {
             due_at: None,
             priority: Some(TaskPriority::P1),
             tags: Some(vec!["工作".into()]),
+            planned_window: None,
         };
         let json = serde_json::to_string(&req).unwrap();
         assert!(json.contains("\"title\":\"test\""));
         assert!(json.contains("\"effort_estimate_minutes\":30"));
         assert!(json.contains("\"priority\":\"p1\""));
         assert!(json.contains("\"tags\":[\"工作\"]"));
+        // 缺省的 planned_window 序列化成 null（与 description/effort 等同口径，
+        // 这个结构体只用于反序列化请求，序列化形态没有对外契约）
+        assert!(json.contains("\"planned_window\":null"));
+    }
+
+    /// 点日历空白新建：一次请求带任务 + 时段
+    #[test]
+    fn create_task_request_carries_planned_window() {
+        let req = CreateTaskRequest {
+            title: "写周报".into(),
+            planned_window: Some(PlannedWindowInput {
+                start: DateTime::from_timestamp(1_767_225_600, 0).unwrap(),
+                end: DateTime::from_timestamp(1_767_229_200, 0).unwrap(),
+            }),
+            ..serde_json::from_str(r#"{"title":"占位"}"#).unwrap()
+        };
+        let json = serde_json::to_string(&req).unwrap();
+        assert!(json.contains("planned_window"));
+        assert!(json.contains("\"start\""));
+        assert!(json.contains("\"end\""));
     }
 
     /// 新字段全部可选：只给标题也能建（P1 的接口层体现）

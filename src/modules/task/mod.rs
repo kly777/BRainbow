@@ -48,6 +48,15 @@ impl TaskState {
     }
 }
 
+/// 接上 time_window 侧（`CreateTaskRequest.planned_window` 需要它）。
+///
+/// 两个方向的接缝都在 `app::context` 组装 —— 模块自己不 new 对方的服务
+/// （业务域之间禁止互相用对方实现，`AGENTS.md` 的依赖方向）。这里收的是**已经接好**的
+/// service，省得从池子重建一遍（接线时 task 的 service 要同时被 time_window 的校验器用）。
+pub fn from_services(service: TaskService, query: TaskQueryService) -> TaskState {
+    TaskState { service, query }
+}
+
 pub fn routes<S>() -> Router<S>
 where
     S: Clone + Send + Sync + 'static,

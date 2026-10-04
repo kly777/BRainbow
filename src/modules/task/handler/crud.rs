@@ -97,7 +97,10 @@ pub async fn get_task_detail_handler(
     match query.detail(&actor, id).await {
         Ok(Some(mut detail)) => {
             // 标签单独取：`Task` 行本身不含标签（详情里 task 与 children 各一次）
-            if let Err(e) = query.attach_tags(std::slice::from_mut(&mut detail.task)).await {
+            if let Err(e) = query
+                .attach_tags(std::slice::from_mut(&mut detail.task))
+                .await
+            {
                 return e.into_response();
             }
             if let Err(e) = query.attach_tags(&mut detail.children).await {

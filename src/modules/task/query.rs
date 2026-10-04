@@ -338,7 +338,7 @@ impl TaskQueryService {
                     TimeWindowType::Planned | TimeWindowType::Actual
                 )
             })
-            .map(|(_, window)| {
+            .flat_map(|(_, window)| {
                 slotting::expand_capped(&window, from)
                     .into_iter()
                     .map(|seg| {
@@ -346,7 +346,6 @@ impl TaskQueryService {
                         (seg.0.max(from), seg.1.min(to))
                     })
             })
-            .flatten()
             .collect::<Vec<_>>();
 
         // ③ 候选装配：阻塞信息从依赖边里取（`ranking` 已经用它算过因子，这里只取文案）

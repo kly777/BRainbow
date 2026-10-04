@@ -561,7 +561,6 @@ mod tests {
             working_hours: all_day_hours(),
             busy: vec![(local_ts(5, 9, 0), local_ts(5, 12, 0))],
             candidates: vec![cand(1, "写周报", ranked(1))],
-            ..Default::default()
         };
         let result = suggest(&ctx, from, to, ts(2026, 10, 5, 0, 0));
         assert_eq!(result.suggestions.len(), 1);
@@ -705,7 +704,6 @@ mod tests {
             working_hours: all_day_hours(),
             busy: vec![(local_ts(5, 9, 0), local_ts(5, 9, 30))],
             candidates: vec![candidate],
-            ..Default::default()
         };
         let result = suggest(&ctx, from, to, ts(2026, 10, 5, 0, 0));
         // 一天 × 9 小时工作时段 = 540 总容量；已占 30；建议 60
@@ -742,7 +740,6 @@ mod tests {
             working_hours: all_day_hours(),
             busy: vec![(local_ts(5, 9, 0), local_ts(5, 10, 0))],
             candidates: vec![cand(1, "写周报", ranked(1))],
-            ..Default::default()
         };
         let result = suggest(&ctx, from, to, ts(2026, 10, 5, 0, 0));
         // 第一个可用空档是 10:00，紧接上一个占用之后

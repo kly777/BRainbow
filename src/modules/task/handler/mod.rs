@@ -8,7 +8,9 @@ pub use crud::{
     get_task_handler, get_tasks_handler, quick_create_task_handler, update_task_handler,
 };
 
-pub use dependency::{add_dependency_handler, get_tags_handler, remove_dependency_handler};
+pub use dependency::{
+    add_dependency_handler, get_suggestions_handler, get_tags_handler, remove_dependency_handler,
+};
 pub use query::{
     get_calendar_handler, get_dag_handler, get_stats_handler, get_tree_handler,
     search_tasks_handler,

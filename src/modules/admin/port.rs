@@ -2,6 +2,17 @@
 
 use async_trait::async_trait;
 
+/// 设置读端口：**别的业务模块**通过它读 `app_settings` 的键，不直接用 `AdminService`
+/// （业务域之间禁止互相使用对方实现，`AGENTS.md` 的依赖方向）。
+///
+/// 只读：管理页的写仍然走 `AdminServicePort`。这里是给"运行时要读某个设置"的场景开的
+/// 口子 —— 当前只有时段建议算法的工作时段。
+#[async_trait]
+pub trait SettingsReader: Send + Sync {
+    /// 读一个设置；`None` = 没设过，调用方该退回它自己的默认值
+    async fn setting(&self, key: &str) -> Option<String>;
+}
+
 #[async_trait]
 pub trait AdminServicePort: Send + Sync {
     /// 当前是否开放注册（DB 优先于 env 初始值）

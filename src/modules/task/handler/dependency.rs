@@ -44,6 +44,27 @@ pub struct TagsQuery {
     pub prefix: String,
 }
 
+/// 时段建议的区间参数（`GET /api/tasks/suggestions?from=&to=`）
+#[derive(Debug, Deserialize)]
+pub struct SuggestionsQuery {
+    pub from: DateTime<Utc>,
+    pub to: DateTime<Utc>,
+}
+
+/// `GET /api/tasks/suggestions?from=…&to=…` —— **纯读，不落库**（P9）。
+///
+/// 采纳是前端显式调 `POST /api/time-windows`；系统绝不自己写日历。
+pub async fn get_suggestions_handler(
+    Query(query): Query<SuggestionsQuery>,
+    State(qsvc): State<TaskQueryService>,
+    Extension(actor): Extension<Actor>,
+) -> impl IntoResponse {
+    match qsvc.suggestions(&actor, query.from, query.to).await {
+        Ok(result) => Json(result).into_response(),
+        Err(e) => e.into_response(),
+    }
+}
+
 /// `GET /api/tags?prefix=` —— 录入框的标签补全（前缀查询，最多 8 条）
 pub async fn get_tags_handler(
     Query(query): Query<TagsQuery>,

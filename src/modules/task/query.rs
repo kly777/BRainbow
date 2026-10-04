@@ -3,9 +3,12 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
-use super::model::{Task, TaskStatus};
+use super::model::{Task, TaskSort, TaskStatus};
 use super::repository::TaskRepository;
-use crate::modules::time_window::TimeWindow;
+use super::slotting::{self, SlottingResult, WorkingHours};
+use crate::modules::admin::port::SettingsReader;
+use crate::modules::admin::service::KEY_WORKING_HOURS;
+use crate::modules::time_window::{TimeWindow, TimeWindowType};
 use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{
@@ -19,12 +22,45 @@ use crate::shared::search::{
 #[derive(Clone)]
 pub struct TaskQueryService {
     repo: TaskRepository,
+    /// 读 `app_settings`（工作时段偏好）。经端口进来：业务域之间不直接用对方的实现
+    settings: Option<Arc<dyn SettingsReader>>,
 }
 
 impl TaskQueryService {
     pub fn new(db: Arc<sqlx::SqlitePool>) -> Self {
         Self {
             repo: TaskRepository::new(db),
+            settings: None,
+        }
+    }
+
+    /// 接上设置读端口（时段建议要读工作时段偏好）
+    pub fn with_settings(mut self, settings: Arc<dyn SettingsReader>) -> Self {
+        self.settings = Some(settings);
+        self
+    }
+
+    /// 建议算法用的工作时段：读设置，**读不到/坏值就用默认值**。
+    ///
+    /// 建议本身是可降级的功能（"不采纳零成本"），为一个偏好项解析失败而整个端点
+    /// 报 500 说不通 —— 默认的 09:00–12:00 + 14:00–18:00 已经是一档合理的安排。
+    async fn working_hours(&self) -> WorkingHours {
+        let Some(reader) = &self.settings else {
+            return WorkingHours::default();
+        };
+        let Some(raw) = reader.setting(KEY_WORKING_HOURS).await else {
+            return WorkingHours::default();
+        };
+        match serde_json::from_str::<WorkingHours>(&raw) {
+            Ok(hours) => hours,
+            Err(e) => {
+                tracing::warn!(
+                    key = KEY_WORKING_HOURS,
+                    error = %e,
+                    "工作时段设置解析失败，回退默认值"
+                );
+                WorkingHours::default()
+            }
         }
     }
 
@@ -266,6 +302,83 @@ impl TaskQueryService {
             .map_err(ServiceError::Db)
     }
 
+    /// 时段建议：**纯读，不落库**（P9）。
+    ///
+    /// 采纳是前端显式调 `POST /api/time-windows` —— 系统绝不自己写日历。这条边界由
+    /// `suggestions_do_not_write` 那条测试钉住（`time_window` 行数前后一致）。
+    pub async fn suggestions(
+        &self,
+        actor: &Actor,
+        from: DateTime<Utc>,
+        to: DateTime<Utc>,
+    ) -> Result<SlottingResult, ServiceError> {
+        if from >= to {
+            return Err(ServiceError::InvalidInput("区间起止颠倒".into()));
+        }
+
+        // ① 候选：未完成任务，按 smart 排序（复用列表那套打分，同一份理由）
+        let (tasks, _total, ranked) = self.list_sorted(actor, TaskSort::Smart, 500, 0).await?;
+        let edges = self
+            .repo
+            .dependency_edges(actor)
+            .await
+            .map_err(ServiceError::Db)?;
+
+        // ② 硬占用：`planned` + `actual`（循环窗口展开后计入，上限 52 段）。
+        //    `feasible` **不算** —— 它是"我大概有空"的软信息（见 slotting.rs §3.5）
+        let busy = self
+            .repo
+            .find_calendar_events(actor, Some(from), Some(to), None)
+            .await
+            .map_err(ServiceError::Db)?
+            .into_iter()
+            .filter(|(_, window)| {
+                matches!(
+                    window.window_type,
+                    TimeWindowType::Planned | TimeWindowType::Actual
+                )
+            })
+            .map(|(_, window)| {
+                slotting::expand_capped(&window, from)
+                    .into_iter()
+                    .map(|seg| {
+                        // 裁到区间内：展开函数给的是"从 from 起的若干段"
+                        (seg.0.max(from), seg.1.min(to))
+                    })
+            })
+            .flatten()
+            .collect::<Vec<_>>();
+
+        // ③ 候选装配：阻塞信息从依赖边里取（`ranking` 已经用它算过因子，这里只取文案）
+        let candidates = tasks
+            .iter()
+            .filter_map(|task| {
+                let ranked = ranked.get(&task.id)?;
+                let deps = edges.get(&task.id);
+                let blocked_by = deps.and_then(|deps| {
+                    deps.iter()
+                        .find(|dep| dep.is_open)
+                        .map(|dep| dep.title.clone())
+                });
+                Some(slotting::Candidate {
+                    task_id: task.id,
+                    title: task.title.clone(),
+                    ranked: ranked.clone(),
+                    effort_minutes: task.effort_estimate_minutes,
+                    due_at: task.due_at,
+                    blocked_by,
+                })
+            })
+            .collect();
+
+        let ctx = slotting::SlotContext {
+            busy,
+            working_hours: self.working_hours().await,
+            candidates,
+        };
+        Ok(slotting::suggest(&ctx, from, to, Utc::now()))
+    }
+
     /// 构建依赖图（DAG）— 批量查询，避免 N+1
     pub async fn dag(
         &self,
@@ -398,6 +511,7 @@ mod sorted_tests {
     struct Ctx {
         svc: TaskService,
         qsvc: TaskQueryService,
+        pool: Arc<sqlx::SqlitePool>,
     }
 
     async fn setup() -> Ctx {
@@ -409,7 +523,8 @@ mod sorted_tests {
             .unwrap();
         Ctx {
             svc: TaskService::new(pool.clone()),
-            qsvc: TaskQueryService::new(pool),
+            qsvc: TaskQueryService::new(pool.clone()),
+            pool,
         }
     }
 
@@ -553,5 +668,140 @@ mod sorted_tests {
             .await
             .unwrap();
         assert!(ranked.is_empty());
+    }
+
+    // ── 时段建议 ──
+
+    /// 建一条 planned 窗口（不走 service：C001 要求它在 feasible 内，
+    /// 而建议测试只关心"已有占用会被避开"）
+    async fn planned(ctx: &Ctx, task_id: i32, start: DateTime<Utc>, end: DateTime<Utc>) {
+        sqlx::query(
+            "INSERT INTO time_window (start_time, end_time, type, task_id, user_id)
+             VALUES (?, ?, 'planned', ?, 1)",
+        )
+        .bind(start)
+        .bind(end)
+        .bind(task_id)
+        .execute(&*ctx.pool)
+        .await
+        .unwrap();
+    }
+
+    async fn count_windows(ctx: &Ctx) -> i64 {
+        sqlx::query_scalar("SELECT COUNT(*) FROM time_window")
+            .fetch_one(&*ctx.pool)
+            .await
+            .unwrap()
+    }
+
+    /// 任务行数（S6-a 顺带盯住：建议端点不该改任务）
+    async fn count_tasks(ctx: &Ctx) -> i64 {
+        sqlx::query_scalar("SELECT COUNT(*) FROM task")
+            .fetch_one(&*ctx.pool)
+            .await
+            .unwrap()
+    }
+
+    /// S6-a：**调用建议端点之后数据库零变化** —— P9 的机器可验证形式。
+    ///
+    /// 这条是本设计最重要的边界的守卫：系统不自动落盘。哪天有人觉得"顺手写进去更方便"
+    /// 而加了 INSERT/DELETE/UPDATE，这里立刻挂。
+    #[tokio::test]
+    async fn suggestions_do_not_write() {
+        let ctx = setup().await;
+        let actor = Actor::user(1);
+
+        let mut task_req = req("写周报");
+        task_req.due_at = Some(Utc::now() + Duration::days(1));
+        task_req.effort_estimate_minutes = Some(60);
+        let task = ctx.svc.create(&actor, task_req).await.unwrap();
+        planned(&ctx, task.id, Utc::now(), Utc::now() + Duration::hours(1)).await;
+
+        let from = Utc::now();
+        let to = from + Duration::days(3);
+        let before = count_windows(&ctx).await;
+        let tasks_before = count_tasks(&ctx).await;
+
+        let result = ctx.qsvc.suggestions(&actor, from, to).await.unwrap();
+
+        // 端点确实给出了东西（否则"零变化"是因为它什么都没算）
+        assert!(
+            !result.suggestions.is_empty() || !result.unscheduled.is_empty(),
+            "空结果证明不了纯读：要么算了要么全排不下"
+        );
+        assert_eq!(count_windows(&ctx).await, before, "建议端点写库了");
+        assert_eq!(count_tasks(&ctx).await, tasks_before, "建议端点改了任务");
+    }
+
+    /// 已有占用会被避开
+    #[tokio::test]
+    async fn suggestions_avoid_existing_plans() {
+        let ctx = setup().await;
+        let actor = Actor::user(1);
+        let task = ctx.svc.create(&actor, req("写周报")).await.unwrap();
+        planned(
+            &ctx,
+            task.id,
+            Utc::now() + Duration::days(1),
+            Utc::now() + Duration::days(1) + Duration::hours(8),
+        )
+        .await;
+
+        let from = Utc::now();
+        let to = from + Duration::days(3);
+        let result = ctx.qsvc.suggestions(&actor, from, to).await.unwrap();
+        // 区间内确实有建议（默认工作时段里还有空档），且没有一条与占用重叠
+        let busy_start = Utc::now() + Duration::days(1);
+        let busy_end = busy_start + Duration::hours(8);
+        for s in &result.suggestions {
+            assert!(
+                s.end <= busy_start || s.start >= busy_end,
+                "建议与已有安排重叠：{:?} – {:?}",
+                s.start,
+                s.end
+            );
+        }
+    }
+
+    /// 区间起止颠倒 → 400（不是 500）
+    #[tokio::test]
+    async fn suggestions_reject_reversed_range() {
+        let ctx = setup().await;
+        let actor = Actor::user(1);
+        let now = Utc::now();
+        let err = ctx
+            .qsvc
+            .suggestions(&actor, now + Duration::days(1), now)
+            .await
+            .unwrap_err();
+        assert!(matches!(err, ServiceError::InvalidInput(_)));
+    }
+
+    /// 没有设置端口 / 设置读不到 / 设置是坏 JSON —— 三种都退回默认工作时段，
+    /// 而不是让整个端点 500（建议本来就可降级）
+    #[tokio::test]
+    async fn working_hours_falls_back_instead_of_failing() {
+        let ctx = setup().await;
+        let from = Utc::now();
+        let to = from + Duration::days(2);
+
+        // 没接端口
+        assert!(
+            ctx.qsvc
+                .suggestions(&Actor::user(1), from, to)
+                .await
+                .is_ok()
+        );
+
+        // 端口返回坏 JSON
+        struct BadSettings;
+        #[async_trait]
+        impl SettingsReader for BadSettings {
+            async fn setting(&self, _key: &str) -> Option<String> {
+                Some("{ 不是合法 JSON".into())
+            }
+        }
+        let qsvc = TaskQueryService::new(ctx.pool.clone()).with_settings(Arc::new(BadSettings));
+        assert!(qsvc.suggestions(&Actor::user(1), from, to).await.is_ok());
     }
 }

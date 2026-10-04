@@ -19,7 +19,7 @@
 //! 依赖未解除 / 容量已满 / 截止在区间之外，三种文案各自不同。
 
 use chrono::{DateTime, Datelike, Duration, Timelike, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use super::ranking::Ranked;
 
@@ -31,7 +31,7 @@ pub const SLOT_GRANULARITY_MINUTES: i64 = 15;
 pub const MAX_EXPANDED_SEGMENTS: usize = 52;
 
 /// 一天里的一个工作区间，**本地钟点**（0 = 午夜）
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TimeRange {
     pub start_minute: i32,
     pub end_minute: i32,
@@ -45,7 +45,7 @@ impl TimeRange {
 }
 
 /// 工作时段偏好（**本地钟点** —— "我 9 点开始工作"说的是钟点不是 UTC 时刻）
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorkingHours {
     /// 一天里的工作区间
     pub ranges: Vec<TimeRange>,
@@ -292,12 +292,13 @@ fn confidence_of(
         return Confidence::Medium;
     }
     // 有明确 due 或显式优先级 = high；什么都没有 = low
-    let committed = candidate.due_at.is_some() || candidate.ranked.reasons.iter().any(
-        |reason| matches!(
-            reason.kind,
-            super::ranking::ReasonKind::Priority | super::ranking::ReasonKind::DueToday
-        ),
-    );
+    let committed = candidate.due_at.is_some()
+        || candidate.ranked.reasons.iter().any(|reason| {
+            matches!(
+                reason.kind,
+                super::ranking::ReasonKind::Priority | super::ranking::ReasonKind::DueToday
+            )
+        });
     if committed {
         Confidence::High
     } else {
@@ -329,7 +330,8 @@ fn working_slots(hours: &WorkingHours, from: DateTime<Utc>, to: DateTime<Utc>) -
     // 不该让这段变成一个几十 MB 的循环
     while day <= last && slots.len() < MAX_EXPANDED_SEGMENTS {
         // 1 = 周一 … 7 = 周日（与 `time_window.by_weekdays` 同约定）
-        let iso = day.weekday().number_from_monday() as u8 + u8::from(day.weekday() == chrono::Weekday::Sun);
+        let iso = day.weekday().number_from_monday() as u8
+            + u8::from(day.weekday() == chrono::Weekday::Sun);
         if hours.weekdays.contains(&iso) {
             for range in &hours.ranges {
                 if !range.is_valid() {
@@ -355,27 +357,31 @@ fn working_slots(hours: &WorkingHours, from: DateTime<Utc>, to: DateTime<Utc>) -
 /// 第一个合法时刻，重复时取**第一个**（保守：宁可早一点开始，别把时段推到用户已经
 /// 下班之后）。单时区用户永远走不到这两条分支。
 fn local_minute_of(day: chrono::NaiveDate, minute_of_day: i32) -> DateTime<Utc> {
-    let naive = day
-        .and_hms_opt(
-            (minute_of_day / 60) as u32,
-            (minute_of_day % 60) as u32,
-            0,
-        )
-        .unwrap_or_else(|| day.and_hms_opt(0, 0, 0).expect("00:00 是合法时刻"));
+    // `day` 来自日期迭代，`and_hms_opt` 对 0/0/0 与任何合法钟点都不会失败；
+    // 真失败了（理论上不可达）就退回该日的 UTC 零点 —— 生产代码禁 panic，
+    // 而"返回个错的时刻"在这里的后果只是建议落到偏一点的位置（界面上看得见）
+    let midnight = || {
+        day.and_hms_opt(0, 0, 0)
+            .map(|n| n.and_utc())
+            .unwrap_or_else(Utc::now)
+    };
+    let Some(naive) = day.and_hms_opt((minute_of_day / 60) as u32, (minute_of_day % 60) as u32, 0)
+    else {
+        return midnight();
+    };
     naive
         .and_local_timezone(chrono::Local)
         .earliest()
         .map(|local| local.with_timezone(&Utc))
-        // 本地时刻构造失败（理论上不会）：退回该日的 UTC 零点，总比 panic 好
-        .unwrap_or_else(|| {
-            day.and_hms_opt(0, 0, 0)
-                .map(|n| n.and_utc())
-                .unwrap_or_else(Utc::now)
-        })
+        .unwrap_or_else(midnight)
 }
 
 /// 半开区间相减：`slots` 去掉 `[cut_start, cut_end)`
-fn subtract(slots: Vec<Interval>, cut_start: DateTime<Utc>, cut_end: DateTime<Utc>) -> Vec<Interval> {
+fn subtract(
+    slots: Vec<Interval>,
+    cut_start: DateTime<Utc>,
+    cut_end: DateTime<Utc>,
+) -> Vec<Interval> {
     let mut out = Vec::new();
     for (start, end) in slots {
         if cut_end <= start || cut_start >= end {
@@ -395,13 +401,17 @@ fn subtract(slots: Vec<Interval>, cut_start: DateTime<Utc>, cut_end: DateTime<Ut
 
 /// 找最早一段够长的空闲（15 分钟对齐），并把它**从空闲集里扣掉**
 fn first_fit(free: &mut Vec<Interval>, minutes: i64) -> Option<(DateTime<Utc>, DateTime<Utc>)> {
-    let order: Vec<usize> = {
-        let mut idx: Vec<usize> = (0..free.len()).collect();
-        idx.sort_by_key(|i| free[*i].0);
-        idx
-    };
+    // 按起点排的索引（索引本身由 `enumerate` 生成，`get` 兜底）
+    let mut order: Vec<usize> = (0..free.len()).collect();
+    order.sort_by_key(|i| {
+        free.get(*i)
+            .map(|(s, _)| *s)
+            .unwrap_or(DateTime::<Utc>::MIN_UTC)
+    });
     for i in order {
-        let (start, end) = free[i];
+        let Some(&(start, end)) = free.get(i) else {
+            continue;
+        };
         // 起点对齐到 15 分钟网格：人安排一件事的时间就在这四档上
         let aligned = snap_up(start);
         if minute_len(aligned, end) >= minutes {
@@ -616,7 +626,12 @@ mod tests {
         };
         let result = suggest(&ctx, from, to, ts(2026, 10, 5, 0, 0));
         // S6-f：宁可少给，不塞满；排不下的要说清
-        assert!(result.unscheduled.iter().any(|u| u.reason == "这段时间排不下了"));
+        assert!(
+            result
+                .unscheduled
+                .iter()
+                .any(|u| u.reason == "这段时间排不下了")
+        );
         assert_eq!(result.capacity.total_minutes, 540);
     }
 
@@ -712,7 +727,11 @@ mod tests {
         assert_eq!(result.suggestions.len(), 1);
         // 落点必须在工作日
         let weekday = result.suggestions[0].start.weekday().num_days_from_monday() as u8;
-        assert!(weekday <= 4, "落到了周末：{:?}", result.suggestions[0].start);
+        assert!(
+            weekday <= 4,
+            "落到了周末：{:?}",
+            result.suggestions[0].start
+        );
     }
 
     #[test]
@@ -735,7 +754,9 @@ mod tests {
         let (from, to) = range_for(5, 6);
         let ctx = SlotContext {
             working_hours: all_day_hours(),
-            candidates: (1..=5).map(|id| cand(id, &format!("任务 {id}"), ranked(id))).collect(),
+            candidates: (1..=5)
+                .map(|id| cand(id, &format!("任务 {id}"), ranked(id)))
+                .collect(),
             ..Default::default()
         };
         let result = suggest(&ctx, from, to, ts(2026, 10, 5, 0, 0));

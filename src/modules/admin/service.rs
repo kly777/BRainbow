@@ -5,11 +5,14 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use sqlx::SqlitePool;
 
-use super::port::AdminServicePort;
+use super::port::{AdminServicePort, SettingsReader};
 use super::repository::SettingsRepo;
 
 pub const KEY_ALLOW_REGISTER: &str = "allow_register";
 pub const KEY_JWT_SECRET: &str = "jwt_secret";
+/// 工作时段偏好（时段建议算法用）。值是 `task::slotting::WorkingHours` 的 JSON。
+/// 没存过时用 `WorkingHours::default()`（09:00–12:00 + 14:00–18:00，周一至周五）。
+pub const KEY_WORKING_HOURS: &str = "task_working_hours";
 
 #[derive(Clone)]
 pub struct SettingsService {
@@ -119,6 +122,15 @@ impl AdminService {
                 .unwrap_or_else(|e| e.into_inner());
             *cache = Some(parsed);
         }
+    }
+}
+
+#[async_trait]
+impl SettingsReader for AdminService {
+    /// 读设置。**读失败与"没设过"都当 `None`**：调用方会退回自己的默认值，
+    /// 而让一次 DB 抖动把建议功能整个搞挂是不划算的（建议本来就是可降级的）。
+    async fn setting(&self, key: &str) -> Option<String> {
+        self.settings.get(key).await.unwrap_or(None)
     }
 }
 

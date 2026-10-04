@@ -24,10 +24,10 @@ pub use handler::{
     activate_task_handler, add_dependency_handler, archive_task_handler, complete_task_handler,
     create_task_handler, delete_task_handler, get_active_tasks_handler, get_all_tasks_handler,
     get_archived_tasks_handler, get_backlog_tasks_handler, get_calendar_handler,
-    get_completed_tasks_handler, get_dag_handler, get_stats_handler, get_tags_handler,
-    get_task_detail_handler, get_task_handler, get_tasks_handler, get_tree_handler,
-    move_to_backlog_handler, quick_create_task_handler, remove_dependency_handler,
-    search_tasks_handler, update_task_handler,
+    get_completed_tasks_handler, get_dag_handler, get_stats_handler, get_suggestions_handler,
+    get_tags_handler, get_task_detail_handler, get_task_handler, get_tasks_handler,
+    get_tree_handler, move_to_backlog_handler, quick_create_task_handler,
+    remove_dependency_handler, search_tasks_handler, update_task_handler,
 };
 
 pub use query::TaskQueryService;
@@ -73,6 +73,9 @@ where
         .route("/tree", get(get_tree_handler))
         .route("/calendar", get(get_calendar_handler))
         .route("/dag", get(get_dag_handler))
+        // 建议走 `/tasks/suggestions` 而不是 `/tasks/{id}`：静态路径必须排在
+        // `{id}` 之前，否则会被当成 id="suggestions" 去解析
+        .route("/suggestions", get(get_suggestions_handler))
         .route("/status/backlog", get(get_backlog_tasks_handler))
         .route("/status/active", get(get_active_tasks_handler))
         .route("/status/completed", get(get_completed_tasks_handler))

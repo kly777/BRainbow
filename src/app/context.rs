@@ -254,7 +254,9 @@ impl AppState {
             Arc::new(time_window.clone());
         let task = task::from_services(
             task_service.with_window_creator(window_creator),
-            task::TaskQueryService::new(db.clone()),
+            // 时段建议要读工作时段偏好（app_settings），经设置端口进来。
+            // `admin` 在下面才建，所以用同一个 Arc 先握着 admin service
+            task::TaskQueryService::new(db.clone()).with_settings(Arc::new(admin.clone())),
         );
 
         let mem = MemService::new(

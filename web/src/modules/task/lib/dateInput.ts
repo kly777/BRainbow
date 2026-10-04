@@ -80,8 +80,15 @@ export function formatDateInput(date: Date): string {
 	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
-/** 控件的 helper 文案（MD3：格式要写在 helper 里，不是 placeholder） */
-export const DATE_HELPER = `格式 2026-10-03 15:00，可省时间（按 ${DEFAULT_HOUR}:00）`;
+/**
+ * 日期框下方的提示。
+ *
+ * **不再重复格式示例** —— 那是 placeholder 的活（它直接把 `2026-10-03 15:00` 的形状
+ * 摆在那儿，不必再用一句"格式是…"讲一遍；MD3 的原话是把格式写在 helper 里，
+ * 但两处都写就成了同一句话说两遍）。这里只留一条从示例里看不出来的规则：
+ * 只写日期时按几点算。
+ */
+export const DATE_HELPER = `只写日期时按 ${DEFAULT_HOUR}:00 算`;
 
 /**
  * 本地时间 → `<input type="datetime-local">` 的 value（`2026-10-03T15:00`，不带时区）。

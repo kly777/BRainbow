@@ -56,18 +56,28 @@
 	color: var(--t-color-warning);
 }
 
-/* ── 第 2 层：六个控件 ── */
+/* ── 第 2 层：六个控件 ──
+   它是"可选补几个属性"的一条尾巴，不是一张表单：控件收一档尺寸（--text-sm +
+   紧内边距），否则六个全尺寸输入框摊出来就是一堵表单墙，把录入框那份"随手记一句"
+   的轻感吃掉。参考产品（Todoist / TickTick）的第二层也都是紧凑的一排。 */
 
 .panel {
 	/* 展开动效 ≤140ms（P3）；reduced-motion 下由 global.css 关掉过渡 */
 	animation: panel-in var(--t-transition-fast) ease-out;
 	display: grid;
 	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: var(--space-sm);
-	padding: var(--space-sm);
+	align-items: start;
+	gap: var(--space-sm) var(--space-md);
+	padding: var(--space-md);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-md);
 	background: var(--t-color-surface);
+}
+
+/* 面板内的输入控件统一收紧：Control 的基础尺寸是给表单页的 */
+.panel :is(input, select) {
+	font-size: var(--text-sm);
+	padding: var(--space-xs) var(--space-sm);
 }
 
 @keyframes panel-in {

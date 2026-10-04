@@ -29,8 +29,17 @@
 	max-width: min(15rem, 100%);
 }
 
+/*
+ * 录入框：吃掉工具条剩下的宽度。
+ *
+ * 原先只有 `flex-shrink: 0`，于是它的宽度由内容决定 —— 而内容（`.capture` → `.row`
+ * → Input）的基础控件写着 `width: 100%`。**百分比遇上 shrink-to-fit 父级解析成 0**，
+ * 整条录入框塌成一个空方块，placeholder 都看不见。
+ * 给它一个实打实的 basis，宽度就不再取决于里面那个 100%。
+ */
 .quick-add-box {
-	flex-shrink: 0;
+	flex: 1 1 14rem;
+	min-width: 0;
 }
 
 /* 筛选按钮：常驻控件之一（与排序同级） */
@@ -89,8 +98,17 @@
 	}
 }
 
-/* 排序下拉（工具条）：宽度跟着内容走，不占满 */
+/*
+ * 排序下拉（工具条）：宽度跟着内容走，不占满。
+ *
+ * `width: auto` 是必须的，光有 `flex-shrink: 0` 拦不住它 —— `.control` 基础规则写着
+ * `width: 100%`（给表单里竖排的字段用的），而 flex 项的 `flex-basis: auto` 就取这个
+ * width，于是解析成**整行宽**；加上 shrink 0 不让它缩，它便独占一行，
+ * 看起来像一条没有内容的横条，后面的录入框也被挤没了。
+ * `:where(.control)` 特异度是 0，这里 (0,1,0) 稳压。
+ */
 .sort-select {
+	width: auto;
 	flex-shrink: 0;
 	font-size: var(--text-sm);
 }

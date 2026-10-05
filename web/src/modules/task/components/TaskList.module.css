@@ -133,18 +133,7 @@
 	line-height: var(--leading-normal);
 }
 
-/*
- * 元信息一行、弱化到 --text-xs：标题是 --text-sm/600，元信息不该和它同号
- * （否则一行的视觉重心会被日历图标抢走）。
- */
-.task-meta {
-	display: flex;
-	gap: var(--space-md);
-	align-items: center;
-	flex-wrap: wrap;
-	font-size: var(--text-xs);
-	color: var(--t-color-ink-muted);
-}
+/* 子任务徽章（属性条本身在 TaskMeta.module.css，与看板卡片共用） */
 
 .sub-task-badge {
 	margin-left: var(--space-sm);
@@ -473,44 +462,8 @@
 	padding: var(--space-md) 0;
 }
 
-/* ── S3：截止/优先级/标签/理由（默认视图的信息层） ── */
-
-.priority-badge {
-	padding: 0 var(--space-2xs);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-2xs);
-	font-size: var(--text-xs);
-	font-weight: 600;
-	font-variant-numeric: tabular-nums;
-	color: var(--t-color-ink-muted);
-}
-
-/* 元信息里的"图标 + 文字"：行内 flex 让 12px 的线稿图标与文字基线齐平
-   （直接放在 span 里会按文字的基线对齐，图标显得飘高） */
-.due-badge,
-.effort-badge {
-	display: inline-flex;
-	align-items: center;
-	gap: var(--space-2xs);
-	font-size: var(--text-xs);
-	color: var(--t-color-ink-muted);
-	font-variant-numeric: tabular-nums;
-}
-
-/* 逾期：图标 + 文字 + 点下划线（不是只换个颜色 —— WCAG 1.4.1 要求不能只有颜色通道） */
-.due-overdue {
-	color: var(--t-color-danger);
-	font-weight: 600;
-	text-decoration: underline dotted;
-	text-underline-offset: 0.2em;
-}
-
-.tag-chip {
-	padding: 0 var(--space-2xs);
-	border-radius: var(--radius-2xs);
-	background: var(--t-color-accent-soft);
-	font-size: var(--text-xs);
-}
+/* ── S3：排序理由（默认视图的信息层） ──
+   截止 / 优先级 / 时长 / 标签已搬到 TaskMeta.module.css —— 看板卡片共用同一份。 */
 
 .reason-line {
 	margin: var(--space-2xs) 0 0;

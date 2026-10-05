@@ -1,0 +1,43 @@
+/* 任务属性条（列表行与看板卡片共用）—— 见 TaskMeta.tsx 顶部说明 */
+
+.meta {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--space-md);
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}
+
+/* "图标 + 文字"用行内 flex：直接放在 span 里会按文字基线对齐，12px 的图标显得飘高 */
+
+.due-badge,
+.effort-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2xs);
+	font-variant-numeric: tabular-nums;
+}
+
+/* 逾期：图标 + 文字 + 点下划线（不只换个颜色 —— WCAG 1.4.1） */
+
+.due-overdue {
+	color: var(--t-color-danger);
+	font-weight: 600;
+	text-decoration: underline dotted;
+	text-underline-offset: 0.2em;
+}
+
+.priority-badge {
+	padding: 0 var(--space-2xs);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-2xs);
+	font-weight: 600;
+	font-variant-numeric: tabular-nums;
+}
+
+.tag-chip {
+	padding: 0 var(--space-2xs);
+	border-radius: var(--radius-2xs);
+	background: var(--t-color-accent-soft);
+}

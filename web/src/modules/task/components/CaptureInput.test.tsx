@@ -9,7 +9,9 @@ import { describe, expect, it, vi } from "vitest";
 import CaptureInput, { type CaptureSubmit } from "./CaptureInput.tsx";
 
 function mount(
-	onSubmit: (payload: CaptureSubmit) => void | boolean | Promise<void | boolean>,
+	onSubmit: (
+		payload: CaptureSubmit,
+	) => boolean | undefined | Promise<boolean | undefined>,
 ) {
 	document.body.innerHTML = "";
 	const host = document.createElement("div");
@@ -74,7 +76,10 @@ describe("CaptureInput：第 1 层", () => {
 		const input = titleInput(host) as HTMLInputElement;
 		input.focus();
 
-		type(input, "很长很长很长很长很长很长很长很长很长很长很长的标题".repeat(10));
+		type(
+			input,
+			"很长很长很长很长很长很长很长很长很长很长很长的标题".repeat(10),
+		);
 		press(input, "Enter");
 		await flush();
 

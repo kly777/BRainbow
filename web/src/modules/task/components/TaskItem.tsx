@@ -159,6 +159,7 @@ function TaskItem(props: TaskItemProps) {
 							type="button"
 							onClick={props.onEdit}
 							class={styles.editButton}
+							aria-label={`编辑任务：${props.task.title}`}
 						>
 							<Pencil size={14} />
 						</button>
@@ -168,6 +169,7 @@ function TaskItem(props: TaskItemProps) {
 							type="button"
 							onClick={() => props.onDelete(props.task.id)}
 							class={styles.deleteButton}
+							aria-label={`删除任务：${props.task.title}`}
 						>
 							<Trash2 size={14} />
 						</button>
@@ -177,6 +179,7 @@ function TaskItem(props: TaskItemProps) {
 							type="button"
 							onClick={() => setShowSubTaskInput(true)}
 							class={styles.subTaskButton}
+							aria-label={`给「${props.task.title}」添加子任务`}
 						>
 							+
 						</button>

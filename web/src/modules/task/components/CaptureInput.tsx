@@ -67,7 +67,9 @@ export interface CaptureInputProps {
 	 *
 	 * 失败的原因由调用方提示（provider 的 `add` 已经调 `notifyError`）。
 	 */
-	onSubmit: (payload: CaptureSubmit) => void | boolean | Promise<void | boolean>;
+	onSubmit: (
+		payload: CaptureSubmit,
+	) => boolean | undefined | Promise<boolean | undefined>;
 	/** 父任务候选；缺省（或不给）时不显示"父任务"控件 */
 	parentCandidates?: readonly Task[];
 	placeholder?: string;

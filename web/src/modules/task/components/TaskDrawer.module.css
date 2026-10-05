@@ -74,47 +74,11 @@
 	overflow-wrap: anywhere;
 }
 
-.meta {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--space-sm);
-	margin: 0;
-}
-
-.meta-item {
-	display: flex;
-	align-items: baseline;
-	gap: var(--space-2xs);
-	font-size: var(--text-xs);
-}
-
-.meta-item dt {
-	color: var(--t-color-ink-faint);
-}
-
-.meta-item dd {
-	margin: 0;
-	color: var(--t-color-ink);
-	font-variant-numeric: tabular-nums;
-}
-
-/* 逾期：⚠ + 加粗（不靠颜色单独承载） */
-.overdue {
-	color: var(--t-color-danger);
-	font-weight: 600;
-}
-
-.tags {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--space-2xs);
-}
-
-.tag {
-	padding: 0 var(--space-2xs);
-	border-radius: var(--radius-2xs);
-	background: var(--t-color-accent-soft);
-	font-size: var(--text-xs);
+/* 属性条：排版在 TaskMeta.module.css（与列表行、看板卡片共用一份），
+   这里只管它与描述之间的间距。原先抽屉有自己的一套（定义列表 + `⚠` 字符 +
+   标签单独一栏），同一个"逾期"在三处的形状与措辞都不一样。 */
+.task-meta {
+	margin-top: var(--space-xs);
 }
 
 .window-group {

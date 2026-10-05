@@ -7,6 +7,7 @@
 // （焦点归还是硬要求：抽屉盖在日历旁边，不还焦点就等于让键盘用户丢失位置）。
 
 import { Button, Select } from "@components/ui";
+import { X } from "@components/ui/icons";
 import {
 	type Component,
 	createEffect,
@@ -17,9 +18,9 @@ import {
 } from "solid-js";
 import { getTaskDetailE } from "../api.ts";
 import type { Task, TaskDetail } from "../api-types.ts";
-import { formatDue } from "../lib/task-group.ts";
 import EditTaskModal from "./EditTaskModal.tsx";
 import styles from "./TaskDrawer.module.css";
+import { TaskMeta } from "./TaskMeta.tsx";
 import { useTasks } from "./TaskProvider.tsx";
 
 export interface TaskDrawerProps {
@@ -82,7 +83,7 @@ export default function TaskDrawer(props: TaskDrawerProps) {
 						aria-label="关闭任务详情"
 						onClick={close}
 					>
-						×
+						<X size={16} />
 					</button>
 				</header>
 
@@ -115,43 +116,12 @@ export default function TaskDrawer(props: TaskDrawerProps) {
 								<p class={styles.description}>{data().task.description}</p>
 							</Show>
 
-							<dl class={styles.meta}>
-								<Show when={data().task.priority}>
-									{(p) => (
-										<div class={styles.metaItem}>
-											<dt>优先级</dt>
-											<dd>{p().toUpperCase()}</dd>
-										</div>
-									)}
-								</Show>
-								<Show when={formatDue(data().task.due_at)}>
-									{(due) => (
-										<div class={styles.metaItem}>
-											<dt>截止</dt>
-											<dd classList={{ [styles.overdue]: due().overdue }}>
-												{due().overdue ? "⚠ " : ""}
-												{due().text}
-											</dd>
-										</div>
-									)}
-								</Show>
-								<Show when={data().task.effort_estimate_minutes}>
-									{(minutes) => (
-										<div class={styles.metaItem}>
-											<dt>预计</dt>
-											<dd>{minutes()} 分钟</dd>
-										</div>
-									)}
-								</Show>
-							</dl>
-
-							<Show when={data().task.tags.length > 0}>
-								<div class={styles.tags}>
-									<For each={data().task.tags}>
-										{(tag) => <span class={styles.tag}>#{tag.name}</span>}
-									</For>
-								</div>
-							</Show>
+							{/*
+							 * 属性条：与列表行、看板卡片共用同一份（见 TaskMeta.tsx 顶部）。
+							 * 原来是抽屉自己的第三套写法（定义列表 + `⚠` 字符 + 标签 chip 单独一栏），
+							 * 同一个"逾期"在三处的形状与措辞都不一样。
+							 */}
+							<TaskMeta task={data().task} class={styles.taskMeta} />
 
 							{/* 三类时段分别列出：feasible / planned / actual（P11：承诺与兑现是两件事） */}
 							<WindowList

@@ -62,13 +62,20 @@ export default function TaskToolbar(props: TaskToolbarProps) {
 		props.onSearchChange(q);
 	};
 
-	/** 提交：乐观插入由 provider 负责，这里只负责提一句提示（P2：不弹模态、不跳转） */
+	/**
+	 * 提交：乐观插入由 provider 负责，这里只负责提一句提示（P2：不弹模态、不跳转）。
+	 *
+	 * 把 `add` 的成败如实回传 —— 录入框靠它决定要不要清空输入框（失败时保留原文，
+	 * 让用户改一改就能重发）。失败的原因已经由 provider 弹过 toast，这里不再重复。
+	 */
 	const submit = async (payload: CaptureSubmit) => {
 		const req: CreateTaskRequest = captureToCreateRequest(payload);
 		const created = await add(req);
-		if (created) {
-			notifySuccess("已创建", created.title);
+		if (!created) {
+			return false;
 		}
+		notifySuccess("已创建", created.title);
+		return true;
 	};
 
 	return (

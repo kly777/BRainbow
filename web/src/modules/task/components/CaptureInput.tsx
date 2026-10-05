@@ -57,8 +57,17 @@ export interface CaptureSubmit {
 }
 
 export interface CaptureInputProps {
-	/** 提交（调用方负责乐观更新与 toast；本组件只管清空与焦点） */
-	onSubmit: (payload: CaptureSubmit) => void | Promise<void>;
+	/**
+	 * 提交。返回 `true` 表示已创建，`false` 表示失败。
+	 *
+	 * **返回值是有意义的**：失败时本组件**不清空输入框**、把焦点留在原地，
+	 * 用户写的内容还在、可以直接改。原先这里是 `void` 且先清空再 await ——
+	 * 创建失败（例如标题超 255 被后端 400 拒）时内容已经被丢掉，用户既看不到
+	 * 原因也找不回原文，等同静默丢数据。
+	 *
+	 * 失败的原因由调用方提示（provider 的 `add` 已经调 `notifyError`）。
+	 */
+	onSubmit: (payload: CaptureSubmit) => void | boolean | Promise<void | boolean>;
 	/** 父任务候选；缺省（或不给）时不显示"父任务"控件 */
 	parentCandidates?: readonly Task[];
 	placeholder?: string;
@@ -119,6 +128,17 @@ export default function CaptureInput(props: CaptureInputProps) {
 			dueAt: dueAt()?.toISOString() ?? null,
 			parentTaskId: parentId(),
 		};
+
+		// 失败时要还原的东西：**提交前**先留着（不能等失败了才想起来）
+		const restore = {
+			text: text(),
+			startAt: startAt(),
+			dueAt: dueAt(),
+			parentId: parentId(),
+		};
+
+		// 先乐观清空、**立刻**清：回车即清是连着录入的手感（P2），
+		// 放在 await 之后会让输入框在网络往返期间还留着原文，连按两下就建出两条。
 		if (keepText) {
 			// 连写多条：只清第 2 层的日期/父任务，标题留着改改再发
 			setStartAt(null);
@@ -127,7 +147,17 @@ export default function CaptureInput(props: CaptureInputProps) {
 		} else {
 			reset();
 		}
-		await props.onSubmit(payload);
+
+		const outcome = await props.onSubmit(payload);
+
+		if (outcome === false) {
+			// 失败（标题超 255 之类）：把原文放回去，原因已由 provider 弹过 toast。
+			// 不还原就是静默丢数据 —— 用户写的东西既看不见也找不回。
+			setText(restore.text);
+			setStartAt(restore.startAt);
+			setDueAt(restore.dueAt);
+			setParentId(restore.parentId);
+		}
 		inputRef?.focus();
 	};
 

@@ -164,8 +164,12 @@ export function TaskProvider(props: { children: JSX.Element }) {
 			setTasks((p) => p.map((t) => (t.id === temp.id ? result.value : t)));
 			return result.value;
 		}
-		// 失败：回滚乐观更新
+		// 失败：回滚乐观更新**并把原因说出来**。
+		// 此前这里只回滚、不提示，于是创建失败（如标题超 255 被 400 拒）在界面上
+		// 完全静默 —— 调用方（录入框）已经先把输入框清空了，用户既看不到原因、
+		// 也找不回写的内容。等同于静默丢数据。
 		setTasks((p) => p.filter((t) => t.id !== temp.id));
+		notifyError("没能创建任务", result.error);
 		return null;
 	};
 

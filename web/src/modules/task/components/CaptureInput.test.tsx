@@ -8,13 +8,18 @@ import { render } from "solid-js/web";
 import { describe, expect, it, vi } from "vitest";
 import CaptureInput, { type CaptureSubmit } from "./CaptureInput.tsx";
 
-function mount(onSubmit: (payload: CaptureSubmit) => void) {
+function mount(
+	onSubmit: (payload: CaptureSubmit) => void | boolean | Promise<void | boolean>,
+) {
 	document.body.innerHTML = "";
 	const host = document.createElement("div");
 	document.body.appendChild(host);
 	render(() => <CaptureInput onSubmit={onSubmit} />, host);
 	return host;
 }
+
+/** 等到 onSubmit 返回的 promise 落地（清空/还原都在 await 之后发生） */
+const flush = () => new Promise((r) => setTimeout(r, 0));
 
 const titleInput = (host: HTMLElement) =>
 	host.querySelector<HTMLInputElement>(
@@ -60,6 +65,59 @@ describe("CaptureInput：第 1 层", () => {
 
 		expect(input.value).toBe("");
 		expect(document.activeElement).toBe(input);
+	});
+
+	// 回归：创建失败（如标题超 255 被后端 400 拒）时，用户写的内容必须还在。
+	// 此前是先清空再 await 提交、失败又没提示，等同静默丢数据。
+	it("提交失败时把原文放回输入框，焦点也留在框里", async () => {
+		const host = mount(() => false);
+		const input = titleInput(host) as HTMLInputElement;
+		input.focus();
+
+		type(input, "很长很长很长很长很长很长很长很长很长很长很长的标题".repeat(10));
+		press(input, "Enter");
+		await flush();
+
+		expect(input.value.length).toBeGreaterThan(0);
+		expect(input.value.startsWith("很长很长")).toBe(true);
+		expect(document.activeElement).toBe(input);
+	});
+
+	it("提交失败时第 2 层的日期与父任务也一并还原", async () => {
+		const host = mount(() => false);
+		const input = titleInput(host) as HTMLInputElement;
+		input.focus();
+
+		type(input, "写周报");
+		// 用 ↓ 唤出第 2 层（见 onKeyDown 的 ArrowDown 分支）
+		press(input, "ArrowDown");
+		const dateInput = host.querySelector<HTMLInputElement>(
+			'input[data-testid="capture-due"], input[id="capture-due"]',
+		) as HTMLInputElement | null;
+		// 第 2 层是原生 datetime-local；填上值即可，不必逐个控件断言
+		if (dateInput) {
+			dateInput.value = "2026-10-20T15:00";
+			dateInput.dispatchEvent(new Event("change", { bubbles: true }));
+		}
+		press(input, "Enter");
+		await flush();
+
+		expect(input.value).toBe("写周报");
+		if (dateInput) {
+			expect(dateInput.value).toBe("2026-10-20T15:00");
+		}
+	});
+
+	it("提交成功（onSubmit 返回 true）时清空，与 void 返回值一视同仁", async () => {
+		const host = mount(() => true);
+		const input = titleInput(host) as HTMLInputElement;
+		input.focus();
+
+		type(input, "写周报");
+		press(input, "Enter");
+		await flush();
+
+		expect(input.value).toBe("");
 	});
 
 	it("Shift+Enter 提交但不清空（连写多条）", () => {

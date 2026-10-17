@@ -85,7 +85,7 @@ pub struct CalendarEvent {
     pub window_id: i32,
     pub title: String,
     pub start: DateTime<Utc>,
-    pub end: DateTime<Utc>,
+    pub end: Option<DateTime<Utc>>,
     pub window_type: String,
     pub status: TaskStatus,
     /// 优先级（日历要按 type/status/priority 三通道上色，见 06-日历视图 §5.2）
@@ -161,7 +161,7 @@ mod tests {
             window_id: 7,
             title: "x".into(),
             start: chrono::Utc::now(),
-            end: chrono::Utc::now(),
+            end: Some(chrono::Utc::now()),
             window_type: "planned".into(),
             status: crate::modules::task::model::TaskStatus::Active,
             priority: Some(crate::modules::task::model::TaskPriority::P1),

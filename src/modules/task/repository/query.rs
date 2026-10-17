@@ -1,10 +1,10 @@
 use chrono::{DateTime, Utc};
 use sqlx::{FromRow, QueryBuilder};
 
-use crate::modules::time_window::{TimeWindow, TimeWindowType};
 use crate::shared::actor::Actor;
 use crate::shared::db_query::{like_contains, push_owner_scope};
 
+use super::super::block::TaskBlock;
 use super::super::dto::TaskDetailResponse;
 use super::super::model::{Task, TaskStatus};
 use super::super::response::TaskResponse;
@@ -38,16 +38,16 @@ struct CalendarRow {
     priority: Option<crate::modules::task::model::TaskPriority>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
-    tw_id: i32,
-    start_time: DateTime<Utc>,
-    end_time: DateTime<Utc>,
-    window_type: TimeWindowType,
-    tw_task_id: i32,
-    tw_user_id: Option<i32>,
-    recurrence_freq: Option<crate::modules::time_window::RecurrenceFrequency>,
-    recurrence_interval: Option<i32>,
-    recurrence_until: Option<DateTime<Utc>>,
-    recurrence_by_weekdays: Option<String>,
+    block_id: i32,
+    block_start: DateTime<Utc>,
+    block_end: Option<DateTime<Utc>>,
+    block_kind: String,
+    block_task_id: i32,
+    block_user_id: Option<i32>,
+    block_fixed: i64,
+    block_source: String,
+    block_created_at: DateTime<Utc>,
+    block_updated_at: DateTime<Utc>,
 }
 
 impl TaskRepository {
@@ -147,33 +147,22 @@ impl TaskRepository {
         .fetch_all(&*self.db)
         .await?;
 
-        let time_windows = sqlx::query_as!(
-            TimeWindow,
-            r#"SELECT id AS "id: i32",
-                      start_time AS "start_time!: chrono::DateTime<chrono::Utc>",
-                      end_time AS "end_time!: chrono::DateTime<chrono::Utc>",
-                      type AS "window_type!: crate::modules::time_window::TimeWindowType",
-                      task_id AS "task_id: i32",
-                      user_id AS "user_id?: i32",
-                      recurrence_freq AS "recurrence_freq?: crate::modules::time_window::RecurrenceFrequency",
-                      recurrence_interval AS "recurrence_interval?: i32",
-                      recurrence_until AS "recurrence_until?: chrono::DateTime<chrono::Utc>",
-                      recurrence_by_weekdays
-               FROM time_window WHERE task_id = ? ORDER BY start_time"#,
-            id
+        let blocks = sqlx::query_as::<_, TaskBlock>(
+            r#"SELECT id, user_id, task_id, kind, start_at, end_at, fixed, source,
+                      created_at, updated_at
+               FROM task_block WHERE task_id = ?1 ORDER BY start_at"#,
         )
+        .bind(id)
         .fetch_all(&*self.db)
         .await?;
 
-        let mut available_slots = Vec::new();
-        let mut planned_slots = Vec::new();
-        let mut actual_slots = Vec::new();
-
-        for window in time_windows {
-            match window.window_type {
-                TimeWindowType::Feasible => available_slots.push(window),
-                TimeWindowType::Planned => planned_slots.push(window),
-                TimeWindowType::Actual => actual_slots.push(window),
+        let mut feasible_blocks = Vec::new();
+        let mut planned_blocks = Vec::new();
+        for block in blocks {
+            if block.kind == "feasible" {
+                feasible_blocks.push(block);
+            } else {
+                planned_blocks.push(block);
             }
         }
 
@@ -181,9 +170,8 @@ impl TaskRepository {
             task: TaskResponse::from(task),
             depends_on: dependencies,
             children: children.into_iter().map(TaskResponse::from).collect(),
-            available_slots,
-            planned_slots,
-            actual_slots,
+            feasible_blocks,
+            planned_blocks,
         }))
     }
 
@@ -282,87 +270,38 @@ impl TaskRepository {
         start: Option<DateTime<Utc>>,
         end: Option<DateTime<Utc>>,
         status_filter: Option<TaskStatus>,
-    ) -> Result<Vec<(Task, TimeWindow)>, sqlx::Error> {
+    ) -> Result<Vec<(Task, TaskBlock)>, sqlx::Error> {
         let default_start = DateTime::from_timestamp(0, 0).unwrap_or_default();
         let default_end = DateTime::from_timestamp(4102444800, 0).unwrap_or_default();
         let range_start = start.unwrap_or(default_start);
         let range_end = end.unwrap_or(default_end);
 
-        // 如果指定了状态就按状态过滤，否则排除 archived
-        let rows = if let Some(ref s) = status_filter {
-            sqlx::query_as!(
-                CalendarRow,
-                r#"SELECT t.id AS "id: i32", t.title, t.description,
-                          t.parent_task_id AS "parent_task_id?: i32",
-                          COALESCE(t.status, 'backlog') AS "status!: crate::modules::task::model::TaskStatus",
-                          t.completed_at AS "completed_at?: chrono::DateTime<chrono::Utc>",
-                          t.effort_estimate_minutes AS "effort_estimate_minutes?: i32",
-                          t.start_at AS "start_at?: chrono::DateTime<chrono::Utc>",
-                          t.due_at AS "due_at?: chrono::DateTime<chrono::Utc>",
-                          t.priority AS "priority?: crate::modules::task::model::TaskPriority",
-                          COALESCE(t.created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
-                          COALESCE(t.updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>",
-                          tw.id AS "tw_id: i32",
-                          tw.start_time AS "start_time!: chrono::DateTime<chrono::Utc>",
-                          tw.end_time AS "end_time!: chrono::DateTime<chrono::Utc>",
-                          tw.type AS "window_type!: crate::modules::time_window::TimeWindowType",
-                          tw.task_id AS "tw_task_id: i32",
-                          tw.user_id AS "tw_user_id?: i32",
-                          tw.recurrence_freq AS "recurrence_freq?: crate::modules::time_window::RecurrenceFrequency",
-                          tw.recurrence_interval AS "recurrence_interval?: i32",
-                          tw.recurrence_until AS "recurrence_until?: chrono::DateTime<chrono::Utc>",
-                          tw.recurrence_by_weekdays
-                   FROM task t
-                   INNER JOIN time_window tw ON t.id = tw.task_id
-                   WHERE t.status = ?1
-                     AND (?2 IS NULL OR t.user_id = ?2)
-                     AND tw.start_time < ?3
-                     AND tw.end_time > ?4
-                   ORDER BY tw.start_time"#,
-                s.as_str(),
-                actor.owner_scope(),
-                range_end,
-                range_start
-            )
-            .fetch_all(&*self.db)
-            .await?
-        } else {
-            sqlx::query_as!(
-                CalendarRow,
-                r#"SELECT t.id AS "id: i32", t.title, t.description,
-                          t.parent_task_id AS "parent_task_id?: i32",
-                          COALESCE(t.status, 'backlog') AS "status!: crate::modules::task::model::TaskStatus",
-                          t.completed_at AS "completed_at?: chrono::DateTime<chrono::Utc>",
-                          t.effort_estimate_minutes AS "effort_estimate_minutes?: i32",
-                          t.start_at AS "start_at?: chrono::DateTime<chrono::Utc>",
-                          t.due_at AS "due_at?: chrono::DateTime<chrono::Utc>",
-                          t.priority AS "priority?: crate::modules::task::model::TaskPriority",
-                          COALESCE(t.created_at, CURRENT_TIMESTAMP) AS "created_at!: chrono::DateTime<chrono::Utc>",
-                          COALESCE(t.updated_at, CURRENT_TIMESTAMP) AS "updated_at!: chrono::DateTime<chrono::Utc>",
-                          tw.id AS "tw_id: i32",
-                          tw.start_time AS "start_time!: chrono::DateTime<chrono::Utc>",
-                          tw.end_time AS "end_time!: chrono::DateTime<chrono::Utc>",
-                          tw.type AS "window_type!: crate::modules::time_window::TimeWindowType",
-                          tw.task_id AS "tw_task_id: i32",
-                          tw.user_id AS "tw_user_id?: i32",
-                          tw.recurrence_freq AS "recurrence_freq?: crate::modules::time_window::RecurrenceFrequency",
-                          tw.recurrence_interval AS "recurrence_interval?: i32",
-                          tw.recurrence_until AS "recurrence_until?: chrono::DateTime<chrono::Utc>",
-                          tw.recurrence_by_weekdays
-                   FROM task t
-                   INNER JOIN time_window tw ON t.id = tw.task_id
-                   WHERE t.status != 'archived'
-                     AND (?1 IS NULL OR t.user_id = ?1)
-                     AND tw.start_time < ?2
-                     AND tw.end_time > ?3
-                   ORDER BY tw.start_time"#,
-                actor.owner_scope(),
-                range_end,
-                range_start
-            )
-            .fetch_all(&*self.db)
-            .await?
-        };
+        let rows = sqlx::query_as::<_, CalendarRow>(
+            r#"SELECT t.id, t.title, t.description,
+                      t.parent_task_id, COALESCE(t.status, 'backlog') AS status,
+                      t.completed_at, t.effort_estimate_minutes, t.start_at, t.due_at,
+                      t.priority, COALESCE(t.created_at, CURRENT_TIMESTAMP) AS created_at,
+                      COALESCE(t.updated_at, CURRENT_TIMESTAMP) AS updated_at,
+                      b.id AS block_id, b.start_at AS block_start, b.end_at AS block_end,
+                      b.kind AS block_kind, b.task_id AS block_task_id,
+                      b.user_id AS block_user_id, b.fixed AS block_fixed,
+                      b.source AS block_source, b.created_at AS block_created_at,
+                      b.updated_at AS block_updated_at
+               FROM task t
+               INNER JOIN task_block b ON t.id = b.task_id
+               WHERE (?1 IS NULL OR t.status = ?1)
+                 AND (?1 IS NOT NULL OR t.status != 'archived')
+                 AND (?2 IS NULL OR t.user_id = ?2)
+                 AND b.start_at < ?3
+                 AND (b.end_at IS NULL OR b.end_at > ?4)
+               ORDER BY b.start_at"#,
+        )
+        .bind(status_filter.map(|s| s.as_str().to_string()))
+        .bind(actor.owner_scope())
+        .bind(range_end)
+        .bind(range_start)
+        .fetch_all(&*self.db)
+        .await?;
 
         let mut events = Vec::new();
         for row in rows {
@@ -380,59 +319,43 @@ impl TaskRepository {
                 created_at: row.created_at,
                 updated_at: row.updated_at,
             };
-
-            let time_window = TimeWindow {
-                id: row.tw_id,
-                start_time: row.start_time,
-                end_time: row.end_time,
-                window_type: row.window_type,
-                task_id: row.tw_task_id,
-                user_id: row.tw_user_id,
-                recurrence_freq: row.recurrence_freq,
-                recurrence_interval: row.recurrence_interval,
-                recurrence_until: row.recurrence_until,
-                recurrence_by_weekdays: row.recurrence_by_weekdays,
+            let block = TaskBlock {
+                id: row.block_id,
+                user_id: row.block_user_id,
+                task_id: row.block_task_id,
+                kind: row.block_kind,
+                start_at: row.block_start,
+                end_at: row.block_end,
+                fixed: row.block_fixed,
+                source: row.block_source,
+                created_at: row.block_created_at,
+                updated_at: row.block_updated_at,
             };
-
-            events.push((task, time_window));
+            events.push((task, block));
         }
-
         Ok(events)
     }
 
-    /// 某个任务的时间窗口 —— 归属随父任务（`time_window` 没有自己的归属判据）。
-    ///
-    /// `time_window` 的写路径（`validate_time_windows`）靠这条读拿"已有窗口"：
-    /// 少一层归属过滤就等于把别人任务的窗口也算进来（或不给别人算）。
-    pub async fn find_time_windows_by_task(
+    /// 某个任务的时间块 —— 归属随父任务。
+    #[allow(dead_code)]
+    pub async fn find_blocks_by_task(
         &self,
         actor: &Actor,
         task_id: i32,
-    ) -> Result<Vec<TimeWindow>, sqlx::Error> {
-        let rows = sqlx::query_as!(
-            TimeWindow,
-            r#"SELECT tw.id AS "id: i32",
-                      tw.start_time AS "start_time!: chrono::DateTime<chrono::Utc>",
-                      tw.end_time AS "end_time!: chrono::DateTime<chrono::Utc>",
-                      tw.type AS "window_type!: crate::modules::time_window::TimeWindowType",
-                      tw.task_id AS "task_id: i32",
-                      tw.user_id AS "user_id?: i32",
-                      tw.recurrence_freq AS "recurrence_freq?: crate::modules::time_window::RecurrenceFrequency",
-                      tw.recurrence_interval AS "recurrence_interval?: i32",
-                      tw.recurrence_until AS "recurrence_until?: chrono::DateTime<chrono::Utc>",
-                      tw.recurrence_by_weekdays
-               FROM time_window tw
-               WHERE tw.task_id = ?2
+    ) -> Result<Vec<TaskBlock>, sqlx::Error> {
+        sqlx::query_as::<_, TaskBlock>(
+            r#"SELECT b.id, b.user_id, b.task_id, b.kind, b.start_at, b.end_at,
+                      b.fixed, b.source, b.created_at, b.updated_at
+               FROM task_block b
+               WHERE b.task_id = ?2
                  AND (?1 IS NULL OR EXISTS (
-                       SELECT 1 FROM task t WHERE t.id = tw.task_id AND t.user_id = ?1))
-               ORDER BY tw.start_time"#,
-            actor.owner_scope(),
-            task_id
+                       SELECT 1 FROM task t WHERE t.id = b.task_id AND t.user_id = ?1))
+               ORDER BY b.start_at"#,
         )
+        .bind(actor.owner_scope())
+        .bind(task_id)
         .fetch_all(&*self.db)
-        .await?;
-
-        Ok(rows)
+        .await
     }
 
     pub async fn get_stats(&self, actor: &Actor) -> Result<(i64, i64, i64, i64), sqlx::Error> {
@@ -578,7 +501,8 @@ mod tests {
             .await
             .unwrap();
         sqlx::query(
-            "INSERT INTO time_window (start_time, end_time, task_id) VALUES ('2026-01-01T08:00:00Z', '2026-01-01T09:00:00Z', ?)",
+            "INSERT INTO task_block (start_at, end_at, kind, task_id)
+             VALUES ('2026-01-01T08:00:00Z', '2026-01-01T09:00:00Z', 'feasible', ?)",
         )
         .bind(root)
         .execute(&*repo.db)
@@ -590,9 +514,8 @@ mod tests {
         assert_eq!(detail.depends_on, vec![child]);
         assert_eq!(detail.children.len(), 1);
         assert_eq!(detail.children[0].id, child);
-        assert_eq!(detail.available_slots.len(), 1);
-        assert!(detail.planned_slots.is_empty());
-        assert!(detail.actual_slots.is_empty());
+        assert_eq!(detail.feasible_blocks.len(), 1);
+        assert!(detail.planned_blocks.is_empty());
     }
 
     #[tokio::test]
@@ -615,13 +538,16 @@ mod tests {
             let window_start = DateTime::from_timestamp(1_767_225_600 + hour * 3600, 0).unwrap();
             let window_end =
                 DateTime::from_timestamp(1_767_225_600 + (hour + 1) * 3600, 0).unwrap();
-            sqlx::query("INSERT INTO time_window (start_time, end_time, task_id) VALUES (?, ?, ?)")
-                .bind(window_start)
-                .bind(window_end)
-                .bind(id)
-                .execute(&*repo.db)
-                .await
-                .unwrap();
+            sqlx::query(
+                "INSERT INTO task_block (start_at, end_at, kind, task_id)
+                 VALUES (?, ?, 'planned', ?)",
+            )
+            .bind(window_start)
+            .bind(window_end)
+            .bind(id)
+            .execute(&*repo.db)
+            .await
+            .unwrap();
         }
 
         let start = DateTime::from_timestamp(1_767_225_600, 0).unwrap(); // 2026-01-01T00:00:00Z

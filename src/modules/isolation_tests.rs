@@ -349,23 +349,20 @@ async fn sign_isolation_between_users() {
     assert_eq!(svc.delete(&admin, sig.id).await.unwrap(), 1);
 }
 
-/// time_window：子表随父 —— 归属回到任务上判（窗口自己没有归属判据）
+/// task_block：子表随父 —— 归属回到任务上判（块自己没有归属判据）
 ///
-/// 这是"子表随父"这一批的模板：B 读不到/列不出/建不上/删不掉 A 的任务下的窗口，
+/// 这是"子表随父"这一批的模板：B 读不到/列不出/建不上/删不掉 A 的任务下的时间块，
 /// admin 全都能。见 doc/design/authorization.md §3.1。
 #[tokio::test]
-async fn time_window_follows_its_parent_task() {
+async fn task_block_follows_its_parent_task() {
+    use crate::modules::task::block::{CreateTaskBlockRequest, TaskBlockService};
     use crate::modules::task::dto::CreateTaskRequest;
-    use crate::modules::time_window::port::TaskTimeWindowValidator;
-    use crate::modules::time_window::{CreateTimeWindowRequest, TimeWindowType};
 
     let pool = SqlitePool::connect("sqlite::memory:").await.unwrap();
     setup(&pool).await;
     let pool = Arc::new(pool);
     let task_svc = crate::modules::task::TaskService::new(pool.clone());
-    let validator: Arc<dyn TaskTimeWindowValidator> = Arc::new(task_svc.clone());
-    let svc = crate::modules::time_window::TimeWindowService::new(pool.clone(), validator.clone());
-    let qsvc = crate::modules::time_window::TimeWindowQueryService::new(pool);
+    let svc = TaskBlockService::new(pool);
 
     let a = Actor::user(1);
     let b = Actor::user(2);
@@ -390,51 +387,31 @@ async fn time_window_follows_its_parent_task() {
         .unwrap();
 
     let now = chrono::Utc::now();
-    let mk = |start_offset: i64| CreateTimeWindowRequest {
-        start_time: now + chrono::Duration::hours(start_offset),
-        end_time: now + chrono::Duration::hours(start_offset + 1),
-        window_type: TimeWindowType::Feasible,
-        task_id: task_a.id,
-        user_id: None,
-        recurrence_rule: None,
+    let mk = |start_offset: i64| CreateTaskBlockRequest {
+        kind: "feasible".into(),
+        start_at: now + chrono::Duration::hours(start_offset),
+        end_at: Some(now + chrono::Duration::hours(start_offset + 1)),
+        fixed: false,
     };
 
-    let window_a = svc.create(&a, mk(0)).await.unwrap();
+    let block_a = svc.create(&a, task_a.id, mk(0)).await.unwrap();
 
-    // B：读不到、列不出、建不上、删不掉
-    assert!(qsvc.by_id(&b, window_a.id).await.unwrap().is_none());
-    assert_eq!(
-        qsvc.list_by_task(&b, task_a.id, None, 10, 0)
-            .await
-            .unwrap()
-            .1,
-        0
+    // B：列不出、建不上、删不掉
+    assert!(svc.list_by_task(&b, task_a.id).await.is_err());
+    assert!(
+        svc.create(&b, task_a.id, mk(5)).await.is_err(),
+        "B 不该能往 A 的任务上挂时间块"
     );
     assert!(
-        svc.create(&b, mk(5)).await.is_err(),
-        "B 不该能往 A 的任务上挂窗口"
-    );
-    assert!(
-        svc.delete(&b, window_a.id).await.is_err(),
-        "B 不该删得掉（越权按不存在处理：Err(NotFound)，REST 上同为 404）"
-    );
-    assert!(
-        qsvc.by_id(&a, window_a.id).await.unwrap().is_some(),
-        "B 的删除尝试不该真的删掉 A 的窗口"
+        svc.delete(&b, block_a.id).await.is_err(),
+        "B 不该删得掉（越权按不存在处理）"
     );
 
     // A 自己：一切正常
-    assert!(qsvc.by_id(&a, window_a.id).await.unwrap().is_some());
-    assert_eq!(
-        qsvc.list_by_task(&a, task_a.id, None, 10, 0)
-            .await
-            .unwrap()
-            .1,
-        1
-    );
+    assert_eq!(svc.list_by_task(&a, task_a.id).await.unwrap().len(), 1);
 
     // admin：看得见、建得上、删得掉
-    assert!(qsvc.by_id(&admin, window_a.id).await.unwrap().is_some());
-    let window_admin = svc.create(&admin, mk(10)).await.unwrap();
-    assert_eq!(svc.delete(&admin, window_admin.id).await.unwrap(), 1);
+    assert_eq!(svc.list_by_task(&admin, task_a.id).await.unwrap().len(), 1);
+    let block_admin = svc.create(&admin, task_a.id, mk(10)).await.unwrap();
+    assert_eq!(svc.delete(&admin, block_admin.id).await.unwrap(), 1);
 }

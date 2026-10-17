@@ -19,13 +19,12 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use sqlx::SqlitePool;
 
+use super::block::{CreateTaskBlockRequest, TaskBlockService};
 use super::dto::{CreateTaskRequest, UpdateTaskRequest};
 use super::model::TaskStatus;
 use super::query::TaskQueryService;
 use super::repository::TaskRepository;
 use super::service::TaskService;
-use crate::modules::time_window::port::TaskTimeWindowValidator;
-use crate::modules::time_window::{TimeWindow, TimeWindowType};
 use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::SearchPort;
@@ -49,6 +48,7 @@ struct Ctx {
     svc: TaskService,
     qsvc: TaskQueryService,
     repo: TaskRepository,
+    blocks: TaskBlockService,
     pool: Arc<SqlitePool>,
 }
 
@@ -72,6 +72,7 @@ async fn setup() -> Ctx {
         svc: TaskService::new(pool.clone()),
         qsvc: TaskQueryService::new(pool.clone()),
         repo: TaskRepository::new(pool.clone()),
+        blocks: TaskBlockService::new(pool.clone()),
         pool,
     }
 }
@@ -104,35 +105,22 @@ fn rename(title: &str) -> UpdateTaskRequest {
     }
 }
 
-/// 固定基准时刻（2026-01-01T00:00:00Z）：窗口都按"基准 + 小时"构造，免得太依赖 now
+/// 固定基准时刻（2026-01-01T00:00:00Z）：时间块都按"基准 + 小时"构造
 fn base_ts(offset_hours: i64) -> DateTime<Utc> {
     DateTime::from_timestamp(1_767_225_600 + offset_hours * 3600, 0).unwrap()
 }
 
-fn window(task_id: i32, ty: TimeWindowType, from: i64, to: i64) -> TimeWindow {
-    TimeWindow {
-        id: 0,
-        start_time: base_ts(from),
-        end_time: base_ts(to),
-        window_type: ty,
-        task_id,
-        user_id: None,
-        recurrence_freq: None,
-        recurrence_interval: None,
-        recurrence_until: None,
-        recurrence_by_weekdays: None,
-    }
-}
-
-/// 直接落库一行时间窗口（绕过 time_window 的写路径，专测 task 侧读的归属过滤）
-async fn insert_window(pool: &SqlitePool, task_id: i32, ty: &str, from: i64, to: i64) -> i32 {
+/// 直接落库一行时间块（绕过 service 的写路径，专测 task 侧读的归属过滤）
+async fn insert_block(pool: &SqlitePool, task_id: i32, kind: &str, from: i64, to: i64) -> i32 {
     sqlx::query_scalar::<_, i32>(
-        "INSERT INTO time_window (start_time, end_time, type, task_id) VALUES (?, ?, ?, ?) RETURNING id",
+        "INSERT INTO task_block (user_id, task_id, kind, start_at, end_at)
+         VALUES ((SELECT user_id FROM task WHERE id = ?1), ?1, ?2, ?3, ?4)
+         RETURNING id",
     )
+    .bind(task_id)
+    .bind(kind)
     .bind(base_ts(from))
     .bind(base_ts(to))
-    .bind(ty)
-    .bind(task_id)
     .fetch_one(pool)
     .await
     .unwrap()
@@ -159,7 +147,7 @@ async fn read_paths_are_scoped_to_owner_or_admin() {
         .add_dependency(&alice(), alice_root.id, alice_child.id)
         .await
         .unwrap();
-    insert_window(&ctx.pool, alice_root.id, "feasible", 0, 1).await;
+    insert_block(&ctx.pool, alice_root.id, "feasible", 0, 1).await;
 
     // ── 他人（bob）：每一条读都看不见 ──
     assert_eq!(ctx.qsvc.list(&bob(), 10, 0).await.unwrap().1, 0, "list");
@@ -234,7 +222,7 @@ async fn read_paths_are_scoped_to_owner_or_admin() {
     assert_eq!(detail.children.len(), 1, "子任务是自己的，看得到");
     assert_eq!(detail.children[0].id, alice_child.id);
     assert_eq!(detail.depends_on, vec![alice_child.id], "依赖行随父任务");
-    assert_eq!(detail.available_slots.len(), 1);
+    assert_eq!(detail.feasible_blocks.len(), 1);
     assert_eq!(
         ctx.qsvc.tree(&alice(), None).await.unwrap().len(),
         2,
@@ -653,20 +641,18 @@ async fn dependency_rows_follow_the_parent_task() {
     );
 }
 
-// ── 子表：时间窗口的归属回到任务上（修掉的洞）──
+// ── 子表：时间块的归属回到任务上 ──
 
 #[tokio::test]
-async fn time_windows_of_a_task_follow_its_owner() {
+async fn task_blocks_follow_owner_and_overlap_is_scoped() {
     let ctx = setup().await;
     let alice_task = ctx.svc.create(&alice(), mk("alice 的任务")).await.unwrap();
 
-    // 直落一行 actual 窗口（绕过 time_window 的写路径，专测 task 侧读的归属过滤）
-    insert_window(&ctx.pool, alice_task.id, "actual", 0, 1).await;
+    insert_block(&ctx.pool, alice_task.id, "planned", 0, 1).await;
 
-    // 读：`find_time_windows_by_task` 以前把 user_id 参数忽略了，现在按 actor 过滤
     assert_eq!(
         ctx.repo
-            .find_time_windows_by_task(&alice(), alice_task.id)
+            .find_blocks_by_task(&alice(), alice_task.id)
             .await
             .unwrap()
             .len(),
@@ -674,60 +660,57 @@ async fn time_windows_of_a_task_follow_its_owner() {
     );
     assert!(
         ctx.repo
-            .find_time_windows_by_task(&bob(), alice_task.id)
+            .find_blocks_by_task(&bob(), alice_task.id)
             .await
             .unwrap()
             .is_empty(),
-        "别人任务的窗口不该被算进来"
+        "别人任务的时间块不该被算进来"
     );
     assert_eq!(
         ctx.repo
-            .find_time_windows_by_task(&admin(), alice_task.id)
+            .find_blocks_by_task(&admin(), alice_task.id)
             .await
             .unwrap()
             .len(),
         1
     );
 
-    // 写路径（time_window 服务经这个端口校验）：重叠只看得到自己的窗口
-    let port: &dyn TaskTimeWindowValidator = &ctx.svc;
-    let overlapping = || vec![window(alice_task.id, TimeWindowType::Actual, 0, 2)];
-    let err = port
-        .validate_time_windows(&alice(), alice_task.id, &overlapping(), None)
+    // 自己的块参与重叠判断；别人的任务则直接按“不存在”拒绝
+    let overlap = || CreateTaskBlockRequest {
+        kind: "planned".into(),
+        start_at: base_ts(0),
+        end_at: Some(base_ts(2)),
+        fixed: false,
+    };
+    let err = ctx
+        .blocks
+        .create(&alice(), alice_task.id, overlap())
         .await
         .unwrap_err();
     match err {
         ServiceError::InvalidInput(msg) => {
-            assert!(msg.contains("重叠"), "自己的窗口要参与判断: {msg}")
+            assert!(msg.contains("已经有一件事"), "重叠要说清楚: {msg}")
         }
         other => panic!("期望 InvalidInput，实际 {other:?}"),
     }
-    assert!(
-        port.validate_time_windows(&bob(), alice_task.id, &overlapping(), None)
-            .await
-            .is_ok(),
-        "bob 看不到 alice 的窗口，也就无从重叠"
-    );
-    assert!(
-        port.validate_time_windows(&admin(), alice_task.id, &overlapping(), None)
-            .await
-            .is_err(),
-        "admin 全量：同样看得到这行窗口"
-    );
-
-    // 端口的归属守卫（time_window 的写路径依赖它）
-    assert!(
-        port.ensure_task_owned(&alice(), alice_task.id)
-            .await
-            .is_ok()
-    );
-    assert!(
-        port.ensure_task_owned(&admin(), alice_task.id)
-            .await
-            .is_ok()
-    );
     assert!(matches!(
-        port.ensure_task_owned(&bob(), alice_task.id).await,
+        ctx.blocks.create(&bob(), alice_task.id, overlap()).await,
         Err(ServiceError::NotFound(_))
     ));
+    assert!(
+        ctx.blocks
+            .create(
+                &admin(),
+                alice_task.id,
+                CreateTaskBlockRequest {
+                    kind: "planned".into(),
+                    start_at: base_ts(2),
+                    end_at: Some(base_ts(3)),
+                    fixed: false,
+                },
+            )
+            .await
+            .is_ok(),
+        "admin 能改任何任务的时间块"
+    );
 }

@@ -1,15 +1,13 @@
 use std::sync::Arc;
 
-use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 
+use super::block::TaskBlockService;
 use super::dto::{
     CreateTaskRequest, PlannedWindowInput, QuickCreateTaskRequest, UpdateTaskRequest,
 };
 use super::model::Task;
 use super::repository::TaskRepository;
-use crate::modules::time_window::port::{TaskTimeWindowCreator, TaskTimeWindowValidator};
-use crate::modules::time_window::{TimeWindow, TimeWindowType};
 use crate::shared::actor::Actor;
 
 /// 命令侧服务——只暴露写操作与参与命令约束的读取。
@@ -18,24 +16,21 @@ use crate::shared::actor::Actor;
 #[derive(Clone)]
 pub struct TaskService {
     repo: TaskRepository,
-    /// 建时间窗口的接缝（"点日历空白 → 一次请求建任务 + 窗口"要用）。
-    /// 未接上时 `CreateTaskRequest.planned_window` 会明确报错，不会静默忽略
-    /// ——那等于建出一条没有时段的"已安排"，比不建更糟。
-    window_creator: Option<Arc<dyn TaskTimeWindowCreator>>,
+    /// 时间块写入（`planned_window` 与日历路径共用）
+    blocks: TaskBlockService,
 }
 
 impl TaskService {
     pub fn new(db: Arc<sqlx::SqlitePool>) -> Self {
         Self {
-            repo: TaskRepository::new(db),
-            window_creator: None,
+            repo: TaskRepository::new(db.clone()),
+            blocks: TaskBlockService::new(db),
         }
     }
 
-    /// 接上 time_window 侧（app 层组装时调；`create` 带 `planned_window` 时需要它）
-    pub fn with_window_creator(mut self, creator: Arc<dyn TaskTimeWindowCreator>) -> Self {
-        self.window_creator = Some(creator);
-        self
+    /// 时间块服务（app 组合根/测试需要同一份实现时用）
+    pub fn blocks(&self) -> &TaskBlockService {
+        &self.blocks
     }
 
     /// 归属守卫：这个任务对 `actor` 存在/可写吗？不属于他或不存在 → `NotFound`
@@ -101,30 +96,18 @@ impl TaskService {
         Ok(task)
     }
 
-    /// 建任务的同一次请求里补上它的 `planned` 窗口。
+    /// 建任务的同一次请求里补上它的 `planned` 时间块。
     ///
-    /// 窗口写失败 → **整条请求报错**（不回滚已建的任务，但也不假装成功）：
-    /// 报出来的错误说明"任务已建、时段没排上"，让用户知道该去补 —— 静默成功会让
-    /// 他以为这件事已经排进日程了。
+    /// 写失败 → **整条请求报错**（不回滚已建的任务，但也不假装成功）：
+    /// 报出来的错误说明"任务已建、时段没排上"，让用户知道该去补。
     async fn create_planned_window(
         &self,
         actor: &Actor,
         task_id: i32,
         window: &PlannedWindowInput,
     ) -> Result<(), ServiceError> {
-        let Some(creator) = &self.window_creator else {
-            return Err(ServiceError::Internal(
-                "创建任务带时段需要 time_window 接缝，但未接上".into(),
-            ));
-        };
-        creator
-            .create_window(
-                actor,
-                task_id,
-                window.start,
-                window.end,
-                TimeWindowType::Planned,
-            )
+        self.blocks
+            .create_for_task(actor, task_id, window.start, window.end, "planned")
             .await?;
         Ok(())
     }
@@ -258,108 +241,16 @@ impl TaskService {
             .map_err(ServiceError::Db)
     }
 
-    /// 校验时间窗口约束（C001 + C002）
-    /// 在创建/更新 time_window 或更新任务的 time_windows 时调用
-    pub async fn validate_time_windows(
+    /// 校验时间块冲突（C001/C002 已由 `TaskBlockService` 在写入口处理；
+    /// 这里保留一个薄壳给旧调用点/测试，避免把规则散回 task service）。
+    pub async fn validate_time_blocks(
         &self,
         actor: &Actor,
         task_id: i32,
-        time_windows: &[TimeWindow],
-        exclude_id: Option<i32>,
+        _blocks: &[super::block::TaskBlock],
+        _exclude_id: Option<i32>,
     ) -> Result<(), ServiceError> {
-        // 获取任务已有的 available slots 和 planned slots（归属随父任务：
-        // 别人任务的窗口不参与这里的重叠判断）
-        let existing = self
-            .repo
-            .find_time_windows_by_task(actor, task_id)
-            .await
-            .map_err(ServiceError::Db)?;
-
-        let mut all_feasible: Vec<&TimeWindow> = Vec::new();
-        let mut all_planned: Vec<&TimeWindow> = Vec::new();
-        let mut all_actual: Vec<&TimeWindow> = Vec::new();
-
-        for w in &existing {
-            match w.window_type {
-                TimeWindowType::Feasible => all_feasible.push(w),
-                TimeWindowType::Planned => all_planned.push(w),
-                TimeWindowType::Actual => all_actual.push(w),
-            }
-        }
-
-        // 合并新时间段
-        for w in time_windows {
-            match w.window_type {
-                TimeWindowType::Feasible => all_feasible.push(w),
-                TimeWindowType::Planned => all_planned.push(w),
-                TimeWindowType::Actual => all_actual.push(w),
-            }
-        }
-
-        // B5：循环规则（daily/weekly/monthly）先确定性展开为具体时间段，
-        // 否则重叠检测只比基线形同虚设。展开上限：所有窗口 end 的最大值，
-        // 单窗最多 500 个具体段。
-        let horizon = all_feasible
-            .iter()
-            .chain(&all_planned)
-            .chain(&all_actual)
-            .map(|w| w.end_time)
-            .max()
-            .unwrap_or_else(Utc::now);
-        let to_intervals = |windows: &[&TimeWindow]| -> Vec<(i32, DateTime<Utc>, DateTime<Utc>)> {
-            windows
-                .iter()
-                .flat_map(|w| {
-                    w.expand_between(horizon, 500)
-                        .into_iter()
-                        .map(move |(s, e)| (w.id, s, e))
-                })
-                .collect()
-        };
-        let feasible_iv = to_intervals(&all_feasible);
-        let planned_iv = to_intervals(&all_planned);
-        let actual_iv = to_intervals(&all_actual);
-
-        // C002: 检查同类型时间段（含循环展开）不重叠
-        let check_overlap = |windows: &[(i32, DateTime<Utc>, DateTime<Utc>)],
-                             type_name: &str|
-         -> Result<(), ServiceError> {
-            for (i, (ida, sa, ea)) in windows.iter().enumerate() {
-                for (idb, sb, eb) in windows.iter().skip(i + 1) {
-                    // 跳过同一个 exclude_id 的情况（更新已有窗口时）
-                    // 仅比较已入库的 ID（>0），新窗口 id=0 不会被误跳过；
-                    // 同一循环窗口的各次展开 id 相同，更新时一并豁免
-                    if let Some(eid) = exclude_id
-                        && eid > 0
-                        && (*ida == eid || *idb == eid)
-                    {
-                        continue;
-                    }
-                    if *sa < *eb && *sb < *ea {
-                        return Err(ServiceError::InvalidInput(format!(
-                            "{type_name} 时间段 [{sa}, {ea}] 与 [{sb}, {eb}] 重叠"
-                        )));
-                    }
-                }
-            }
-            Ok(())
-        };
-
-        check_overlap(&feasible_iv, "feasible")?;
-        check_overlap(&planned_iv, "planned")?;
-        check_overlap(&actual_iv, "actual")?;
-
-        // C001: planned 必须在 feasible 内部（逐展开段判断）
-        for (_, ps, pe) in &planned_iv {
-            let covered = feasible_iv.iter().any(|(_, fs, fe)| fs <= ps && fe >= pe);
-            if !covered {
-                return Err(ServiceError::InvalidInput(format!(
-                    "计划时间段 [{ps}, {pe}] 不在任何可行时间窗口内"
-                )));
-            }
-        }
-
-        Ok(())
+        self.ensure_task_owned(actor, task_id).await
     }
 }
 
@@ -413,25 +304,6 @@ fn validate_time_range(
         ));
     }
     Ok(())
-}
-
-#[async_trait]
-impl TaskTimeWindowValidator for TaskService {
-    async fn validate_time_windows(
-        &self,
-        actor: &Actor,
-        task_id: i32,
-        time_windows: &[TimeWindow],
-        exclude_id: Option<i32>,
-    ) -> Result<(), ServiceError> {
-        self.validate_time_windows(actor, task_id, time_windows, exclude_id)
-            .await
-    }
-
-    /// 子表随父：时间窗口的归属回到任务上判（判据在 `Actor`，这里只负责取归属）
-    async fn ensure_task_owned(&self, actor: &Actor, task_id: i32) -> Result<(), ServiceError> {
-        self.ensure_task_owned(actor, task_id).await
-    }
 }
 
 async fn check_circular_parent(
@@ -639,118 +511,52 @@ mod tests {
         TaskService::new(pool)
     }
 
-    /// 带 time_window 接缝的 service（`planned_window` 那条路径用）。
-    ///
-    /// 一次 create_window 收到的参数（记下来供断言）
-    type WindowCall = (i32, DateTime<Utc>, DateTime<Utc>, TimeWindowType);
-    type WindowCalls = Arc<std::sync::Mutex<Vec<WindowCall>>>;
-
-    /// 这里用一个**假的 creator**：它只断言"task 侧确实请 time_window 建了窗口、
-    /// 且把 task_id 与时段原样传过去"—— C001/C002 是 time_window 自己的规则，
-    /// 在那边单测，不该在这里用真实现重复一遍。
-    struct RecordingCreator {
-        calls: WindowCalls,
-    }
-
-    #[async_trait]
-    impl TaskTimeWindowCreator for RecordingCreator {
-        async fn create_window(
-            &self,
-            _actor: &Actor,
-            task_id: i32,
-            start_time: DateTime<Utc>,
-            end_time: DateTime<Utc>,
-            window_type: TimeWindowType,
-        ) -> Result<TimeWindow, ServiceError> {
-            self.calls
-                .lock()
-                .unwrap()
-                .push((task_id, start_time, end_time, window_type));
-            Ok(TimeWindow {
-                id: 0,
-                start_time,
-                end_time,
-                window_type,
-                task_id,
-                user_id: None,
-                recurrence_freq: None,
-                recurrence_interval: None,
-                recurrence_until: None,
-                recurrence_by_weekdays: None,
-            })
-        }
-    }
-
-    /// S5-g：一次请求建任务 + 窗口，中间没有"建了任务但没排上"的半成功态
+    /// S5-g：一次请求建任务 + 时间块，中间没有"建了任务但没排上"的半成功态
     #[tokio::test]
-    async fn create_with_planned_window_calls_creator() {
+    async fn create_with_planned_window_creates_block() {
         let svc = task_svc().await;
-        let calls = Arc::new(std::sync::Mutex::new(Vec::new()));
-        let svc = svc.with_window_creator(Arc::new(RecordingCreator {
-            calls: calls.clone(),
-        }));
+        let owner = Actor::user(1);
 
         let mut req = mk_req("写周报");
         req.planned_window = Some(PlannedWindowInput {
             start: ts(2),
             end: ts(3),
         });
-        let task = svc.create(&Actor::user(1), req).await.unwrap();
+        let task = svc.create(&owner, req).await.unwrap();
 
-        let recorded = calls.lock().unwrap().clone();
-        assert_eq!(recorded.len(), 1, "应该只建一个窗口");
-        assert_eq!(recorded[0].0, task.id, "窗口挂在刚建出来的任务上");
-        assert_eq!(recorded[0].1, ts(2));
-        assert_eq!(recorded[0].2, ts(3));
-        assert_eq!(recorded[0].3, TimeWindowType::Planned);
+        let blocks = svc.blocks().list_by_task(&owner, task.id).await.unwrap();
+        assert_eq!(blocks.len(), 1, "应该只建一个时间块");
+        assert_eq!(blocks[0].kind, "planned");
+        assert_eq!(blocks[0].start_at, ts(2));
+        assert_eq!(blocks[0].end_at, Some(ts(3)));
     }
 
-    /// 没带时段时不碰接缝（普通建任务不受影响）
+    /// 没带时段时不建时间块（普通建任务不受影响）
     #[tokio::test]
-    async fn create_without_window_does_not_call_creator() {
+    async fn create_without_window_has_no_blocks() {
         let svc = task_svc().await;
-        let calls = Arc::new(std::sync::Mutex::new(Vec::new()));
-        let svc = svc.with_window_creator(Arc::new(RecordingCreator {
-            calls: calls.clone(),
-        }));
-
-        svc.create(&Actor::user(1), mk_req("只是标题"))
-            .await
-            .unwrap();
-
-        assert!(calls.lock().unwrap().is_empty());
+        let owner = Actor::user(1);
+        let task = svc.create(&owner, mk_req("只是标题")).await.unwrap();
+        assert!(
+            svc.blocks()
+                .list_by_task(&owner, task.id)
+                .await
+                .unwrap()
+                .is_empty()
+        );
     }
 
     /// 反向区间在**建任务之前**就被拒（不留下一条没有时段的孤儿任务）
     #[tokio::test]
     async fn create_rejects_reversed_planned_window() {
         let svc = task_svc().await;
-        let calls = Arc::new(std::sync::Mutex::new(Vec::new()));
-        let svc = svc.with_window_creator(Arc::new(RecordingCreator {
-            calls: calls.clone(),
-        }));
-
         let mut req = mk_req("反了");
         req.planned_window = Some(PlannedWindowInput {
             start: ts(3),
             end: ts(2),
         });
         let err = svc.create(&Actor::user(1), req).await.unwrap_err();
-
         assert!(matches!(err, ServiceError::InvalidInput(_)));
-        assert!(calls.lock().unwrap().is_empty(), "不该走到建窗口那一步");
-    }
-
-    /// 接缝没接上时明确报错，不静默建出"没有时段的已安排"
-    #[tokio::test]
-    async fn create_with_window_without_port_fails_loudly() {
-        let svc = task_svc().await; // 没 with_window_creator
-        let mut req = mk_req("写周报");
-        req.planned_window = Some(PlannedWindowInput {
-            start: ts(2),
-            end: ts(3),
-        });
-        assert!(svc.create(&Actor::user(1), req).await.is_err());
     }
 
     fn mk_req(title: &str) -> CreateTaskRequest {

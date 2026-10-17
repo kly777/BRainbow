@@ -4,12 +4,12 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 
+use super::block::TaskBlock;
 use super::model::{Task, TaskSort, TaskStatus};
 use super::repository::TaskRepository;
 use super::slotting::{self, SlottingResult, WorkingHours};
 use crate::modules::admin::port::SettingsReader;
 use crate::modules::admin::service::KEY_WORKING_HOURS;
-use crate::modules::time_window::{TimeWindow, TimeWindowType};
 use crate::shared::actor::Actor;
 use crate::shared::error_types::ServiceError;
 use crate::shared::search::{
@@ -296,7 +296,7 @@ impl TaskQueryService {
         start: Option<DateTime<Utc>>,
         end: Option<DateTime<Utc>>,
         status: Option<TaskStatus>,
-    ) -> Result<Vec<(Task, TimeWindow)>, ServiceError> {
+    ) -> Result<Vec<(Task, TaskBlock)>, ServiceError> {
         self.repo
             .find_calendar_events(actor, start, end, status)
             .await
@@ -332,24 +332,26 @@ impl TaskQueryService {
         let mut already_scheduled: HashSet<i32> = HashSet::new();
         let mut busy: Vec<(DateTime<Utc>, DateTime<Utc>)> = Vec::new();
         let mut feasible: Vec<(DateTime<Utc>, DateTime<Utc>)> = Vec::new();
-        for (task, window) in self
+        for (task, block) in self
             .repo
             .find_calendar_events(actor, Some(from), Some(to), None)
             .await
             .map_err(ServiceError::Db)?
         {
-            let segments = slotting::expand_capped(&window, from)
-                .into_iter()
-                .map(|seg| {
-                    // 裁到区间内：展开函数给的是"从 from 起的若干段"
-                    (seg.0.max(from), seg.1.min(to))
-                });
-            match window.window_type {
-                TimeWindowType::Planned | TimeWindowType::Actual => {
+            let Some(end_at) = block.end_at else {
+                continue;
+            };
+            let segment = (block.start_at.max(from), end_at.min(to));
+            if segment.0 >= segment.1 {
+                continue;
+            }
+            match block.kind.as_str() {
+                "planned" => {
                     already_scheduled.insert(task.id);
-                    busy.extend(segments);
+                    busy.push(segment);
                 }
-                TimeWindowType::Feasible => feasible.extend(segments),
+                "feasible" => feasible.push(segment),
+                _ => {}
             }
         }
 
@@ -682,7 +684,7 @@ mod sorted_tests {
     /// 而建议测试只关心"已有占用会被避开"）
     async fn planned(ctx: &Ctx, task_id: i32, start: DateTime<Utc>, end: DateTime<Utc>) {
         sqlx::query(
-            "INSERT INTO time_window (start_time, end_time, type, task_id, user_id)
+            "INSERT INTO task_block (start_at, end_at, kind, task_id, user_id)
              VALUES (?, ?, 'planned', ?, 1)",
         )
         .bind(start)
@@ -696,7 +698,7 @@ mod sorted_tests {
     /// 建一条 feasible 窗口（同上，绕过 service 的 C001）
     async fn feasible(ctx: &Ctx, task_id: i32, start: DateTime<Utc>, end: DateTime<Utc>) {
         sqlx::query(
-            "INSERT INTO time_window (start_time, end_time, type, task_id, user_id)
+            "INSERT INTO task_block (start_at, end_at, kind, task_id, user_id)
              VALUES (?, ?, 'feasible', ?, 1)",
         )
         .bind(start)
@@ -708,7 +710,7 @@ mod sorted_tests {
     }
 
     async fn count_windows(ctx: &Ctx) -> i64 {
-        sqlx::query_scalar("SELECT COUNT(*) FROM time_window")
+        sqlx::query_scalar("SELECT COUNT(*) FROM task_block")
             .fetch_one(&*ctx.pool)
             .await
             .unwrap()

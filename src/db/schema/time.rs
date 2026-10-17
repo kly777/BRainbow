@@ -132,9 +132,30 @@ pub(crate) const TIME_COLUMNS: &[(&str, &str, &[&str])] = &[
         ],
     ),
     (
-        "time_window",
+        "task_block",
         "id",
-        &["start_time", "end_time", "recurrence_until"],
+        &["start_at", "end_at", "created_at", "updated_at"],
+    ),
+    (
+        "task_series",
+        "id",
+        &["archived_at", "created_at", "updated_at"],
+    ),
+    (
+        "calendar_event_series",
+        "id",
+        &["archived_at", "created_at", "updated_at"],
+    ),
+    (
+        "calendar_event",
+        "id",
+        &[
+            "start_at",
+            "end_at",
+            "deleted_at",
+            "created_at",
+            "updated_at",
+        ],
     ),
     // media 表已在 v15 中删除，此处移除；历史库中 v8 早已执行，不会重跑
     ("signifier_signified", "id", &["created_at"]),

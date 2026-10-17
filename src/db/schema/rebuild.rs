@@ -209,7 +209,7 @@ mod tests {
             .await
             .unwrap();
         sqlx::query(
-            "INSERT INTO time_window (id, start_time, end_time, type, task_id, user_id)
+            "INSERT INTO task_block (id, start_at, end_at, kind, task_id, user_id)
              VALUES (1, '2026-10-01T09:00:00+00:00', '2026-10-01T10:00:00+00:00', 'planned', 1, 1)",
         )
         .execute(&pool)
@@ -235,7 +235,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(titles, vec!["a", "b"]);
-        let tasks: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM time_window WHERE task_id = 1")
+        let tasks: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM task_block WHERE task_id = 1")
             .fetch_one(&pool)
             .await
             .unwrap();

@@ -472,26 +472,6 @@ fn snap_up(at: DateTime<Utc>) -> DateTime<Utc> {
     }
 }
 
-/// 展开循环窗口并截到上限 —— 建议算法读 `planned`/`actual` 时用它（§3.4）
-///
-/// `time_window::expand_between` 自己的上限是 500；这里用 52（≈ 一年的周重复），
-/// 超了就 warn：说明数据的递归规则有问题，该说破而不是默默截断。
-pub fn expand_capped(
-    window: &crate::modules::time_window::TimeWindow,
-    horizon: DateTime<Utc>,
-) -> Vec<Interval> {
-    let expanded = window.expand_between(horizon, MAX_EXPANDED_SEGMENTS + 1);
-    if expanded.len() > MAX_EXPANDED_SEGMENTS {
-        tracing::warn!(
-            task_id = window.task_id,
-            segments = expanded.len(),
-            cap = MAX_EXPANDED_SEGMENTS,
-            "循环窗口展开超上限，已截断：建议只覆盖接下来几天"
-        );
-    }
-    expanded.into_iter().take(MAX_EXPANDED_SEGMENTS).collect()
-}
-
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]

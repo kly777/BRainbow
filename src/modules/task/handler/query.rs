@@ -84,13 +84,13 @@ pub async fn get_calendar_handler(
         Ok(entries) => {
             let events: Vec<CalendarEvent> = entries
                 .into_iter()
-                .map(|(task, tw)| CalendarEvent {
+                .map(|(task, block)| CalendarEvent {
                     task_id: task.id,
-                    window_id: tw.id,
+                    window_id: block.id,
                     title: task.title,
-                    start: tw.start_time,
-                    end: tw.end_time,
-                    window_type: tw.window_type.as_str().to_string(),
+                    start: block.start_at,
+                    end: block.end_at,
+                    window_type: block.kind,
                     status: task.status,
                     priority: task.priority,
                     due_at: task.due_at,

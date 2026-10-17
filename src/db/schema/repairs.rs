@@ -45,6 +45,7 @@ repairs! {
     18 => merge_duplicate_tags, "同名标签合并到最早一条";
     20 => claim_orphan_rows, "无主行认领给 admin";
     23 => reset_pdf_text_content, "PDF 正文置空待重抽（换了抽取器）";
+    26 => move_time_windows_to_task_blocks, "time_window 迁入 task_block 并删除旧表";
 }
 
 /// v8 引入、v21 扩展到 `file`：把存量时间列统一成 `+00:00` 规范形态。
@@ -142,6 +143,41 @@ async fn merge_duplicate_tags(conn: &mut SqliteConnection) -> Result<(), sqlx::E
 /// 数据修复正是这套版本化修复机制的用途（与 v20 认领无主行同类）。
 ///
 /// 代价是重抽一遍（后台、一次性）：一行 1312 页的教材约 94 秒。幂等：再跑一遍只会
+/// v26：把 `time_window` 的 feasible/planned 行搬到 `task_block`，然后删掉旧表。
+///
+/// `actual` 行按设计丢弃（不再有“实际用时”语义）。归属优先取旧行，旧行为 NULL 时
+/// 回落到任务归属。新库没有 `time_window`，直接跳过。
+async fn move_time_windows_to_task_blocks(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
+    let exists: Option<String> = sqlx::query_scalar(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'time_window'",
+    )
+    .fetch_optional(&mut *conn)
+    .await?;
+    if exists.is_none() {
+        return Ok(());
+    }
+
+    sqlx::query(
+        "INSERT INTO task_block (user_id, task_id, kind, start_at, end_at, fixed, source)
+         SELECT COALESCE(tw.user_id, (SELECT t.user_id FROM task t WHERE t.id = tw.task_id)),
+                tw.task_id,
+                CASE WHEN tw.type = 'feasible' THEN 'feasible' ELSE 'planned' END,
+                tw.start_time,
+                tw.end_time,
+                0,
+                'manual'
+           FROM time_window tw
+          WHERE tw.type IN ('feasible','planned')",
+    )
+    .execute(&mut *conn)
+    .await?;
+
+    sqlx::query("DROP TABLE time_window")
+        .execute(&mut *conn)
+        .await?;
+    Ok(())
+}
+
 /// 把已经重抽好的又置空一次，回填再补回来（收敛，不丢数据）。
 async fn reset_pdf_text_content(conn: &mut SqliteConnection) -> Result<(), sqlx::Error> {
     sqlx::query(
@@ -156,7 +192,7 @@ async fn reset_pdf_text_content(conn: &mut SqliteConnection) -> Result<(), sqlx:
 /// 认领范围：这些表的 NULL 行归当前 admin。
 ///
 /// 逐表理由（都是"有该列、且 NULL 表示无主"的表）：
-/// - `card` / `task` / `time_window`：基线就带 `user_id`，但早期 handler 不提取
+/// - `card` / `task` / `task_block`：基线就带 `user_id`，但早期 handler 不提取
 ///   Claims，历史行全是 NULL；
 /// - `file`：匿名上传的老文件（未认证，`user_id` 留空）；
 /// - 其余是 v11 补列的那批（mem 家族、bookmark、reading、conv、text、onto、sign）；
@@ -167,7 +203,7 @@ async fn reset_pdf_text_content(conn: &mut SqliteConnection) -> Result<(), sqlx:
 const CLAIM_TABLES: &[&str] = &[
     "card",
     "task",
-    "time_window",
+    "task_block",
     "file",
     "chunk",
     "mem",

@@ -1,9 +1,9 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use super::block::TaskBlock;
 use super::model::{TaskPriority, TaskStatus};
 use super::response::TaskResponse;
-use crate::modules::time_window::TimeWindow;
 use crate::shared::serde_utils::double_option;
 
 /// 任务创建请求体
@@ -117,14 +117,11 @@ pub struct TaskDetailResponse {
     /// 子任务列表
     pub children: Vec<TaskResponse>,
 
-    /// 可进行时间段
-    pub available_slots: Vec<TimeWindow>,
+    /// 可行时间块（feasible）
+    pub feasible_blocks: Vec<TaskBlock>,
 
-    /// 计划时间段
-    pub planned_slots: Vec<TimeWindow>,
-
-    /// 实际执行时间段
-    pub actual_slots: Vec<TimeWindow>,
+    /// 已排期时间块（planned）
+    pub planned_blocks: Vec<TaskBlock>,
 }
 
 #[cfg(test)]

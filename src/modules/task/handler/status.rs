@@ -5,6 +5,7 @@ use axum::{
 
 use super::super::model::TaskStatus;
 use super::super::query::TaskQueryService;
+use super::super::series::TaskSeriesService;
 use super::super::service::TaskService;
 use crate::shared::actor::Actor;
 use crate::shared::pagination::{PaginatedResponse, Pagination};
@@ -13,9 +14,18 @@ pub async fn complete_task_handler(
     Path(id): Path<i32>,
     State(service): State<TaskService>,
     State(query): State<TaskQueryService>,
+    State(series): State<TaskSeriesService>,
     Extension(actor): Extension<Actor>,
 ) -> impl IntoResponse {
-    respond(service.complete(&actor, id).await, &query).await
+    match service.complete(&actor, id).await {
+        Ok(task) => {
+            if let Err(error) = series.ensure_next_after_completion(task.id).await {
+                tracing::warn!(task_id = task.id, %error, "循环任务生成下一次失败");
+            }
+            respond(Ok(task), &query).await
+        }
+        Err(error) => error.into_response(),
+    }
 }
 
 pub async fn activate_task_handler(

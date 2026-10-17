@@ -13,9 +13,11 @@ import { MAX_PAGE_SIZE } from "./api-funcs.ts";
 import type {
 	CreateTaskRequest,
 	DagView,
+	SuggestionsResponse,
+	Tag,
 	Task,
 	TaskDetail,
-	TaskStatus,
+	TaskStatusType,
 	UpdateTaskRequest,
 } from "./api-types.ts";
 
@@ -77,38 +79,12 @@ export const removeTaskDependencyE = (
 		{ entity: `/tasks/${taskId}` },
 	);
 
-export const addTaskDecompositionE = (
-	parentTaskId: number,
-	childTaskId: number,
-): Promise<void> =>
-	domains.tasks.invalidate(
-		request<void>(`/tasks/${parentTaskId}/decomposition/${childTaskId}`, {
-			method: "POST",
-		}),
-		{ entity: `/tasks/${parentTaskId}` },
-	);
-
-export const addTaskTimeAllocationE = (
-	taskId: number,
-	timeWindowId: number,
-	durationMinutes: number,
-): Promise<void> =>
-	domains.tasks.invalidate(
-		request<void>(
-			`/tasks/${taskId}/time-allocation/${timeWindowId}/${durationMinutes}`,
-			{
-				method: "POST",
-			},
-		),
-		{ entity: `/tasks/${taskId}` },
-	);
-
 export const getUserTasksE = (userId: number): Promise<readonly Task[]> =>
 	cachedRequest(`/tasks/user/${userId}`);
 
 export const updateTaskStatusE = (
 	id: number,
-	status: TaskStatus,
+	status: TaskStatusType,
 ): Promise<Task> =>
 	domains.tasks.invalidate(patch<Task>(`/tasks/${id}`, { status }), {
 		entity: `/tasks/${id}`,
@@ -125,6 +101,27 @@ export const searchTasksE = (
 
 export const getArchivedTasksE = (): Promise<PaginatedResponse<Task>> =>
 	cachedRequest("/tasks/status/archived");
+
+/**
+ * 标签补全（录入框用）：`prefix` 为空即"取前几条"。
+ *
+ * 缓存 30s 够用 —— 标签只在写任务时变，而写任务会连坐失效 tasks 域（含本端点，见
+ * domainPolicies）；调用方另有 200ms 输入去抖，不会每敲一个字都打一次请求。
+ */
+export const getTagsE = (prefix = ""): Promise<Tag[]> =>
+	cachedRequest(`/tags?prefix=${encodeURIComponent(prefix)}`);
+
+/**
+ * 时段建议（**纯读**）：后端只算不写，采纳由前端显式调 `createTimeWindowE`。
+ *
+ * 不走 `cachedRequest`：建议每次都要重算（用户刚拖完一个块，凭据就是"此刻的日历"），
+ * 缓存会让建议停留在旧状态 —— 那比慢 20ms 糟糕得多。
+ */
+export const getSuggestionsE = (
+	from: string,
+	to: string,
+): Promise<SuggestionsResponse> =>
+	request<SuggestionsResponse>(`/tasks/suggestions${buildQuery({ from, to })}`);
 
 // 任务统计缓存 15 秒
 export const getTaskStatsE = (): Promise<{

@@ -2,7 +2,7 @@
 
 import type { PaginatedResponse } from "@shared/api";
 import { buildQuery, cachedRequest } from "@shared/api";
-import type { CalendarEvent, Task, TaskStatus } from "./api-types.ts";
+import type { CalendarEvent, Task, TaskSortKey } from "./api-types.ts";
 
 // ==================== Task API Functions ====================
 
@@ -12,19 +12,34 @@ export const MAX_PAGE_SIZE = 100;
 /** 拉全时的页数上限：个人工具用不到，只用来挡住异常循环 */
 const MAX_ALL_PAGES = 10;
 
+interface CalendarEventApi extends Omit<CalendarEvent, "end"> {
+	end: string | null;
+}
+
 export const getCalendarEventsE = (
 	start?: string,
 	end?: string,
-	status?: TaskStatus,
+	status?: string,
 ): Promise<readonly CalendarEvent[]> => {
-	return cachedRequest(`/tasks/calendar${buildQuery({ start, end, status })}`);
+	return cachedRequest<readonly CalendarEventApi[]>(
+		`/tasks/calendar${buildQuery({ start, end, status })}`,
+	).then((items) =>
+		items.map((event) => ({
+			...event,
+			// 软计划点没有结束时刻：给 15 分钟占位，日历仍能画出一小段。
+			end:
+				event.end ??
+				new Date(new Date(event.start).getTime() + 15 * 60_000).toISOString(),
+		})),
+	);
 };
 
 export const getTasksE = (
 	page = 1,
 	pageSize = MAX_PAGE_SIZE,
+	sort: TaskSortKey = "smart",
 ): Promise<PaginatedResponse<Task>> =>
-	cachedRequest(`/tasks${buildQuery({ page, page_size: pageSize })}`);
+	cachedRequest(`/tasks${buildQuery({ page, page_size: pageSize, sort })}`);
 
 export const getAllTasksE = (
 	page = 1,

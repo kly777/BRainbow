@@ -87,6 +87,21 @@ describe("notifyError 的抑制规则（已由传输层提示过的不再重复�
 			}),
 		);
 	});
+
+	it("传字符串时原样当文案，不再过 getErrorMessage", async () => {
+		// 回归：仓库里有六处写成 `notifyError("删除失败", getErrorMessage(err))` ——
+		// 调用方刚提取出来的原因又进了 getErrorMessage，而它不认字符串、
+		// 一律返回"未知错误"（file 的删除/重命名/合并、task 的落位都中过）。
+		const { mockShowToast, notifyError } = await setup();
+		notifyError("删除文件失败", "文件正在被占用");
+		expect(mockShowToast).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "error",
+				title: "删除文件失败",
+				message: "文件正在被占用",
+			}),
+		);
+	});
 });
 
 describe("notifySuccess / notifyWarning / notifyInfo", () => {

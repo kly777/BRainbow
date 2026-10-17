@@ -31,11 +31,11 @@ describe("domains 写→失效配对", () => {
 
 	it("tasks 写入连带失效 timeWindows 读取（跨域）", async () => {
 		mockedRequest.mockResolvedValue([{ id: 1 }]);
-		await cachedRequest("/time-windows?task_id=1"); // 预热
+		await cachedRequest("/tasks/1/blocks"); // 预热
 		expect(mockedRequest).toHaveBeenCalledTimes(1);
 
 		await domains.tasks.invalidate(Promise.resolve({ ok: true }));
-		await cachedRequest("/time-windows?task_id=1"); // 应重取
+		await cachedRequest("/tasks/1/blocks"); // 应重取
 		expect(mockedRequest).toHaveBeenCalledTimes(2);
 	});
 
@@ -160,13 +160,13 @@ describe("分级失效（reads vs singles + entity）", () => {
 
 	it("tasks 写入连带失效 timeWindows 广域（跨域），不影响 timeWindows 单条", async () => {
 		mockedRequest.mockResolvedValue("tw");
-		await cachedRequest("/time-windows?task_id=1"); // 广域（列表）
+		await cachedRequest("/tasks/1/blocks"); // 广域（列表）
 		expect(mockedRequest).toHaveBeenCalledTimes(1);
 
 		await domains.tasks.invalidate(Promise.resolve({ ok: true }));
 
 		// timeWindows 广域被跨域连坐
-		await cachedRequest("/time-windows?task_id=1");
+		await cachedRequest("/tasks/1/blocks");
 		expect(mockedRequest).toHaveBeenCalledTimes(2); // 重取
 	});
 });

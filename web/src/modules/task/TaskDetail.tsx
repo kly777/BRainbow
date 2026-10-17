@@ -2,30 +2,10 @@
 
 import { AsyncSection, Button, Toolbar } from "@components/ui";
 import { fillPath, PATHS } from "@config/paths";
-import {
-	confirmAndDelete,
-	fmtLocal,
-	notifySuccess,
-	tryOrNotify,
-	useDetailResource,
-} from "@shared/utils";
+import { confirmAndDelete, fmtLocal, useDetailResource } from "@shared/utils";
 import { A, useNavigate, useParams } from "@solidjs/router";
-import {
-	type Component,
-	createResource,
-	createSignal,
-	For,
-	Show,
-} from "solid-js";
-import {
-	deleteTaskE,
-	fetchAllTasks,
-	getAllTasksE,
-	getTaskDetailE,
-	type Task,
-	updateTaskE,
-} from "./api.ts";
-import EditTaskModal from "./components/EditTaskModal.tsx";
+import { type Component, For, Show } from "solid-js";
+import { deleteTaskE, getTaskDetailE } from "./api.ts";
 import styles from "./TaskDetail.module.css";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -102,25 +82,6 @@ export default function TaskDetail() {
 	});
 	const detail = m.data;
 	const { refetch } = m;
-	const [allTasks] = createResource(async () => {
-		// 父子任务选择器要的是全量：`/tasks/all` 分页缺省 20 条，只取第一页会漏
-		const page = await fetchAllTasks(getAllTasksE);
-		return page.items;
-	});
-
-	const [editing, setEditing] = createSignal(false);
-
-	const save = async (taskId: number, updates: Partial<Task>) => {
-		const ok = await tryOrNotify(
-			() => updateTaskE(taskId, updates),
-			"保存任务",
-		);
-		if (ok) {
-			notifySuccess("任务已更新");
-			setEditing(false);
-			refetch();
-		}
-	};
 
 	const remove = async () => {
 		const task = detail()?.task;
@@ -135,9 +96,6 @@ export default function TaskDetail() {
 	return (
 		<div class={styles.container}>
 			<Toolbar backLabel="任务列表" onBack={() => navigate(PATHS.task)}>
-				<Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
-					编辑
-				</Button>
 				<Button variant="danger" size="sm" onClick={remove}>
 					删除
 				</Button>
@@ -193,25 +151,16 @@ export default function TaskDetail() {
 						</Show>
 
 						<Show
-							when={d().available_slots.length + d().planned_slots.length > 0}
+							when={d().feasible_blocks.length + d().planned_blocks.length > 0}
 						>
 							<TimeSection
-								available={d().available_slots.length}
-								planned={d().planned_slots.length}
+								available={d().feasible_blocks.length}
+								planned={d().planned_blocks.length}
 							/>
 						</Show>
 					</div>
 				)}
 			</AsyncSection>
-
-			<EditTaskModal
-				isOpen={editing()}
-				onClose={() => setEditing(false)}
-				task={detail()?.task ?? null}
-				allTasks={allTasks() ?? []}
-				onSave={save}
-				onDependencyChange={() => void refetch()}
-			/>
 		</div>
 	);
 }

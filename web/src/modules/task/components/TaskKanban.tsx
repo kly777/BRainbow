@@ -1,9 +1,10 @@
 import { Button, FilterGroup, Input, Modal } from "@components/ui";
-import { fmtLocal } from "@shared/utils";
 import { createMemo, createSignal, For, Show } from "solid-js";
 import type { Task } from "../api.ts";
+import type { TaskStatusType } from "../api-types.ts";
 import { statusToken } from "../lib/status-colors.ts";
 import styles from "./TaskKanban.module.css";
+import { TaskMeta } from "./TaskMeta.tsx";
 import { useTasks } from "./TaskProvider.tsx";
 
 // ==================== 状态常量 ====================
@@ -51,12 +52,10 @@ function KanbanCard(props: KanbanCardProps) {
 			<Show when={t.description}>
 				<p class={styles.cardDesc}>{t.description?.slice(0, 80)}</p>
 			</Show>
-			<div class={styles.cardMeta}>
-				<Show when={t.effort_estimate_minutes}>
-					<span class={styles.effortTag}>⏱ {t.effort_estimate_minutes}min</span>
-				</Show>
-				<span class={styles.cardDate}>{fmtLocal(t.created_at)}</span>
-			</div>
+			{/* 与列表行共用同一份属性条（截止 / 优先级 / 时长 / 标签）。
+			    原先这里只显示时长 + **创建时间** —— 创建时间不可操作，而真正的
+			    截止与优先级恰恰没显示，两种视图对"这条任务有什么"的说法不一致。 */}
+			<TaskMeta task={t} class={styles.cardMeta} />
 		</button>
 	);
 }
@@ -67,7 +66,7 @@ interface ColumnProps {
 	col: (typeof COLUMNS)[number];
 	tasks: Task[];
 	onEdit: (task: Task) => void;
-	onDrop: (taskId: number, newStatus: string) => void;
+	onDrop: (taskId: number, newStatus: TaskStatusType) => void;
 }
 
 function Column(props: ColumnProps) {
@@ -142,7 +141,7 @@ export default function TaskKanban() {
 		return map;
 	});
 
-	const handleDrop = async (taskId: number, newStatus: string) => {
+	const handleDrop = async (taskId: number, newStatus: TaskStatusType) => {
 		const task = tasks().find((t) => t.id === taskId);
 		if (!task || task.status === newStatus) return;
 		await updateStatus(taskId, newStatus);

@@ -3,7 +3,14 @@
 
 import { type CreateBookmarkRequest, createBookmarkE } from "@modules/bookmark";
 import { type CreateCardRequest, createCardE } from "@modules/card";
-import { type CreateTaskRequest, createTaskE } from "@modules/task";
+import {
+	type CaptureResult,
+	type CreateTaskRequest,
+	captureToCreateRequest,
+	createTaskE,
+	mentionsToDescription,
+	parseCapture,
+} from "@modules/task";
 import { showToast } from "@shared/utils/toastStore.ts";
 import { createSignal, onCleanup, onMount } from "solid-js";
 
@@ -17,19 +24,28 @@ export interface QuickCaptureState {
 
 /**
  * 检测输入意图：
- * - #开头 → 任务
- * - @开头 + URL → 书签
+ * - `#` 开头 → 任务（`#` 之后才是内容，`#购物` 建的任务标题是"购物"）
+ * - `@` 开头 + URL → 书签
  * - 其他 → 卡片
+ *
+ * 行首的 `#` / `@` 是**类型前缀**（"这条输入要创建什么"），与任务属性的**行内 token**
+ * （`#标签` / `@提及`）是两件事：前缀只在第一个非空白字符处生效，剥掉之后交给
+ * `parseCapture` 提取属性。`#购物` 仍创建名为"购物"的任务 —— 这是向后兼容的红线（A6）。
+ *
+ * 卡片与书签**不解析**属性语法：它们的正文原样保存。
  */
 export function detectType(input: string): {
 	type: QuickCaptureType;
 	cleanValue: string;
 	url?: string;
+	/** 任务的属性解析结果（只有 type === "task" 时才有） */
+	capture?: CaptureResult;
 } {
 	const trimmed = input.trim();
 
 	if (trimmed.startsWith("#")) {
-		return { type: "task", cleanValue: trimmed.slice(1).trim() };
+		const capture = parseCapture(trimmed.slice(1).trim());
+		return { type: "task", cleanValue: capture.cleanTitle, capture };
 	}
 
 	if (trimmed.startsWith("@")) {
@@ -113,7 +129,18 @@ export function useQuickCapture() {
 		try {
 			switch (detected.type) {
 				case "task": {
-					const req: CreateTaskRequest = { title: value };
+					// 符号已经由解析器剥走，这里组装创建请求（提及本期进 description）
+					const capture = detected.capture ?? parseCapture(value);
+					const req: CreateTaskRequest = captureToCreateRequest({
+						title: value,
+						description: mentionsToDescription(capture.mentions),
+						priority: capture.priority,
+						tags: capture.tags,
+						effortMinutes: capture.effortMinutes,
+						startAt: null,
+						dueAt: null,
+						parentTaskId: null,
+					});
 					await createTaskE(req);
 					showToast({
 						type: "success",

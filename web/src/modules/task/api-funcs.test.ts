@@ -89,13 +89,23 @@ describe("任务列表端点", () => {
 		const mocked = vi.mocked(cachedRequest);
 		mocked.mockResolvedValue(page(0, 0));
 
+		// 默认排序是 smart（系统算"先做哪件"），所以显式带上 sort
 		await getTasksE();
-		expect(mocked).toHaveBeenLastCalledWith("/tasks?page=1&page_size=100");
+		expect(mocked).toHaveBeenLastCalledWith(
+			"/tasks?page=1&page_size=100&sort=smart",
+		);
 
 		await getAllTasksE();
 		expect(mocked).toHaveBeenLastCalledWith("/tasks/all?page=1&page_size=100");
 
 		await getTasksE(2, 50);
-		expect(mocked).toHaveBeenLastCalledWith("/tasks?page=2&page_size=50");
+		expect(mocked).toHaveBeenLastCalledWith(
+			"/tasks?page=2&page_size=50&sort=smart",
+		);
+
+		await getTasksE(1, 100, "due");
+		expect(mocked).toHaveBeenLastCalledWith(
+			"/tasks?page=1&page_size=100&sort=due",
+		);
 	});
 });

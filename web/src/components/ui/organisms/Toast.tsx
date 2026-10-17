@@ -55,6 +55,21 @@ const ToastCard: Component<{ toast: ToastItem }> = (props) => (
 				<Show when={props.toast.message}>
 					<div class={styles.message}>{props.toast.message}</div>
 				</Show>
+				{/* 动作（典型是「撤销」）：失败后给一条可反悔的路，而不是弹确认框 */}
+				<Show when={props.toast.action}>
+					{(action) => (
+						<button
+							type="button"
+							class={styles.action}
+							onClick={() => {
+								action().onClick();
+								dismissToast(props.toast.id);
+							}}
+						>
+							{action().label}
+						</button>
+					)}
+				</Show>
 			</div>
 		</div>
 		<button

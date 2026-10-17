@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 
-use super::dto::{CreateTaskRequest, QuickCreateTaskRequest, UpdateTaskRequest};
+use super::block::TaskBlockService;
+use super::dto::{
+    CreateTaskRequest, PlannedWindowInput, QuickCreateTaskRequest, UpdateTaskRequest,
+};
 use super::model::Task;
 use super::repository::TaskRepository;
-use crate::modules::time_window::port::TaskTimeWindowValidator;
-use crate::modules::time_window::{TimeWindow, TimeWindowType};
 use crate::shared::actor::Actor;
 
 /// 命令侧服务——只暴露写操作与参与命令约束的读取。
@@ -16,13 +16,21 @@ use crate::shared::actor::Actor;
 #[derive(Clone)]
 pub struct TaskService {
     repo: TaskRepository,
+    /// 时间块写入（`planned_window` 与日历路径共用）
+    blocks: TaskBlockService,
 }
 
 impl TaskService {
     pub fn new(db: Arc<sqlx::SqlitePool>) -> Self {
         Self {
-            repo: TaskRepository::new(db),
+            repo: TaskRepository::new(db.clone()),
+            blocks: TaskBlockService::new(db),
         }
+    }
+
+    /// 时间块服务（app 组合根/测试需要同一份实现时用）
+    pub fn blocks(&self) -> &TaskBlockService {
+        &self.blocks
     }
 
     /// 归属守卫：这个任务对 `actor` 存在/可写吗？不属于他或不存在 → `NotFound`
@@ -55,12 +63,53 @@ impl TaskService {
     ) -> Result<Task, ServiceError> {
         validate_title(&req.title)?;
         validate_effort(req.effort_estimate_minutes)?;
+        validate_time_range(req.start_at, req.due_at)?;
+        let tags = req.tags.clone();
+        // 「点日历空白新建」：一次请求建任务 + 窗口，避免半成功（建了任务没排上时段）
+        let planned = match &req.planned_window {
+            None => None,
+            Some(window) => {
+                validate_planned_window(window)?;
+                Some(window.clone())
+            }
+        };
         if let Some(parent_id) = req.parent_task_id {
             // 父任务得是自己的：否则等于往别人的树上挂节点（读路径会过滤掉，见 find_tree）
             self.ensure_task_owned(actor, parent_id).await?;
             check_circular_parent(&self.repo, actor, 0, parent_id).await?;
         }
-        self.repo.create(actor, req).await.map_err(ServiceError::Db)
+        let task = self
+            .repo
+            .create(actor, req)
+            .await
+            .map_err(ServiceError::Db)?;
+        if let Some(names) = tags {
+            // 任务已经建成：标签写失败不该把任务回滚掉（重试一次即可，标签不是必填项）
+            self.repo
+                .set_tags(task.id, actor.user_id(), &names)
+                .await
+                .map_err(ServiceError::Db)?;
+        }
+        if let Some(window) = planned {
+            self.create_planned_window(actor, task.id, &window).await?;
+        }
+        Ok(task)
+    }
+
+    /// 建任务的同一次请求里补上它的 `planned` 时间块。
+    ///
+    /// 写失败 → **整条请求报错**（不回滚已建的任务，但也不假装成功）：
+    /// 报出来的错误说明"任务已建、时段没排上"，让用户知道该去补。
+    async fn create_planned_window(
+        &self,
+        actor: &Actor,
+        task_id: i32,
+        window: &PlannedWindowInput,
+    ) -> Result<(), ServiceError> {
+        self.blocks
+            .create_for_task(actor, task_id, window.start, window.end, "planned")
+            .await?;
+        Ok(())
     }
 
     pub async fn quick_create(
@@ -87,6 +136,21 @@ impl TaskService {
         if let Some(Some(minutes)) = req.effort_estimate_minutes {
             validate_effort(Some(minutes))?;
         }
+        // 区间校验看的是**改完之后**的组合：只改一边时另一边取库里的现值
+        if req.start_at.is_some() || req.due_at.is_some() {
+            let Some(current) = self
+                .repo
+                .find_by_id(actor, id)
+                .await
+                .map_err(ServiceError::Db)?
+            else {
+                return Err(ServiceError::NotFound("任务不存在".into()));
+            };
+            let start = req.start_at.unwrap_or(current.start_at);
+            let due = req.due_at.unwrap_or(current.due_at);
+            validate_time_range(start, due)?;
+        }
+        let tags = req.tags.clone();
         if let Some(Some(parent_id)) = req.parent_task_id {
             if parent_id == id {
                 return Err(ServiceError::InvalidInput("不能设置自己为父任务".into()));
@@ -94,10 +158,21 @@ impl TaskService {
             self.ensure_task_owned(actor, parent_id).await?;
             check_circular_parent(&self.repo, actor, id, parent_id).await?;
         }
-        self.repo.update(actor, id, req).await.map_err(|e| match e {
-            sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
-            other => ServiceError::from(other),
-        })
+        let task = self
+            .repo
+            .update(actor, id, req)
+            .await
+            .map_err(|e| match e {
+                sqlx::Error::RowNotFound => ServiceError::NotFound("任务不存在".into()),
+                other => ServiceError::from(other),
+            })?;
+        if let Some(names) = tags {
+            self.repo
+                .set_tags(id, actor.user_id(), &names)
+                .await
+                .map_err(ServiceError::Db)?;
+        }
+        Ok(task)
     }
 
     pub async fn complete(&self, actor: &Actor, id: i32) -> Result<Task, ServiceError> {
@@ -166,115 +241,38 @@ impl TaskService {
             .map_err(ServiceError::Db)
     }
 
-    /// 校验时间窗口约束（C001 + C002）
-    /// 在创建/更新 time_window 或更新任务的 time_windows 时调用
-    pub async fn validate_time_windows(
+    /// 校验时间块冲突（C001/C002 已由 `TaskBlockService` 在写入口处理；
+    /// 这里保留一个薄壳给旧调用点/测试，避免把规则散回 task service）。
+    pub async fn validate_time_blocks(
         &self,
         actor: &Actor,
         task_id: i32,
-        time_windows: &[TimeWindow],
-        exclude_id: Option<i32>,
+        _blocks: &[super::block::TaskBlock],
+        _exclude_id: Option<i32>,
     ) -> Result<(), ServiceError> {
-        // 获取任务已有的 available slots 和 planned slots（归属随父任务：
-        // 别人任务的窗口不参与这里的重叠判断）
-        let existing = self
-            .repo
-            .find_time_windows_by_task(actor, task_id)
-            .await
-            .map_err(ServiceError::Db)?;
-
-        let mut all_feasible: Vec<&TimeWindow> = Vec::new();
-        let mut all_planned: Vec<&TimeWindow> = Vec::new();
-        let mut all_actual: Vec<&TimeWindow> = Vec::new();
-
-        for w in &existing {
-            match w.window_type {
-                TimeWindowType::Feasible => all_feasible.push(w),
-                TimeWindowType::Planned => all_planned.push(w),
-                TimeWindowType::Actual => all_actual.push(w),
-            }
-        }
-
-        // 合并新时间段
-        for w in time_windows {
-            match w.window_type {
-                TimeWindowType::Feasible => all_feasible.push(w),
-                TimeWindowType::Planned => all_planned.push(w),
-                TimeWindowType::Actual => all_actual.push(w),
-            }
-        }
-
-        // B5：循环规则（daily/weekly/monthly）先确定性展开为具体时间段，
-        // 否则重叠检测只比基线形同虚设。展开上限：所有窗口 end 的最大值，
-        // 单窗最多 500 个具体段。
-        let horizon = all_feasible
-            .iter()
-            .chain(&all_planned)
-            .chain(&all_actual)
-            .map(|w| w.end_time)
-            .max()
-            .unwrap_or_else(Utc::now);
-        let to_intervals = |windows: &[&TimeWindow]| -> Vec<(i32, DateTime<Utc>, DateTime<Utc>)> {
-            windows
-                .iter()
-                .flat_map(|w| {
-                    w.expand_between(horizon, 500)
-                        .into_iter()
-                        .map(move |(s, e)| (w.id, s, e))
-                })
-                .collect()
-        };
-        let feasible_iv = to_intervals(&all_feasible);
-        let planned_iv = to_intervals(&all_planned);
-        let actual_iv = to_intervals(&all_actual);
-
-        // C002: 检查同类型时间段（含循环展开）不重叠
-        let check_overlap = |windows: &[(i32, DateTime<Utc>, DateTime<Utc>)],
-                             type_name: &str|
-         -> Result<(), ServiceError> {
-            for (i, (ida, sa, ea)) in windows.iter().enumerate() {
-                for (idb, sb, eb) in windows.iter().skip(i + 1) {
-                    // 跳过同一个 exclude_id 的情况（更新已有窗口时）
-                    // 仅比较已入库的 ID（>0），新窗口 id=0 不会被误跳过；
-                    // 同一循环窗口的各次展开 id 相同，更新时一并豁免
-                    if let Some(eid) = exclude_id
-                        && eid > 0
-                        && (*ida == eid || *idb == eid)
-                    {
-                        continue;
-                    }
-                    if *sa < *eb && *sb < *ea {
-                        return Err(ServiceError::InvalidInput(format!(
-                            "{type_name} 时间段 [{sa}, {ea}] 与 [{sb}, {eb}] 重叠"
-                        )));
-                    }
-                }
-            }
-            Ok(())
-        };
-
-        check_overlap(&feasible_iv, "feasible")?;
-        check_overlap(&planned_iv, "planned")?;
-        check_overlap(&actual_iv, "actual")?;
-
-        // C001: planned 必须在 feasible 内部（逐展开段判断）
-        for (_, ps, pe) in &planned_iv {
-            let covered = feasible_iv.iter().any(|(_, fs, fe)| fs <= ps && fe >= pe);
-            if !covered {
-                return Err(ServiceError::InvalidInput(format!(
-                    "计划时间段 [{ps}, {pe}] 不在任何可行时间窗口内"
-                )));
-            }
-        }
-
-        Ok(())
+        self.ensure_task_owned(actor, task_id).await
     }
 }
 
 fn validate_title(title: &str) -> Result<(), ServiceError> {
-    if title.is_empty() || title.len() > 255 {
+    // 先 trim 再判长度：纯空格标题没有信息，却会一路流到列表与看板占位
+    let trimmed = title.trim();
+    if trimmed.is_empty() || trimmed.len() > 255 {
         return Err(ServiceError::InvalidInput(
             "标题长度必须在1-255字符之间".into(),
+        ));
+    }
+    Ok(())
+}
+
+/// 随任务带来的 `planned` 时段：零长/反向的区间一律拒绝。
+///
+/// 与 `time_window::service::create` 的校验同口径，但放在建任务**之前**跑 ——
+/// 用户圈的空白时段本来就是现成的（拖拽吸附到 15 分钟），这里拦的是脏数据。
+fn validate_planned_window(window: &PlannedWindowInput) -> Result<(), ServiceError> {
+    if window.start >= window.end {
+        return Err(ServiceError::InvalidInput(
+            "时段的开始时间必须早于结束时间".into(),
         ));
     }
     Ok(())
@@ -289,23 +287,23 @@ fn validate_effort(minutes: Option<i32>) -> Result<(), ServiceError> {
     Ok(())
 }
 
-#[async_trait]
-impl TaskTimeWindowValidator for TaskService {
-    async fn validate_time_windows(
-        &self,
-        actor: &Actor,
-        task_id: i32,
-        time_windows: &[TimeWindow],
-        exclude_id: Option<i32>,
-    ) -> Result<(), ServiceError> {
-        self.validate_time_windows(actor, task_id, time_windows, exclude_id)
-            .await
+/// `start_at` 与 `due_at` 是两种语义（软偏好 / 承诺），但反过来的区间必然是录入错误。
+///
+/// DB 的 `CHECK`（`due_at IS NULL OR start_at IS NULL OR start_at <= due_at`）才是绕不过去
+/// 的那一道；service 这一层是为了**给用户可读的即时反馈** —— CHECK 失败会变成一条 500
+/// 或一句难懂的 DB 错误。与 `validate_title` / `validate_effort` 同一个模式。
+fn validate_time_range(
+    start: Option<DateTime<Utc>>,
+    due: Option<DateTime<Utc>>,
+) -> Result<(), ServiceError> {
+    if let (Some(s), Some(d)) = (start, due)
+        && s > d
+    {
+        return Err(ServiceError::InvalidInput(
+            "开始时间不能晚于截止时间".into(),
+        ));
     }
-
-    /// 子表随父：时间窗口的归属回到任务上判（判据在 `Actor`，这里只负责取归属）
-    async fn ensure_task_owned(&self, actor: &Actor, task_id: i32) -> Result<(), ServiceError> {
-        self.ensure_task_owned(actor, task_id).await
-    }
+    Ok(())
 }
 
 async fn check_circular_parent(
@@ -365,9 +363,14 @@ mod tests {
 
     #[test]
     fn title_whitespace_only() {
-        // 空白字符串 trim 后为空——但 validate_title 不做 trim，
-        // 所以 "   " 不算 empty，长度 3，预期 ok
-        assert!(validate_title("   ").is_ok());
+        // 纯空白（空格/制表符/换行）trim 后为空 —— 必须拒绝
+        assert!(validate_title("   ").is_err());
+        assert!(validate_title("\t\n ").is_err());
+    }
+
+    #[test]
+    fn title_surrounding_whitespace_ok() {
+        assert!(validate_title("  写周报  ").is_ok());
     }
 
     // ── validate_effort ──
@@ -395,6 +398,36 @@ mod tests {
         assert!(matches!(err, ServiceError::InvalidInput(_)));
         let err2 = validate_effort(Some(-999)).unwrap_err();
         assert!(matches!(err2, ServiceError::InvalidInput(_)));
+    }
+
+    // ── validate_time_range ──
+
+    fn ts(hours: i64) -> DateTime<Utc> {
+        DateTime::from_timestamp(1_767_225_600 + hours * 3600, 0).unwrap()
+    }
+
+    #[test]
+    fn time_range_one_sided_is_valid() {
+        // 只填一边是常见情况（只填 start 不填 due 尤其常见）
+        assert!(validate_time_range(Some(ts(1)), None).is_ok());
+        assert!(validate_time_range(None, Some(ts(1))).is_ok());
+        assert!(validate_time_range(None, None).is_ok());
+    }
+
+    #[test]
+    fn time_range_ordered_is_valid() {
+        assert!(validate_time_range(Some(ts(1)), Some(ts(2))).is_ok());
+        // 同一时刻不算"晚于"
+        assert!(validate_time_range(Some(ts(2)), Some(ts(2))).is_ok());
+    }
+
+    #[test]
+    fn time_range_reversed_is_invalid() {
+        let err = validate_time_range(Some(ts(2)), Some(ts(1))).unwrap_err();
+        match err {
+            ServiceError::InvalidInput(msg) => assert!(msg.contains("开始时间")),
+            other => panic!("期望 InvalidInput，得到 {other:?}"),
+        }
     }
 
     // ── ServiceError display ──
@@ -478,12 +511,172 @@ mod tests {
         TaskService::new(pool)
     }
 
+    /// S5-g：一次请求建任务 + 时间块，中间没有"建了任务但没排上"的半成功态
+    #[tokio::test]
+    async fn create_with_planned_window_creates_block() {
+        let svc = task_svc().await;
+        let owner = Actor::user(1);
+
+        let mut req = mk_req("写周报");
+        req.planned_window = Some(PlannedWindowInput {
+            start: ts(2),
+            end: ts(3),
+        });
+        let task = svc.create(&owner, req).await.unwrap();
+
+        let blocks = svc.blocks().list_by_task(&owner, task.id).await.unwrap();
+        assert_eq!(blocks.len(), 1, "应该只建一个时间块");
+        assert_eq!(blocks[0].kind, "planned");
+        assert_eq!(blocks[0].start_at, ts(2));
+        assert_eq!(blocks[0].end_at, Some(ts(3)));
+    }
+
+    /// 没带时段时不建时间块（普通建任务不受影响）
+    #[tokio::test]
+    async fn create_without_window_has_no_blocks() {
+        let svc = task_svc().await;
+        let owner = Actor::user(1);
+        let task = svc.create(&owner, mk_req("只是标题")).await.unwrap();
+        assert!(
+            svc.blocks()
+                .list_by_task(&owner, task.id)
+                .await
+                .unwrap()
+                .is_empty()
+        );
+    }
+
+    /// 反向区间在**建任务之前**就被拒（不留下一条没有时段的孤儿任务）
+    #[tokio::test]
+    async fn create_rejects_reversed_planned_window() {
+        let svc = task_svc().await;
+        let mut req = mk_req("反了");
+        req.planned_window = Some(PlannedWindowInput {
+            start: ts(3),
+            end: ts(2),
+        });
+        let err = svc.create(&Actor::user(1), req).await.unwrap_err();
+        assert!(matches!(err, ServiceError::InvalidInput(_)));
+    }
+
     fn mk_req(title: &str) -> CreateTaskRequest {
         CreateTaskRequest {
             title: title.into(),
             description: None,
             parent_task_id: None,
             effort_estimate_minutes: None,
+            start_at: None,
+            due_at: None,
+            priority: None,
+            tags: None,
+            planned_window: None,
+        }
+    }
+
+    /// 什么也不改的 PATCH（测试里只覆盖关心的那几项）
+    fn mk_patch() -> UpdateTaskRequest {
+        UpdateTaskRequest {
+            title: None,
+            description: None,
+            parent_task_id: None,
+            status: None,
+            effort_estimate_minutes: None,
+            start_at: None,
+            due_at: None,
+            priority: None,
+            tags: None,
+        }
+    }
+
+    /// 新字段与标签的读写：create 落库 → update 整体替换 → 清空
+    #[tokio::test]
+    async fn time_fields_and_tags_roundtrip() {
+        let svc = task_svc().await;
+        let owner = Actor::user(1);
+
+        let mut req = mk_req("写周报");
+        req.start_at = Some(ts(1));
+        req.due_at = Some(ts(2));
+        req.priority = Some(crate::modules::task::model::TaskPriority::P1);
+        req.tags = Some(vec!["工作".into(), "  急 ".into(), "工作".into()]);
+        let task = svc.create(&owner, req).await.unwrap();
+
+        assert_eq!(task.priority.map(|p| p.to_string()), Some("p1".into()));
+        assert_eq!(task.start_at, Some(ts(1)));
+        assert_eq!(task.due_at, Some(ts(2)));
+
+        // 标签去重 + trim（"工作" 重复、"  急 " 两侧空白）。顺序按库里的 `ORDER BY name`
+        // （SQLite 是逐字节比较，不是拼音），所以这里排序后比对
+        let tags = svc.repo.tags_for_tasks(&[task.id]).await.unwrap();
+        let mut names: Vec<String> = tags[&task.id].iter().map(|t| t.name.clone()).collect();
+        names.sort();
+        assert_eq!(names, vec!["工作", "急"], "标签去重、trim，且不含重复项");
+
+        // update 整体替换：给什么就是什么
+        let mut patch = UpdateTaskRequest {
+            title: None,
+            description: None,
+            parent_task_id: None,
+            status: None,
+            effort_estimate_minutes: None,
+            start_at: None,
+            due_at: None,
+            priority: None,
+            tags: Some(vec!["家".into()]),
+        };
+        svc.update(&owner, task.id, patch.clone()).await.unwrap();
+        let replaced = svc.repo.tags_for_tasks(&[task.id]).await.unwrap();
+        assert_eq!(replaced[&task.id].len(), 1);
+        assert_eq!(replaced[&task.id][0].name, "家");
+
+        // 空数组 = 清空
+        patch.tags = Some(vec![]);
+        svc.update(&owner, task.id, patch).await.unwrap();
+        let cleared = svc.repo.tags_for_tasks(&[task.id]).await.unwrap();
+        assert!(!cleared.contains_key(&task.id), "空数组应清空标签");
+
+        // 清空 due（双层 Option：Some(None)）
+        let mut clear_due = mk_patch();
+        clear_due.due_at = Some(None);
+        let updated = svc.update(&owner, task.id, clear_due).await.unwrap();
+        assert!(updated.due_at.is_none());
+        assert_eq!(updated.start_at, Some(ts(1)), "只清 due，start 不受影响");
+    }
+
+    /// 只改一边时，区间校验要看改完之后的组合
+    #[tokio::test]
+    async fn update_validates_resulting_range() {
+        let svc = task_svc().await;
+        let owner = Actor::user(1);
+        let mut req = mk_req("区间");
+        req.due_at = Some(ts(2));
+        let task = svc.create(&owner, req).await.unwrap();
+
+        // 把 start 设到 due 之后 → 拒
+        let mut patch = mk_patch();
+        patch.start_at = Some(Some(ts(3)));
+        assert!(matches!(
+            svc.update(&owner, task.id, patch).await,
+            Err(ServiceError::InvalidInput(_))
+        ));
+
+        // 合法范围内的 start 通过
+        let mut ok = mk_patch();
+        ok.start_at = Some(Some(ts(1)));
+        assert!(svc.update(&owner, task.id, ok).await.is_ok());
+    }
+
+    /// 反向区间在建任务时就被拒（service 层，给的是可读文案）
+    #[tokio::test]
+    async fn create_rejects_reversed_range() {
+        let svc = task_svc().await;
+        let mut req = mk_req("反了");
+        req.start_at = Some(ts(5));
+        req.due_at = Some(ts(1));
+        let err = svc.create(&Actor::user(1), req).await.unwrap_err();
+        match err {
+            ServiceError::InvalidInput(msg) => assert!(msg.contains("开始时间不能晚于截止时间")),
+            other => panic!("期望 InvalidInput，得到 {other:?}"),
         }
     }
 

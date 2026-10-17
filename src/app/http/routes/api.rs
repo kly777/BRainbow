@@ -6,8 +6,8 @@ use axum::{
 use crate::app::context::AppState;
 use crate::modules::db_viewer;
 use crate::modules::{
-    ai, bookmark, card, chat, conv, file, mem, onto, reading, search, sign, task, text,
-    time_window, user,
+    ai, bookmark, calendar, card, chat, conv, file, mem, onto, reading, search, sign, task, text,
+    user,
 };
 
 pub fn create_api_router(state: AppState) -> Router<AppState> {
@@ -48,6 +48,10 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
         .nest("/search", search::routes::<AppState>())
         .nest("/bookmarks", bookmark::routes::<AppState>())
         .nest("/tasks", task::routes::<AppState>())
+        .nest("/calendar", calendar::routes::<AppState>())
+        // 标签是 `tag` 表（任务与 mem 共用），补全问的是"我有哪些标签"，
+        // 与具体任务无关，所以挂在自己的路径下（设计文档 04 §7.4）
+        .route("/tags", get(task::get_tags_handler))
         .nest("/text", text::routes::<AppState>())
         .nest("/chat", chat::routes::<AppState>())
         .nest(
@@ -56,7 +60,6 @@ pub fn create_api_router(state: AppState) -> Router<AppState> {
                 crate::app::http::rate_limit::rate_limit_ai,
             )),
         )
-        .nest("/time-windows", time_window::routes::<AppState>())
         .layer(middleware::from_fn_with_state(
             state.clone(),
             crate::app::http::auth::auth,

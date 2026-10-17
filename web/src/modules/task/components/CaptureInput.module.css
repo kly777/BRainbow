@@ -1,0 +1,236 @@
+/* ── 录入框：第 1 层常驻单行 + 第 2 层唤出的补充控件 ──
+   令牌一律取 shared/styles/tokens.css（--t-*）与 app/global.css（--radius/--space/--text），
+   本文件不发明新的视觉语言（P12）。类名 kebab-case、JS 侧 camelCaseOnly 取用。 */
+
+.capture {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2xs);
+	container-type: inline-size;
+}
+
+.row {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2xs);
+}
+
+.title-input {
+	flex: 1;
+	min-width: 0;
+}
+
+/* 录入框是任务页的主动作，视觉上比普通表单控件高一档 */
+input.title-input {
+	min-height: 2.5rem;
+	font-size: var(--text-base);
+}
+
+.expand-button {
+	flex-shrink: 0;
+	min-width: 2.5rem;
+	min-height: 2.5rem;
+	font-variant-numeric: tabular-nums;
+}
+
+/* 空框时的快捷键提示：只在还没输入、也没加条件时出现 */
+.guide {
+	margin: 0;
+	padding-left: var(--space-2xs);
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-faint);
+}
+
+.guide-code {
+	padding: 0.0625rem var(--space-2xs);
+	border-radius: var(--radius-2xs);
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink-muted);
+	font-family: var(--t-font-mono);
+	font-size: 0.6875rem;
+}
+
+/* ── 已加条件：一排可点的 chip ── */
+
+.chips {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--space-2xs);
+}
+
+button.chip {
+	border: 1px solid var(--t-color-border);
+	cursor: pointer;
+}
+
+button.chip:hover {
+	border-color: var(--t-color-accent);
+}
+
+/* ── 父任务等单字段编辑器的外壳 ── */
+
+.editor {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-sm);
+	margin: 0;
+	min-inline-size: 0;
+	padding: var(--space-sm) var(--space-md);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	background: var(--t-color-surface);
+}
+
+.editor-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.editor-title {
+	font-size: var(--text-xs);
+	font-weight: 600;
+	color: var(--t-color-ink);
+}
+
+.editor-done {
+	min-height: 1.5rem;
+	padding: 0 var(--space-xs);
+	border: none;
+	border-radius: var(--radius-sm);
+	background: none;
+	color: var(--t-color-ink-muted);
+	font: inherit;
+	font-size: var(--text-xs);
+	cursor: pointer;
+}
+
+.editor-done:hover {
+	color: var(--t-color-ink);
+	background: var(--t-color-surface-raised);
+}
+
+/* ── 实时解析预览 ── */
+
+.preview {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--space-2xs);
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}
+
+.chip {
+	padding: 0.0625rem var(--space-2xs);
+	border-radius: var(--radius-2xs);
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-ink);
+	font-variant-numeric: tabular-nums;
+}
+
+.chip-muted {
+	padding: 0.0625rem var(--space-2xs);
+	border-radius: var(--radius-2xs);
+	border: 1px dashed var(--t-color-border);
+	color: var(--t-color-ink-muted);
+}
+
+.preview-warning {
+	color: var(--t-color-warning);
+}
+
+/* ── 第 2 层：六个控件 ──
+   它是"可选补几个属性"的一条尾巴，不是一张表单：控件收一档尺寸（--text-sm +
+   紧内边距），否则六个全尺寸输入框摊出来就是一堵表单墙，把录入框那份"随手记一句"
+   的轻感吃掉。参考产品（Todoist / TickTick）的第二层也都是紧凑的一排。 */
+
+.panel {
+	/* 展开动效 ≤140ms（P3）；reduced-motion 下由 global.css 关掉过渡 */
+	animation: panel-in var(--t-transition-fast) ease-out;
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	align-items: start;
+	gap: var(--space-sm) var(--space-md);
+	padding: var(--space-md);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	background: var(--t-color-surface);
+}
+
+/* 面板内的输入控件统一收紧：Control 的基础尺寸是给表单页的 */
+.panel :is(input, select) {
+	font-size: var(--text-sm);
+	padding: var(--space-xs) var(--space-sm);
+}
+
+@keyframes panel-in {
+	from {
+		opacity: 0;
+		transform: translateY(-0.25rem);
+	}
+}
+
+/* 窄屏（组件级自适应，看的是宿主容器宽度而不是视口）：单列 */
+
+@container (width < 30rem) {
+	.panel {
+		grid-template-columns: 1fr;
+	}
+}
+
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3xs, 0.25rem);
+	min-width: 0;
+}
+
+.label {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}
+
+.effort-input {
+	width: 100%;
+}
+
+.date-row {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2xs);
+}
+
+.date-input {
+	flex: 1;
+	min-width: 0;
+}
+
+.calendar-button {
+	flex-shrink: 0;
+	padding: var(--space-3xs, 0.25rem);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	background: none;
+	cursor: pointer;
+	line-height: 1;
+}
+
+.calendar-button:hover {
+	border-color: var(--t-color-accent);
+}
+
+/* 原生选择器本体不显示：它只是 `showPicker()` 的落点（打字是主路径，日历是快捷方式） */
+.picker {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.helper {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-faint);
+}

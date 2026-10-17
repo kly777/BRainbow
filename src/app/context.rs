@@ -8,6 +8,7 @@ use crate::modules::admin::port::AdminServicePort;
 use crate::modules::admin::service::{AdminService, ServerPaths};
 use crate::modules::ai::service::AiService;
 use crate::modules::bookmark::BookmarkState;
+use crate::modules::calendar::{CalendarService, CalendarState};
 use crate::modules::card::CardState;
 use crate::modules::chat::query::ChatQueryService;
 use crate::modules::chat::service::ChatService;
@@ -24,10 +25,8 @@ use crate::modules::onto::OntoState;
 use crate::modules::reading::ReadingState;
 use crate::modules::search::service::SearchQueryService;
 use crate::modules::sign::SignState;
-use crate::modules::task::TaskState;
+use crate::modules::task::{self, TaskState};
 use crate::modules::text::TextState;
-use crate::modules::time_window::query::TimeWindowQueryService;
-use crate::modules::time_window::service::TimeWindowService;
 use crate::modules::user::UserState;
 use crate::shared::config::Config;
 use crate::shared::search::SearchRegistry;
@@ -56,12 +55,6 @@ pub struct AiState {
 pub struct ChatState {
     pub chat: ChatService,
     pub chat_query: ChatQueryService,
-}
-
-#[derive(Clone)]
-pub struct TimeWindowState {
-    pub service: TimeWindowService,
-    pub query: TimeWindowQueryService,
 }
 
 #[derive(Clone)]
@@ -111,8 +104,8 @@ pub struct AppState {
     pub user: UserState,
     pub text: TextState,
     pub file: FileState,
+    pub calendar: CalendarState,
     pub reading: ReadingState,
-    pub time_window: TimeWindowState,
     pub task: TaskState,
     pub mem: MemState,
     pub db_viewer: DbViewerState,
@@ -152,14 +145,15 @@ impl_from_ref! {
     conv.service => ConvQueryService,
     file.service => FileService,
     file.query => FileQueryService,
+    calendar.service => CalendarService,
     reading.service => crate::modules::reading::service::ReadingService,
     reading.query => crate::modules::reading::query::ReadingQueryService,
     text.service => crate::modules::text::TextService,
     text.query => crate::modules::text::TextQueryService,
     task.service => crate::modules::task::TaskService,
     task.query => crate::modules::task::TaskQueryService,
-    time_window.service => TimeWindowService,
-    time_window.query => TimeWindowQueryService,
+    task.blocks => crate::modules::task::TaskBlockService,
+    task.series => crate::modules::task::TaskSeriesService,
     user.service => crate::modules::user::UserService,
     user.query => crate::modules::user::UserQueryService,
     mem.service => MemService,
@@ -209,7 +203,7 @@ impl AppState {
 
     pub fn new(db: &Arc<SqlitePool>, config: &Config, mem_config: MemConfig) -> Self {
         // 使用模块构造器构建简单模块
-        let task = TaskState::new(db.clone());
+        // （task 不在这里建：它要与 time_window 双向接线，见下方「需要特殊构造的模块」）
         let card = CardState::new(db.clone());
         // 书签的 favicon 缓存与文件服务共用上传根（别再写死相对路径）
         let bookmark = BookmarkState::new(db.clone(), &config.upload_dir);
@@ -240,10 +234,17 @@ impl AppState {
         let chat_query = ChatQueryService::new(db.as_ref().clone());
 
         // 需要特殊构造的模块
-        let task_validator: Arc<dyn crate::modules::time_window::port::TaskTimeWindowValidator> =
-            Arc::new(task.service.clone());
-        let time_window = TimeWindowService::new(db.clone(), task_validator);
-        let time_window_query = TimeWindowQueryService::new(db.clone());
+        // task 的时间块与循环系列都在 task 模块内；这里只组装 query 的 settings 接缝
+        let task_blocks = crate::modules::task::TaskBlockService::new(db.clone());
+        let task_series = crate::modules::task::TaskSeriesService::new(db.clone());
+        let task = task::from_services(
+            crate::modules::task::TaskService::new(db.clone()),
+            // 时段建议要读工作时段偏好（app_settings），经设置端口进来。
+            // `admin` 在下面才建，所以用同一个 Arc 先握着 admin service
+            task::TaskQueryService::new(db.clone()).with_settings(Arc::new(admin.clone())),
+            task_blocks,
+            task_series,
+        );
 
         let mem = MemService::new(
             mem_repo,
@@ -290,11 +291,8 @@ impl AppState {
                 service: file,
                 query: file_query,
             },
+            calendar: CalendarState::new(db.clone()),
             reading,
-            time_window: TimeWindowState {
-                service: time_window,
-                query: time_window_query,
-            },
             task,
             mem: MemState {
                 service: mem,

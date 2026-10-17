@@ -56,7 +56,9 @@ export function useFileItemOps(deps: {
 				force = true;
 				continue;
 			}
-			notifyError("删除文件失败", getErrorMessage(result.error));
+			// 传 error 对象而不是 getErrorMessage 的结果：文案由 notifyError 提取，
+			// 顺带能把 details（错误码）也带上，而先转成字符串会把它丢掉
+			notifyError("删除文件失败", result.error);
 			deps.refetch(); // 回滚
 			return;
 		}

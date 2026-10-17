@@ -4,6 +4,7 @@
 //! - `pagination`：分页参数与响应形状
 //! - `batch`：批量请求/响应形状
 //! - `outbound`：出网抓取的客户端与 SSRF 防线
+//! - `serde_utils`：serde 辅助（双层 Option 的反序列化）
 
 pub mod actor;
 pub mod batch;
@@ -17,4 +18,5 @@ pub mod outbound;
 pub mod pagination;
 pub mod response;
 pub mod search;
+pub mod serde_utils;
 pub mod time_text;

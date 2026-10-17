@@ -120,11 +120,42 @@ fn trigger_ddls_for(table: &str, pk: &str, columns: &[&str]) -> Vec<(String, Str
 /// 基线、v8（规范化历史数据 + 建触发器）、v9（`Z` → `+00:00`）共用这一份清单。
 pub(crate) const TIME_COLUMNS: &[(&str, &str, &[&str])] = &[
     ("card", "id", &["created_at", "updated_at"]),
-    ("task", "id", &["completed_at", "created_at", "updated_at"]),
     (
-        "time_window",
+        "task",
         "id",
-        &["start_time", "end_time", "recurrence_until"],
+        &[
+            "completed_at",
+            "created_at",
+            "updated_at",
+            "start_at",
+            "due_at",
+        ],
+    ),
+    (
+        "task_block",
+        "id",
+        &["start_at", "end_at", "created_at", "updated_at"],
+    ),
+    (
+        "task_series",
+        "id",
+        &["archived_at", "created_at", "updated_at"],
+    ),
+    (
+        "calendar_event_series",
+        "id",
+        &["archived_at", "created_at", "updated_at"],
+    ),
+    (
+        "calendar_event",
+        "id",
+        &[
+            "start_at",
+            "end_at",
+            "deleted_at",
+            "created_at",
+            "updated_at",
+        ],
     ),
     // media 表已在 v15 中删除，此处移除；历史库中 v8 早已执行，不会重跑
     ("signifier_signified", "id", &["created_at"]),

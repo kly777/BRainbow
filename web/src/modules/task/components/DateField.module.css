@@ -1,0 +1,52 @@
+/* 日期文本控件（录入框与任务行共用）—— 见 DateField.tsx 顶部 */
+
+.field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3xs, 0.25rem);
+	min-width: 0;
+}
+
+.label {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}
+
+.date-row {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2xs);
+}
+
+.date-input {
+	flex: 1;
+	min-width: 0;
+}
+
+.calendar-button {
+	flex-shrink: 0;
+	padding: var(--space-3xs, 0.25rem);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-sm);
+	background: none;
+	cursor: pointer;
+	line-height: 1;
+}
+
+.calendar-button:hover {
+	border-color: var(--t-color-accent);
+}
+
+/* 原生选择器本体不显示：它只是 `showPicker()` 的落点（打字是主路径，日历是快捷方式） */
+.picker {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	opacity: 0;
+	pointer-events: none;
+}
+
+.helper {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-faint);
+}

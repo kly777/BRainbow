@@ -7,7 +7,7 @@ use std::pin::Pin;
 
 use super::super::model::Task;
 use super::super::query::TaskQueryService;
-use super::super::response::{CalendarEvent, StatsResponse, TaskResponse, TreeNode};
+use super::super::response::{CalendarEvent, StatsResponse, TreeNode};
 use super::dependency::{CalendarQuery, DagQuery, TreeQuery};
 use crate::shared::actor::Actor;
 use crate::shared::error_types as error;
@@ -53,6 +53,10 @@ fn build_tree_node<'a>(
         let Ok(children) = svc.tree(actor, Some(task.id)).await else {
             return None;
         };
+        let Ok(mut responses) = svc.responses(vec![task]).await else {
+            return None;
+        };
+        let response = responses.pop()?;
         let mut child_nodes = Vec::new();
         for child in children {
             if let Some(node) = build_tree_node(svc, actor, child).await {
@@ -60,7 +64,7 @@ fn build_tree_node<'a>(
             }
         }
         Some(TreeNode {
-            task: TaskResponse::from(task),
+            task: response,
             children: child_nodes,
         })
     })
@@ -80,13 +84,16 @@ pub async fn get_calendar_handler(
         Ok(entries) => {
             let events: Vec<CalendarEvent> = entries
                 .into_iter()
-                .map(|(task, tw)| CalendarEvent {
+                .map(|(task, block)| CalendarEvent {
                     task_id: task.id,
+                    window_id: block.id,
                     title: task.title,
-                    start: tw.start_time,
-                    end: tw.end_time,
-                    window_type: tw.window_type.as_str().to_string(),
+                    start: block.start_at,
+                    end: block.end_at,
+                    window_type: block.kind,
                     status: task.status,
+                    priority: task.priority,
+                    due_at: task.due_at,
                 })
                 .collect();
             Json(events).into_response()
@@ -150,10 +157,10 @@ pub async fn search_tasks_handler(
         .search(&actor, &query, pagination.limit(), pagination.offset())
         .await
     {
-        Ok((tasks, total)) => {
-            let items: Vec<TaskResponse> = tasks.into_iter().map(TaskResponse::from).collect();
-            Json(PaginatedResponse::new(items, total, &pagination)).into_response()
-        }
+        Ok((tasks, total)) => match svc.responses(tasks).await {
+            Ok(items) => Json(PaginatedResponse::new(items, total, &pagination)).into_response(),
+            Err(e) => e.into_response(),
+        },
         Err(e) => e.into_response(),
     }
 }

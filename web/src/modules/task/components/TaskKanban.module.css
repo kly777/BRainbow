@@ -147,24 +147,12 @@
 	-webkit-box-orient: vertical;
 }
 
+/*
+ * 卡片属性条：排版在 TaskMeta.module.css（与列表行共用一份，见 TaskMeta.tsx 顶部），
+ * 这里只管它与卡片正文的间距。
+ */
 .card-meta {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-}
-
-.effort-tag {
-	font-size: var(--text-xs);
-	background: var(--t-color-accent-soft);
-	color: var(--t-color-accent);
-	padding: var(--space-xs) var(--space-sm);
-	border-radius: var(--radius-sm);
-	font-weight: 500;
-}
-
-.card-date {
-	font-size: var(--text-xs);
-	color: var(--t-color-ink-faint);
+	margin-top: var(--space-xs);
 }
 
 /* ── 响应式 ── */

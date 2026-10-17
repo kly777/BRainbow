@@ -85,6 +85,36 @@ pub(crate) const DECLS: &[Decl] = &[
         "#,
     ),
     // ── 任务 ──
+    // 循环任务模板：occurrence 是 `task` 行（有状态、可完成），series 只持有模板与规则。
+    // 先于 `task` 声明，方便 task.series_id 在语义上指向它（SQLite 的 FK 是延迟解析的，
+    // 但把被引用的表放前面更容易读）。
+    Decl::table(
+        "task_series",
+        r#"
+        CREATE TABLE IF NOT EXISTS task_series (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES user(id),
+            title TEXT NOT NULL,
+            description TEXT,
+            priority TEXT,
+            effort_estimate_minutes INTEGER,
+            recurrence_rule TEXT NOT NULL,
+            recurrence_anchor TEXT NOT NULL DEFAULT 'due',
+            timezone TEXT NOT NULL DEFAULT 'Asia/Shanghai',
+            starts_on TEXT NOT NULL,
+            due_time_minutes INTEGER,
+            next_occurrence_on TEXT,
+            archived_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
+            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
+
+            CHECK (priority IS NULL OR priority IN ('p1','p2','p3','p4')),
+            CHECK (effort_estimate_minutes IS NULL OR effort_estimate_minutes >= 0),
+            CHECK (due_time_minutes IS NULL OR (due_time_minutes >= 0 AND due_time_minutes < 1440)),
+            CHECK (recurrence_anchor IN ('due','completion'))
+        )
+        "#,
+    ),
     Decl::table(
         "task",
         r#"
@@ -95,6 +125,10 @@ pub(crate) const DECLS: &[Decl] = &[
 
             -- 结构关系
             parent_task_id INTEGER,
+
+            -- 循环系列（NULL = 一次性任务）
+            series_id INTEGER,
+            occurrence_on TEXT,
 
             -- 状态管理
             status TEXT DEFAULT 'backlog', -- backlog, active, completed, archived
@@ -110,12 +144,22 @@ pub(crate) const DECLS: &[Decl] = &[
             created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
             updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
 
+            -- 时间承诺（v24）：start 是软偏好、due 是承诺，缺省含义不同，所以分成两列。
+            -- priority 存 'p1'…'p4' 字符串（可读、将来插得进 p0；NULL = 用户没表达过，
+            -- 与显式 'p3' 不同，打分时要区别对待）
+            start_at TIMESTAMP,
+            due_at TIMESTAMP,
+            priority TEXT,
+
             -- 外键约束
             FOREIGN KEY (parent_task_id) REFERENCES task(id),
             FOREIGN KEY (user_id) REFERENCES user(id),
 
             -- 检查约束
-            CHECK (effort_estimate_minutes IS NULL OR effort_estimate_minutes >= 0)
+            CHECK (effort_estimate_minutes IS NULL OR effort_estimate_minutes >= 0),
+            CHECK (priority IS NULL OR priority IN ('p1','p2','p3','p4')),
+            -- 前半段让"只填 start 不填 due"合法（常见情况）：反了必然是录入错误
+            CHECK (due_at IS NULL OR start_at IS NULL OR start_at <= due_at)
         )
         "#,
     ),
@@ -132,59 +176,189 @@ pub(crate) const DECLS: &[Decl] = &[
         )
         "#,
     ),
+    // 任务↔标签关联（v24）：形状照 `mem_tag` —— 复合主键、两个级联。
+    // 标签**复用 `tag` 表**（不新造第四套）：它是 `UNIQUE(name, user_id)` 的按用户唯一，
+    // 正是任务标签要的隔离；`file_tag` 是全局唯一，复用会让跨用户标签串味
     Decl::table(
-        "task_decomposition",
+        "task_tag_rel",
         r#"
-        CREATE TABLE IF NOT EXISTS task_decomposition (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            parent_task_id INTEGER NOT NULL,
-            child_task_id INTEGER NOT NULL,
-            FOREIGN KEY (parent_task_id) REFERENCES task(id),
-            FOREIGN KEY (child_task_id) REFERENCES task(id)
+        CREATE TABLE IF NOT EXISTS task_tag_rel (
+            task_id INTEGER NOT NULL,
+            tag_id  INTEGER NOT NULL,
+            PRIMARY KEY (task_id, tag_id),
+            FOREIGN KEY (task_id) REFERENCES task(id) ON DELETE CASCADE,
+            FOREIGN KEY (tag_id)  REFERENCES tag(id)  ON DELETE CASCADE
         )
         "#,
     ),
-    Decl::table(
-        "task_time_allocation",
-        r#"
-        CREATE TABLE IF NOT EXISTS task_time_allocation (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            task_id INTEGER NOT NULL,
-            time_window_id INTEGER NOT NULL,
-            duration_minutes INTEGER NOT NULL,
-            FOREIGN KEY (task_id) REFERENCES task(id),
-            FOREIGN KEY (time_window_id) REFERENCES time_window(id)
-        )
-        "#,
+    Decl::index(
+        "idx_task_tag_rel_tag",
+        "CREATE INDEX IF NOT EXISTS idx_task_tag_rel_tag ON task_tag_rel(tag_id)",
     ),
+    // v24：`task` 从来没有索引，而列表/搜索/建议全都要按 user_id 过滤（现状是全表扫）。
+    // `priority` 不建索引：它是打分输入而不是过滤条件（低基数 + NULL，建索引是反模式）
+    Decl::index(
+        "idx_task_user",
+        "CREATE INDEX IF NOT EXISTS idx_task_user ON task(user_id)",
+    ),
+    Decl::index(
+        "idx_task_user_due",
+        "CREATE INDEX IF NOT EXISTS idx_task_user_due ON task(user_id, due_at)",
+    ),
+    Decl::index(
+        "idx_task_user_status",
+        "CREATE INDEX IF NOT EXISTS idx_task_user_status ON task(user_id, status)",
+    ),
+    Decl::index(
+        "idx_task_user_created",
+        "CREATE INDEX IF NOT EXISTS idx_task_user_created ON task(user_id, created_at DESC)",
+    ),
+    // ── 任务时间块（原 time_window 的替代） ──
+    // 只保留 feasible / planned；actual 已按设计移除。`end_at NULL` 仅允许 planned，
+    // 表示“我大概从这时开始”的软计划点。
     Decl::table(
-        "time_window",
+        "task_block",
         r#"
-        CREATE TABLE IF NOT EXISTS time_window (
+        CREATE TABLE IF NOT EXISTS task_block (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            start_time TIMESTAMP NOT NULL,
-            end_time TIMESTAMP NOT NULL,
-            type TEXT NOT NULL DEFAULT 'feasible', -- feasible, planned, actual
-            task_id INTEGER NOT NULL,
             user_id INTEGER,
+            task_id INTEGER NOT NULL,
+            kind TEXT NOT NULL DEFAULT 'planned',
+            start_at TIMESTAMP NOT NULL,
+            end_at TIMESTAMP,
+            fixed INTEGER NOT NULL DEFAULT 0,
+            source TEXT NOT NULL DEFAULT 'manual',
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
+            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
 
-            -- 递归规则字段（可选扩展）
-            recurrence_freq TEXT, -- daily, weekly, monthly
-            recurrence_interval INTEGER,
-            recurrence_until TIMESTAMP,
-            recurrence_by_weekdays TEXT, -- JSON数组
-
-            -- 外键约束
             FOREIGN KEY (task_id) REFERENCES task(id),
             FOREIGN KEY (user_id) REFERENCES user(id),
 
-            -- 检查约束
-            CHECK (start_time < end_time),
-            CHECK (type IN ('feasible', 'planned', 'actual')),
-            CHECK (recurrence_freq IS NULL OR recurrence_freq IN ('daily', 'weekly', 'monthly')),
-            CHECK (recurrence_interval IS NULL OR recurrence_interval >= 1)
+            CHECK (kind IN ('feasible','planned')),
+            CHECK (end_at IS NULL OR end_at > start_at),
+            CHECK (end_at IS NOT NULL OR kind = 'planned'),
+            CHECK (fixed = 0 OR (kind = 'planned' AND end_at IS NOT NULL)),
+            CHECK (source IN ('manual','suggested','recurrence','import'))
         )
         "#,
+    ),
+    Decl::index(
+        "idx_task_block_user_start",
+        "CREATE INDEX IF NOT EXISTS idx_task_block_user_start ON task_block(user_id, start_at)",
+    ),
+    Decl::index(
+        "idx_task_block_task_kind",
+        "CREATE INDEX IF NOT EXISTS idx_task_block_task_kind ON task_block(task_id, kind)",
+    ),
+    // ── 日历事件（不属于任何 task 的时间） ──
+    // 生日/纪念日/传统节日/会议/假期/航班。**没有 status/completed_at**：
+    // 它不进入 Todo，也不参与完成状态机。
+    Decl::table(
+        "calendar_event_series",
+        r#"
+        CREATE TABLE IF NOT EXISTS calendar_event_series (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES user(id),
+            preset_key TEXT,
+            title TEXT NOT NULL,
+            notes TEXT,
+            kind TEXT NOT NULL DEFAULT 'event',
+            calendar TEXT NOT NULL,
+            month INTEGER,
+            day INTEGER,
+            term TEXT,
+            special TEXT,
+            leap_policy TEXT,
+            missing_day_policy TEXT NOT NULL DEFAULT 'last_day',
+            born_in_leap_month INTEGER NOT NULL DEFAULT 0,
+            since_year INTEGER,
+            since_on TEXT,
+            all_day INTEGER NOT NULL DEFAULT 1,
+            busy INTEGER NOT NULL DEFAULT 0,
+            upcoming_days INTEGER NOT NULL DEFAULT 7,
+            timezone TEXT NOT NULL DEFAULT 'Asia/Shanghai',
+            starts_on TEXT NOT NULL,
+            archived_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
+            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
+
+            CHECK (kind IN ('birthday','anniversary','festival','event')),
+            CHECK (calendar IN ('gregorian','lunar','solar_term')),
+            CHECK (
+                (calendar = 'solar_term' AND term IS NOT NULL AND month IS NULL AND day IS NULL)
+                OR
+                (calendar = 'lunar' AND special = 'new_year_eve' AND month IS NULL AND day IS NULL)
+                OR
+                (calendar IN ('gregorian','lunar') AND month IS NOT NULL AND day IS NOT NULL AND term IS NULL AND special IS NULL)
+            ),
+            CHECK (month IS NULL OR (month >= 1 AND month <= 12)),
+            CHECK (day IS NULL OR (day >= 1 AND day <= 31)),
+            CHECK (leap_policy IS NULL OR leap_policy IN ('regular','leap','skip')),
+            CHECK (missing_day_policy IN ('skip','last_day','next_month_first_day')),
+            CHECK (upcoming_days >= 0 AND upcoming_days <= 60)
+        )
+        "#,
+    ),
+    Decl::table(
+        "calendar_event",
+        r#"
+        CREATE TABLE IF NOT EXISTS calendar_event (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL REFERENCES user(id),
+            series_id INTEGER REFERENCES calendar_event_series(id),
+            occurrence_on TEXT,
+            occurrence_year INTEGER,
+            title TEXT NOT NULL,
+            notes TEXT,
+            start_at TIMESTAMP NOT NULL,
+            end_at TIMESTAMP NOT NULL,
+            all_day INTEGER NOT NULL DEFAULT 1,
+            busy INTEGER NOT NULL DEFAULT 1,
+            kind TEXT NOT NULL DEFAULT 'event',
+            source TEXT NOT NULL DEFAULT 'manual',
+            external_id TEXT,
+            deleted_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
+            updated_at TIMESTAMP DEFAULT (strftime('%Y-%m-%dT%H:%M:%S+00:00', 'now')),
+
+            CHECK (end_at > start_at),
+            CHECK (all_day IN (0,1)),
+            CHECK (busy IN (0,1)),
+            CHECK (source IN ('manual','import','recurrence'))
+        )
+        "#,
+    ),
+    Decl::index(
+        "idx_calendar_event_series_user",
+        "CREATE INDEX IF NOT EXISTS idx_calendar_event_series_user ON calendar_event_series(user_id)",
+    ),
+    Decl::index(
+        "idx_calendar_event_series_preset",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_calendar_event_series_preset
+         ON calendar_event_series(user_id, preset_key) WHERE preset_key IS NOT NULL",
+    ),
+    Decl::index(
+        "idx_calendar_event_user_start",
+        "CREATE INDEX IF NOT EXISTS idx_calendar_event_user_start ON calendar_event(user_id, start_at)",
+    ),
+    Decl::index(
+        "idx_calendar_event_user_end",
+        "CREATE INDEX IF NOT EXISTS idx_calendar_event_user_end ON calendar_event(user_id, end_at)",
+    ),
+    // 同一系列同一天只生成一次（partial unique：非系列事件不参与）
+    Decl::index(
+        "idx_calendar_event_series_occurrence",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_calendar_event_series_occurrence
+         ON calendar_event(series_id, occurrence_on) WHERE series_id IS NOT NULL",
+    ),
+    Decl::index(
+        "idx_task_series_user",
+        "CREATE INDEX IF NOT EXISTS idx_task_series_user ON task_series(user_id)",
+    ),
+    Decl::index(
+        "idx_task_series_occurrence",
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_task_series_occurrence
+         ON task(series_id, occurrence_on) WHERE series_id IS NOT NULL",
     ),
     // ── 通用文件服务 ──
     Decl::table(
@@ -679,6 +853,9 @@ pub(crate) const DECLS: &[Decl] = &[
     user_id_index!("reading_user_word"),
     user_id_index!("conv_titles"),
     user_id_index!("articles"),
+    // v24 补入：`tag` 是任务标签复用的那张表，"按用户查标签"是三处（mem/file/task？）
+    // 共用的主查询路径，之前一直缺索引
+    user_id_index!("tag"),
     // 访问频率排序用的索引（v13 引入 visit_count 时一并建的）
     Decl::index_requiring(
         "idx_bookmark_visit_count",

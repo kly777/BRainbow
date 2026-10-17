@@ -31,8 +31,16 @@ interface Props {
 export default function EmptyState(props: Props) {
 	return (
 		<div
-			classList={{ [styles.empty]: true, [styles.compact]: props.compact }}
-			class={props.class}
+			/*
+			 * 拼成一个 class 串，**不要**同时写 `classList` 和 `class`：
+			 * Solid 里 `class` 会盖掉 `classList`，于是调用方一传 `class`，
+			 * 上面那个 styles.empty 就被丢掉 —— 居中、内边距、字号整个失效
+			 * （实测：传 class 之后 align-items 回到 normal、text-align 回到 start）。
+			 * 这个拼法是仓库里 FilterGroup 的同款。
+			 */
+			class={`${styles.empty}${props.compact ? ` ${styles.compact}` : ""}${
+				props.class ? ` ${props.class}` : ""
+			}`}
 		>
 			<Show when={props.icon}>
 				<span class={styles.icon}>{props.icon}</span>

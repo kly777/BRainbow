@@ -1,9 +1,16 @@
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-use super::model::{Task, TaskStatus};
+use super::model::{Task, TaskPriority, TaskStatus};
 
-#[derive(Debug, Serialize)]
+/// 标签（任务标签复用 `tag` 表，按用户唯一）
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Tag {
+    pub id: i32,
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskResponse {
     pub id: i32,
     pub title: String,
@@ -12,6 +19,18 @@ pub struct TaskResponse {
     pub status: TaskStatus,
     pub completed_at: Option<DateTime<Utc>>,
     pub effort_estimate_minutes: Option<i32>,
+    pub start_at: Option<DateTime<Utc>>,
+    pub due_at: Option<DateTime<Utc>>,
+    pub priority: Option<TaskPriority>,
+    /// 标签（列表出口一次批量查询挂上，见 `TaskQueryService::responses`）
+    pub tags: Vec<Tag>,
+    /// 排序理由：界面显示的那一行（`今天到期 · 标为 p1`）。
+    /// 只有 `sort=smart` 的列表会填；其余口径没有"为什么排这儿"可言
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+    /// 理由的分项（供客户端自己组织文案）；**smart 排序下恒非空**（P8）
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub reasons: Vec<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -26,9 +45,30 @@ impl From<Task> for TaskResponse {
             status: task.status,
             completed_at: task.completed_at,
             effort_estimate_minutes: task.effort_estimate_minutes,
+            start_at: task.start_at,
+            due_at: task.due_at,
+            priority: task.priority,
+            tags: Vec::new(),
+            reason: None,
+            reasons: Vec::new(),
             created_at: task.created_at,
             updated_at: task.updated_at,
         }
+    }
+}
+
+impl TaskResponse {
+    /// 挂上标签（写路径已经知道结果，读路径用一次批量查询，两条都不做 N+1）
+    pub fn with_tags(mut self, tags: Vec<Tag>) -> Self {
+        self.tags = tags;
+        self
+    }
+
+    /// 挂上排序理由（`sort=smart` 的列表出口用）
+    pub fn with_ranking(mut self, ranked: &super::ranking::Ranked) -> Self {
+        self.reason = Some(ranked.summary());
+        self.reasons = ranked.details();
+        self
     }
 }
 
@@ -41,11 +81,17 @@ pub struct TreeNode {
 #[derive(Debug, Serialize)]
 pub struct CalendarEvent {
     pub task_id: i32,
+    /// 时间窗口自身的 id —— 拖拽落位要 PATCH 这条记录，没有它就只能说"大概是哪一段"
+    pub window_id: i32,
     pub title: String,
     pub start: DateTime<Utc>,
-    pub end: DateTime<Utc>,
+    pub end: Option<DateTime<Utc>>,
     pub window_type: String,
     pub status: TaskStatus,
+    /// 优先级（日历要按 type/status/priority 三通道上色，见 06-日历视图 §5.2）
+    pub priority: Option<TaskPriority>,
+    /// 截止时间（日历上的 `⚠` 逾期徽标靠它算；时间承诺与这条时段的 planned 窗口是两回事）
+    pub due_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -90,6 +136,9 @@ mod tests {
             status: TaskStatus::Active,
             completed_at: None,
             effort_estimate_minutes: Some(60),
+            start_at: None,
+            due_at: Some(chrono::Utc::now()),
+            priority: Some(crate::modules::task::model::TaskPriority::P2),
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
         };
@@ -97,21 +146,33 @@ mod tests {
         assert_eq!(resp.id, 42);
         assert_eq!(resp.title, "Test");
         assert_eq!(resp.status, crate::modules::task::model::TaskStatus::Active);
+        assert!(resp.due_at.is_some());
+        assert_eq!(
+            resp.priority,
+            Some(crate::modules::task::model::TaskPriority::P2)
+        );
+        assert!(resp.tags.is_empty(), "标签由调用方按需挂上");
     }
 
     #[test]
     fn calendar_event_serialize() {
         let ev = CalendarEvent {
             task_id: 1,
+            window_id: 7,
             title: "x".into(),
             start: chrono::Utc::now(),
-            end: chrono::Utc::now(),
+            end: Some(chrono::Utc::now()),
             window_type: "planned".into(),
             status: crate::modules::task::model::TaskStatus::Active,
+            priority: Some(crate::modules::task::model::TaskPriority::P1),
+            due_at: Some(chrono::Utc::now()),
         };
         let json = serde_json::to_string(&ev).unwrap();
         assert!(json.contains("\"task_id\":1"));
         assert!(json.contains("\"window_type\":\"planned\""));
+        // 三通道要用 priority 与 due_at（06-日历视图 §5.2）
+        assert!(json.contains("\"priority\":\"p1\""));
+        assert!(json.contains("\"due_at\":"));
     }
 
     #[test]
@@ -152,6 +213,12 @@ mod tests {
                 status: crate::modules::task::model::TaskStatus::Active,
                 completed_at: None,
                 effort_estimate_minutes: None,
+                start_at: None,
+                due_at: None,
+                priority: None,
+                tags: vec![],
+                reason: None,
+                reasons: vec![],
                 created_at: chrono::Utc::now(),
                 updated_at: chrono::Utc::now(),
             },

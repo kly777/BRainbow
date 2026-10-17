@@ -1,0 +1,138 @@
+/* 任务详情抽屉：非模态侧栏，与日历并排（模态会盖掉日历这个参照物，S4-e） */
+
+.drawer {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-md);
+	padding: var(--space-md);
+	background: var(--t-color-surface);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-sm);
+}
+
+.header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--space-sm);
+	padding-bottom: var(--space-sm);
+	border-bottom: 1px solid var(--t-color-surface-raised);
+}
+
+.title {
+	margin: 0;
+	font-size: var(--text-lg);
+	font-weight: 600;
+	line-height: var(--leading-tight);
+	color: var(--t-color-ink);
+	overflow-wrap: anywhere;
+}
+
+.close-button {
+	flex-shrink: 0;
+	padding: 0 var(--space-xs);
+	background: none;
+	border: none;
+	border-radius: var(--radius-sm);
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-lg);
+	line-height: 1.2;
+	cursor: pointer;
+}
+
+.close-button:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+.loading {
+	margin: 0;
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+}
+
+.body {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-sm);
+	min-height: 0;
+	overflow-y: auto;
+}
+
+.row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-sm);
+}
+
+select.status-select {
+	width: auto;
+	min-width: 7rem;
+}
+
+.label {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}
+
+.description {
+	margin: 0;
+	font-size: var(--text-sm);
+	color: var(--t-color-ink-muted);
+	overflow-wrap: anywhere;
+}
+
+/* 属性条：排版在 TaskMeta.module.css（与列表行、看板卡片共用一份），
+   这里只管它与描述之间的间距。原先抽屉有自己的一套（定义列表 + `⚠` 字符 +
+   标签单独一栏），同一个"逾期"在三处的形状与措辞都不一样。 */
+.task-meta {
+	margin-top: var(--space-xs);
+}
+
+.window-group {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-3xs, 0.25rem);
+}
+
+.window-title {
+	display: flex;
+	align-items: baseline;
+	gap: var(--space-2xs);
+	margin: 0;
+	font-size: var(--text-xs);
+	font-weight: 600;
+	color: var(--t-color-ink);
+}
+
+.window-hint {
+	font-weight: 400;
+	color: var(--t-color-ink-faint);
+}
+
+.window-item {
+	align-self: flex-start;
+	max-width: 100%;
+	margin: 0;
+	padding: var(--space-2xs) var(--space-sm);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-surface-raised);
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+.depends {
+	margin: 0;
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-faint);
+}
+
+.footer {
+	display: flex;
+	justify-content: flex-end;
+	padding-top: var(--space-sm);
+	border-top: 1px solid var(--t-color-surface-raised);
+}

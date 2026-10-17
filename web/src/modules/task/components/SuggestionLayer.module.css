@@ -1,0 +1,184 @@
+/* 建议图层：建议块 + 采纳 + 排不下的清单 + 容量账
+   核心约束：**建议必须比真实事件淡**（P9 的视觉落点）。 */
+
+.block {
+	position: absolute;
+	left: 0;
+	right: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 1px;
+	overflow: hidden;
+	padding: 1px 2px;
+
+	/* 虚线边框 + 4% accent 底：一眼能看出"这不是已安排" */
+	border: 1px dashed var(--t-color-accent);
+	background: color-mix(in oklch, var(--t-color-accent) 4%, transparent);
+	border-radius: var(--radius-2xs);
+	font-size: var(--text-2xs);
+	color: var(--t-color-ink-muted);
+	pointer-events: auto;
+}
+
+/* low（时长是估的）：点线边框 —— "这只是个占位" */
+.block.low {
+	border-style: dotted;
+}
+
+.block.medium {
+	/* 线型与 high 相同，靠理由行区分 */
+	border-color: color-mix(in oklch, var(--t-color-accent) 40%, transparent);
+}
+
+.block-time {
+	flex-shrink: 0;
+	font-variant-numeric: tabular-nums;
+	opacity: 0.75;
+}
+
+.block-title {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.block-reason {
+	font-size: var(--text-2xs);
+	color: var(--t-color-ink-faint);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/*
+ * 窄列（周视图的右栏里每列约 48px）：只留时间 + 标题。
+ *
+ * 理由行在 48px 里被省略号切到只剩三四个字（实测显示成 "标为 …"），
+ * 比不留更糟 —— 它看起来像界面坏了，而不是"这里省略了"。理由不是必须看到的
+ * 信息（块的 tooltip 与采纳确认里都有完整文案），所以窄的时候直接收掉，
+ * 把那一行的高度让给标题。
+ *
+ * 采纳按钮（.adopt）绝对定位在右上角，窄列里会压住文字，也一并收进图标本身 ——
+ * 它本来就是常驻的单字按钮，收窄后仍可点。
+ */
+@container (width < 7rem) {
+	.block-reason {
+		display: none;
+	}
+
+	.block-title {
+		/* 给右上角的采纳按钮让出位置，避免文字钻到按钮底下 */
+		padding-right: 0.9rem;
+	}
+}
+
+/* 采纳按钮：位置常驻（不 hover 才出现，理由同月网格的折叠行） */
+.adopt {
+	position: absolute;
+	top: 1px;
+	right: 2px;
+	padding: 0 2px;
+	background: none;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-2xs);
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-2xs);
+	line-height: 1;
+	cursor: pointer;
+}
+
+.adopt:hover {
+	background: var(--t-color-accent-soft);
+	border-color: var(--t-color-accent);
+	color: var(--t-color-ink);
+}
+
+/* ── 排不下的清单（S6-f 的诚实） ── */
+
+.unscheduled {
+	margin-top: var(--space-sm);
+	padding: var(--space-sm);
+	border: 1px dashed var(--t-color-border);
+	border-radius: var(--radius-md);
+}
+
+.unscheduled-title {
+	margin: 0 0 var(--space-2xs);
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}
+
+.unscheduled-list {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.unscheduled-item {
+	display: flex;
+	align-items: baseline;
+	gap: var(--space-2xs);
+	font-size: var(--text-xs);
+}
+
+.unscheduled-link {
+	padding: 0;
+	background: none;
+	border: none;
+	color: var(--t-color-ink);
+	font: inherit;
+	cursor: pointer;
+	text-align: left;
+}
+
+.unscheduled-link:hover {
+	text-decoration: underline;
+}
+
+.unscheduled-reason {
+	color: var(--t-color-ink-faint);
+}
+
+/* ── 容量账 ── */
+
+.capacity {
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+	margin-top: var(--space-sm);
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}
+
+.capacity-bar {
+	display: flex;
+	flex: 1;
+	height: 4px;
+	border-radius: var(--radius-full);
+	background: var(--t-color-surface-raised);
+	overflow: hidden;
+}
+
+.capacity-used {
+	background: var(--t-color-ink-faint);
+}
+
+.capacity-suggested {
+	background: color-mix(in oklch, var(--t-color-accent) 40%, transparent);
+}
+
+.capacity-text {
+	white-space: nowrap;
+	font-variant-numeric: tabular-nums;
+}
+
+/* 高对比度：线型与文字承载全部信息（虚线/点线差别在 forced-colors 下会消失，
+   所以 low 额外把标题前缀「约」留着 —— 那是文字，任何模式下都读得到） */
+@media (forced-colors: active) {
+	.block {
+		border-color: GrayText;
+	}
+}

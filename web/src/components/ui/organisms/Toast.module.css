@@ -118,6 +118,23 @@
 	overflow-wrap: break-word;
 }
 
+/* 动作（撤销）：小按钮，跟着正文排，不做成整条 toast 的主按钮 */
+.action {
+	align-self: flex-start;
+	margin-top: var(--space-2xs);
+	padding: var(--space-3xs, 0.25rem) var(--space-sm);
+	background: none;
+	border: 1px solid currentcolor;
+	border-radius: var(--radius-sm);
+	color: inherit;
+	font-size: var(--text-xs);
+	cursor: pointer;
+}
+
+.action:hover {
+	background: color-mix(in oklch, currentcolor 12%, transparent);
+}
+
 .close {
 	flex-shrink: 0;
 	background: none;

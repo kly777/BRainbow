@@ -1,11 +1,12 @@
 use axum::{
-    extract::{Extension, Json, Path, State},
+    extract::{Extension, Json, Path, Query, State},
     response::IntoResponse,
 };
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 
 use super::super::model::TaskStatus;
+use super::super::query::TaskQueryService;
 use super::super::service::TaskService;
 use crate::shared::actor::Actor;
 use crate::shared::error_types as error;
@@ -36,6 +37,45 @@ pub struct DependencyRequest {
     pub depends_on_task_id: i32,
 }
 
+/// 标签自动补全的查询参数（`GET /api/tags?prefix=`）
+#[derive(Debug, Deserialize)]
+pub struct TagsQuery {
+    #[serde(default)]
+    pub prefix: String,
+}
+
+/// 时段建议的区间参数（`GET /api/tasks/suggestions?from=&to=`）
+#[derive(Debug, Deserialize)]
+pub struct SuggestionsQuery {
+    pub from: DateTime<Utc>,
+    pub to: DateTime<Utc>,
+}
+
+/// `GET /api/tasks/suggestions?from=…&to=…` —— **纯读，不落库**（P9）。
+///
+/// 采纳是前端显式调 `POST /api/time-windows`；系统绝不自己写日历。
+pub async fn get_suggestions_handler(
+    Query(query): Query<SuggestionsQuery>,
+    State(qsvc): State<TaskQueryService>,
+    Extension(actor): Extension<Actor>,
+) -> impl IntoResponse {
+    match qsvc.suggestions(&actor, query.from, query.to).await {
+        Ok(result) => Json(result).into_response(),
+        Err(e) => e.into_response(),
+    }
+}
+
+/// `GET /api/tags?prefix=` —— 录入框的标签补全（前缀查询，最多 8 条）
+pub async fn get_tags_handler(
+    Query(query): Query<TagsQuery>,
+    State(qsvc): State<TaskQueryService>,
+    Extension(actor): Extension<Actor>,
+) -> impl IntoResponse {
+    match qsvc.tags_with_prefix(&actor, &query.prefix).await {
+        Ok(items) => Json(items).into_response(),
+        Err(e) => e.into_response(),
+    }
+}
 pub async fn add_dependency_handler(
     Path(task_id): Path<i32>,
     State(service): State<TaskService>,

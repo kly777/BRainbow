@@ -13,43 +13,81 @@
 
 .toolbar {
 	display: flex;
-	align-items: center;
+	flex-direction: column;
 	gap: var(--space-sm);
-	padding: var(--space-xs) 0;
+	padding: var(--space-2xs) 0 0;
 	flex-shrink: 0;
+}
+
+/* 视图切换：宽度由内容决定，不参与搜索框的伸缩 */
+.view-switch {
+	flex-shrink: 0;
+}
+
+/* 控件行：视图切换 / 搜索 / 筛选 / 排序。录入框单独占下一行。 */
+.toolbar-controls {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: var(--space-sm);
+	min-width: 0;
 }
 
 .search-box {
 	position: relative;
-	flex: 1;
+	flex: 1 1 12rem;
 	min-width: 0;
-	max-width: min(15rem, 100%);
+	max-width: min(24rem, 100%);
 }
 
+/* 录入框是主动作：独占一行，宽度不再被同行控件挤压 */
 .quick-add-box {
-	flex-shrink: 0;
+	flex: 0 0 auto;
+	width: 100%;
+	min-width: 0;
 }
 
-.quick-add-input {
-	padding: var(--space-xs) var(--space-md);
-	border: 1px dashed var(--t-color-border);
-	border-radius: var(--radius-md);
-	font-size: var(--text-sm);
-	outline: none;
-	color: var(--t-color-ink-muted);
+/* 筛选按钮：常驻控件之一（与排序同级） */
+.filter-button {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2xs);
+	flex-shrink: 0;
+	padding: var(--space-xs) var(--space-sm);
 	background: none;
-	width: 8.75rem;
-	box-sizing: border-box;
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-md);
+	color: var(--t-color-ink-muted);
+	font-size: var(--text-sm);
+	cursor: pointer;
 	transition:
+		color var(--t-transition-fast),
 		border-color var(--t-transition-fast),
-		color var(--t-transition-fast);
+		background var(--t-transition-fast);
+}
+
+.filter-button:hover {
+	color: var(--t-color-ink);
+	border-color: var(--t-color-accent);
+	background: var(--t-color-surface-raised);
+}
+
+.filter-button.filter-button-active {
+	border-color: var(--t-color-accent);
+	background: var(--t-color-accent-soft);
+	color: var(--t-color-accent-strong);
+}
+
+/* 筛选面板挂在工具条下方占一行，不做浮层（不遮内容） */
+.filter-panel-slot {
+	flex-basis: 100%;
+	min-width: 0;
 }
 
 .split-view {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) 21rem;
+	grid-template-columns: minmax(0, 1fr) clamp(20rem, 26vw, 24rem);
 	gap: var(--space-lg);
-	align-items: start;
 	flex: 1;
 	min-height: 0;
 }
@@ -59,7 +97,34 @@
 	overflow-y: auto;
 	display: flex;
 	flex-direction: column;
+	gap: var(--space-md);
+	scrollbar-gutter: stable;
+}
+
+/* 右栏头：标题与视图切换同一行，下面的卡片都归它管 */
+.right-header {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
 	gap: var(--space-sm);
+	padding: var(--space-2xs) 0;
+	border-bottom: 1px solid var(--t-color-border);
+	background: var(--t-color-bg);
+}
+
+.right-title {
+	margin: 0;
+	font-size: var(--text-sm);
+	font-weight: 600;
+	color: var(--t-color-ink);
+}
+
+/* 空态落在列表那一列：给它一点上留白，别贴着工具条 */
+.list-empty {
+	margin-top: var(--space-2xl);
 }
 
 /* 响应式 */
@@ -69,15 +134,32 @@
 		gap: var(--space-sm);
 	}
 
-	.toolbar {
-		flex-wrap: wrap;
+	.toolbar-controls {
+		gap: var(--space-xs);
 	}
 
-	.quick-add-input {
-		width: 6.875rem;
+	.search-box {
+		flex: 1 1 100%;
+		max-width: none;
+		order: 2;
 	}
 
 	.split-view {
 		grid-template-columns: 1fr;
 	}
+}
+
+/*
+ * 排序下拉（工具条）：宽度跟着内容走，不占满。
+ *
+ * `width: auto` 是必须的，光有 `flex-shrink: 0` 拦不住它 —— `.control` 基础规则写着
+ * `width: 100%`（给表单里竖排的字段用的），而 flex 项的 `flex-basis: auto` 就取这个
+ * width，于是解析成**整行宽**；加上 shrink 0 不让它缩，它便独占一行，
+ * 看起来像一条没有内容的横条，后面的录入框也被挤没了。
+ * `:where(.control)` 特异度是 0，这里 (0,1,0) 稳压。
+ */
+.sort-select {
+	width: auto;
+	flex-shrink: 0;
+	font-size: var(--text-sm);
 }

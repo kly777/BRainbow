@@ -26,7 +26,7 @@ describe("resolveStaleMs", () => {
 		expect(resolveStaleMs("GET /cards")).toBe(30_000);
 		expect(resolveStaleMs("GET /bookmarks?page=1")).toBe(30_000);
 		expect(resolveStaleMs("GET /text")).toBe(30_000);
-		expect(resolveStaleMs("GET /time-windows?task_id=5")).toBe(30_000);
+		expect(resolveStaleMs("GET /tasks/1/blocks")).toBe(30_000);
 		expect(resolveStaleMs("GET /db")).toBe(30_000);
 		expect(resolveStaleMs("GET /file/stats")).toBe(30_000);
 	});
@@ -67,11 +67,12 @@ const OWN_ENDPOINTS: Record<DomainName, readonly string[]> = {
 		"/tasks/dag?task_id=1",
 		"/tasks/calendar?start=1&end=2",
 		"/tasks/5/detail",
+		"/tags?prefix=%E5%B7%A5",
 	],
 	db: ["/db", "/db/tables?page=1", "/db/tables/backrefs?id=1"],
 	onto: ["/onto", "/onto/5"],
 	text: ["/text"],
-	timeWindows: ["/time-windows?task_id=1", "/time-windows/5"],
+	timeWindows: ["/tasks/1/blocks", "/tasks/blocks/5"],
 	files: ["/file?page=1", "/file/stats", "/file/tags", "/file/abc123"],
 };
 
@@ -128,11 +129,23 @@ function cachedEndpointKeys(): string[] {
 	const keys: string[] = [];
 	for (const file of sourceFiles(root)) {
 		const source = readFileSync(file, "utf8");
-		for (const [, literal] of source.matchAll(
-			/cachedRequest(?:<[\s\S]*?>)?\(\s*[`"]([^`"$]*)/g,
+		for (const [, , literal] of source.matchAll(
+			/cachedRequest(?:<[\s\S]*?>)?\(\s*(["'`])([^"'`]*)\1/g,
 		)) {
-			const prefix = literal ?? "";
-			keys.push(`GET ${prefix}`, `GET ${prefix}1`);
+			const raw = literal ?? "";
+			// 模板里的 `${taskId}` / `${buildQuery(...)}` 这类动态段按 1 代入。
+			// 如果动态段是**尾部的查询串**（`/tasks/all${buildQuery(...)}`），
+			// 代入的 1 要去掉，否则 `/tasks/all1` 这种假端点会误报。
+			let resolved = raw.replace(/\$\{[^}]*\}/g, "1").replace(/[)}]+$/, "");
+			const lastDynamic = raw.lastIndexOf("${");
+			if (
+				lastDynamic > 0 &&
+				raw.endsWith("}") &&
+				raw[lastDynamic - 1] !== "/"
+			) {
+				resolved = resolved.replace(/1$/, "");
+			}
+			keys.push(`GET ${resolved}`);
 		}
 	}
 	return keys;
@@ -147,10 +160,8 @@ describe("调用点镜像", () => {
 
 	it("每个 cachedRequest 端点都能定域（新增端点漏登记会在这里挂）", () => {
 		const orphans: string[] = [];
-		for (let i = 0; i < keys.length; i += 2) {
-			const key = keys[i];
-			const withTail = keys[i + 1];
-			if (domainOf(key) === null && domainOf(withTail) === null) {
+		for (const key of keys) {
+			if (domainOf(key) === null) {
 				orphans.push(key.slice("GET ".length));
 			}
 		}

@@ -3,7 +3,7 @@
 // 边界值得钉住的几条：大小写不敏感、用户输入的正则元字符按字面匹配、
 // 命中数上限（大文件里查一个字母）、空查询不返回"0/0"。
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { findInTextNodes, MAX_MATCHES } from "./findInText.ts";
 
 describe("findInTextNodes", () => {

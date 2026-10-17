@@ -5,7 +5,7 @@
 
 import type { ComponentProps } from "solid-js";
 import { render } from "solid-js/web";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import BatchBar from "./BatchBar.tsx";
 import UploadPanel from "./UploadPanel.tsx";
 

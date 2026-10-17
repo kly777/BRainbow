@@ -1,6 +1,6 @@
 // ── categoryLabel：分类枚举 → 中文展示名 ──
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import type { FileCategory } from "../api.ts";
 import { categoryLabel } from "./category.ts";
 

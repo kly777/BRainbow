@@ -78,9 +78,8 @@ function ThemeCard(props: {
 
 export default function ColorPage() {
 	const [current, setCurrent] = createSignal<ThemeName>(getTheme());
-	const [currentFontScale, setCurrentFontScale] = createSignal<FontScaleName>(
-		getFontScale(),
-	);
+	const [currentFontScale, setCurrentFontScale] =
+		createSignal<FontScaleName>(getFontScale());
 
 	onMount(() => setCurrent(getTheme()));
 

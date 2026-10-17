@@ -1,7 +1,7 @@
 // ── 条件模型的纯函数测试 ──
 // 这些规则会同时喂给列表行、录入框与日历，所以按"输入 → 输出"直测，不做组件渲染。
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import type { Task } from "../api.ts";
 import {
 	type ConditionValues,

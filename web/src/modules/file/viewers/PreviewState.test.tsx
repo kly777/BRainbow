@@ -4,7 +4,7 @@
 // 文案必出、加载中出转子、错误用 alert（打断）而加载/空用 status（不打断）。
 
 import { render } from "solid-js/web";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { PreviewState } from "./PreviewState.tsx";
 
 function mount(ui: () => unknown) {

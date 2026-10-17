@@ -8,7 +8,7 @@
 
 import type { ComponentProps } from "solid-js";
 import { render } from "solid-js/web";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import PaginationBar from "./PaginationBar.tsx";
 
 type BarProps = ComponentProps<typeof PaginationBar>;

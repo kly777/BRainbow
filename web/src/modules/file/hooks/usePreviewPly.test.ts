@@ -2,7 +2,7 @@
 // 这组断言钉的是"与后端 Range 的约定"：Content-Range 的 /total 决定要不要继续下载。
 
 import { createRoot } from "solid-js";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import type { FileItem } from "../api.ts";
 import {
 	__internal,

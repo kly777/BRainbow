@@ -44,11 +44,11 @@ dev-backend-fast *args:
 dev-web *args:
 	@cargo xtask dev web {{args}}
 
-# 格式化：cargo fmt + 前端 biome format
+# 格式化：cargo fmt + 前端 Vite+ fmt
 fmt *args:
 	@cargo xtask fmt {{args}}
 
-# 检查：clippy（workspace，含 xtask）+ 前端 biome/stylelint
+# 检查：clippy（workspace，含 xtask）+ 前端 Vite+/stylelint
 lint *args:
 	@cargo xtask lint {{args}}
 

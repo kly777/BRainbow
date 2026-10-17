@@ -98,7 +98,7 @@ export function boolParam(def = false): UrlParamReader<boolean> {
 // 约束用 unknown 兜底（仅作 extends 边界，ParamsOf 仍精确推导）；
 // 不用 UrlParamReader<unknown> 作为键类型：write 参数逆变会使字面量描述器不满足约束
 export type UrlParamMap = Record<string, UrlParamReader<unknown>>;
-// biome-ignore lint/suspicious/noExplicitAny: 约束兜底，索引访问时由 ParamsOf 收窄
+// 约束兜底，索引访问时由 ParamsOf 收窄
 type AnyReader = UrlParamReader<any>;
 
 /** 从描述器映射推导参数值类型（映射类型保留字面量精度） */

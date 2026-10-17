@@ -3,7 +3,7 @@
 // mock useUrlParams（路由耦合）与搜索 API，验证纯逻辑分支。
 import { PATHS } from "@config/paths";
 import { createRoot } from "solid-js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { type ConvSearchTab, useConvSearch } from "./useConvSearch.ts";
 
 const paramStore: Record<string, string> = {};

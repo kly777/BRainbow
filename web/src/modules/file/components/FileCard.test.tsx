@@ -6,7 +6,7 @@
 
 import type { ComponentProps } from "solid-js";
 import { render } from "solid-js/web";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import type { FileItem } from "../api.ts";
 import FileCard from "./FileCard.tsx";
 import FileRow from "./FileRow.tsx";

@@ -1,7 +1,7 @@
 // ── usePreviewUrl：私密文件换 blob，公开文件直通 ──
 
 import { createRoot } from "solid-js";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { type PreviewUrlState, usePreviewUrl } from "./usePreviewUrl.ts";
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));

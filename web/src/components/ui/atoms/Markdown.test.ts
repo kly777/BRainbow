@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { renderMarkdown } from "@shared/markdown/pipeline.ts";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 // 渲染直接走运行时那条管线（`@shared/markdown/pipeline.ts`），不在这里再抄一份配置。
 // 抄过的那份已与实现漂移：实现的 `ALLOWED_ATTR` 明确不放行 `"id"`（内容自带 id 会与

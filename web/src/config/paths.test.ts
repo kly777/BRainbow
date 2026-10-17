@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { fillPath, PATHS } from "./paths.ts";
 
 describe("PATHS", () => {

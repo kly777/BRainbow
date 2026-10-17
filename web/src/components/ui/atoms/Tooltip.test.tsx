@@ -2,7 +2,7 @@
 
 import type { JSX } from "solid-js";
 import { render } from "solid-js/web";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import Tooltip from "./Tooltip.tsx";
 
 /** 渲染一个 tooltip，返回宿主元素（Tooltip 的 wrap span）与清理函数 */

@@ -70,9 +70,8 @@ export function useTaskCalendar(weekParam?: () => string | undefined) {
 	const [currentDate, setCurrentDate] = createSignal<Date>(new Date());
 	const [granularity, setGranularity] =
 		createSignal<CalendarGranularity>("month");
-	const [density, setDensitySignal] = createSignal<CalendarDensity>(
-		getCalendarDensity(),
-	);
+	const [density, setDensitySignal] =
+		createSignal<CalendarDensity>(getCalendarDensity());
 	// 设置项变了要重新求值（`firstDay` 是 memo，依赖这里）
 	const [weekStartOverride, setWeekStartOverride] =
 		createSignal<Weekday | null>(getWeekStartSetting());
@@ -139,7 +138,7 @@ export function useTaskCalendar(weekParam?: () => string | undefined) {
 
 	/** 重新取数（拖拽落位之后刷新日历用） */
 	const reload = () => {
-		void list.refetch();
+		list.refetch();
 		void refetchExternal();
 	};
 

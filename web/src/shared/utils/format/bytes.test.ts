@@ -2,7 +2,7 @@
 // compact 口径原先是 file/lib/uploadLimits.ts 里的一份同名局部实现（口径相同、
 // 名字相同、语义不同），统一到这里之后，这里的两组断言就是两条口径的契约。
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { formatBytes } from "./bytes.ts";
 
 const MIB = 1024 * 1024;

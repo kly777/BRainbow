@@ -20,7 +20,7 @@
 
 import { createSignal, Show } from "solid-js";
 import { render } from "solid-js/web";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 function mount(node: () => ReturnType<typeof Show>): HTMLDivElement {
 	const host = document.createElement("div");

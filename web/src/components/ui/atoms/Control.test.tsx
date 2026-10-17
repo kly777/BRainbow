@@ -7,7 +7,7 @@
 // 这种相对断言，不写字面量。
 
 import { render } from "solid-js/web";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import Input from "./Input.tsx";
 import Textarea from "./Textarea.tsx";
 

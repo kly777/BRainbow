@@ -8,7 +8,7 @@
 import { useListResource } from "@shared/utils/useListResource.ts";
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 interface Row {
 	id: number;

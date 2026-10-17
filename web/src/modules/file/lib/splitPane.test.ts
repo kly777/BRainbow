@@ -3,7 +3,7 @@
 // 存的是侧栏**像素宽度**而不是比例：侧栏里是键值对文本、字号固定，"多宽能读"是绝对量，
 // 按比例存会让窗口一缩侧栏就窄得没法看。
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import {
 	clampSideWidth,
 	draggedSideWidth,

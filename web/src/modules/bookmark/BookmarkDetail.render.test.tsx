@@ -5,7 +5,7 @@
 
 import { getBookmarkE } from "@modules/bookmark";
 import { render } from "solid-js/web";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import BookmarkDetail from "./BookmarkDetail.tsx";
 
 vi.mock("@modules/bookmark/api.ts", () => ({

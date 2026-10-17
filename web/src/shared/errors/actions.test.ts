@@ -1,7 +1,7 @@
 // ── 错误处理的"动作层"（tryOrNotify / confirmAndRun / confirmAndDelete）──
 // mock 掉 toast 与确认框，专注验证分支语义。
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { confirmAndRun, showConfirm, tryOrNotify } from "./actions.ts";
 import { notifyError } from "./notify.ts";
 

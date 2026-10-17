@@ -3,7 +3,7 @@
 // 两条护栏最值得钉住：**太靠后就从头播**（片尾不该再放一遍），
 // **超出时长的旧记录丢弃**（文件被换成更短的版本时不能跳到不存在的秒数）。
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import {
 	clampSpeedIndex,
 	DEFAULT_SPEED_INDEX,

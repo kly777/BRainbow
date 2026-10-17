@@ -4,7 +4,7 @@
 // ② 翻页取的是**下一段的偏移**（不再有"超过 2MB 就不给看"的闸门）。
 
 import { render } from "solid-js/web";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { HexViewer } from "./HexViewer.tsx";
 import { item } from "./test-fixtures.ts";
 

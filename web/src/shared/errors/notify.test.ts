@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { HttpError, NetworkError } from "./model.ts";
 
 vi.mock("../utils/toastStore.ts", () => ({

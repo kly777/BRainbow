@@ -3,7 +3,7 @@
 // 分界线是"换个时刻再试会不会不一样"：网络/5xx 会，4xx 不会（内容问题、权限、丢了）。
 // 这条判断直接决定用户看到「重试」还是只有「下载」，错分的代价是让人白点或没有出路。
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { httpPreviewError, networkPreviewError } from "./previewError.ts";
 
 describe("httpPreviewError", () => {

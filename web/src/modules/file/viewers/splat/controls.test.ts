@@ -2,7 +2,7 @@
 // 这张表就是"按 A 会往哪转"的契约：逐条对齐参考实现 antimatter15/splat。
 // 坐标约定：相机 +x 右、+y 下、+z 前 —— 所以"抬高"是 -y、"向前"是 +z。
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import {
 	applyOps,
 	dragOps,

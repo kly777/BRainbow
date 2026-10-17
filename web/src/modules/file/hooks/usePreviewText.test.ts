@@ -6,7 +6,7 @@
 //   3. 多字节字符被切在两段之间时不能丢 —— 跨段共用一个解码器才能补齐
 
 import { createRoot } from "solid-js";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { item } from "../viewers/test-fixtures.ts";
 import { usePreviewText } from "./usePreviewText.ts";
 

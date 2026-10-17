@@ -5,7 +5,7 @@
 import { HttpError, NetworkError } from "@shared/api";
 import type { JSX } from "solid-js";
 import { render } from "solid-js/web";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import ErrorRetry from "./ErrorRetry.tsx";
 
 function mount(ui: () => JSX.Element) {

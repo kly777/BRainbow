@@ -4,7 +4,7 @@
 
 import type { JSX } from "solid-js";
 import { render } from "solid-js/web";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { MAX_PREVIEW_BYTES } from "../hooks/usePreviewText.ts";
 import { TextContent } from "./TextContent.tsx";
 import { item } from "./test-fixtures.ts";

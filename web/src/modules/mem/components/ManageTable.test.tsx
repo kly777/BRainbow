@@ -5,7 +5,7 @@
 // loading 时出骨架且不出表格。
 
 import { render } from "solid-js/web";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import type { MemItem } from "../api.ts";
 import ManageTable from "./ManageTable.tsx";
 

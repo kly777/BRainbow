@@ -4,7 +4,7 @@
 // 搜索过滤、选中回调、无标签项、活动项标记。
 
 import { render } from "solid-js/web";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import TagFilter from "./TagFilter.tsx";
 
 const TAGS = [

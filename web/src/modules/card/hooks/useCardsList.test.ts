@@ -9,7 +9,7 @@ import {
 	searchCardsE,
 } from "@modules/card";
 import { createRoot } from "solid-js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useCardsList } from "./useCardsList.ts";
 
 vi.mock("@modules/card/api.ts", () => ({

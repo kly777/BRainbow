@@ -2,7 +2,7 @@
 // 这组测试的来由是一次真实故障：worker 链路静默失败时预览永远停在"正在解析"，
 // 用户看不到任何原因（见 runner.ts 顶部注释）。
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import {
 	buildPly,
 	buildSplat,

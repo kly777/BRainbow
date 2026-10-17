@@ -6,7 +6,7 @@
 // **拿不到时怎么退**（不抛错、结果缓存）、**没有 IO 时怎么退化**（立刻渲染，
 // 别把卡片卡在徽章上）。真正画出来的样子只能在浏览器里看。
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import type { FileItem } from "../api.ts";
 import {
 	clearPdfThumbCache,

@@ -1,4 +1,11 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vite-plus/test";
 import { cachedRequest, clearAllCache } from "./cache.ts";
 import { domains } from "./domains.ts";
 import { request } from "./request.ts";

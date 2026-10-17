@@ -10,7 +10,14 @@
 //      回车会执行它的空动作然后静默关掉面板
 
 import { render } from "solid-js/web";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vite-plus/test";
 import { searchE } from "./api.ts";
 
 const { navigateMock } = vi.hoisted(() => ({ navigateMock: vi.fn() }));

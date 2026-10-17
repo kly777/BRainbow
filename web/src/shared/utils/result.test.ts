@@ -1,7 +1,7 @@
 /**
  * Result 类型单元测试
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import {
 	err,
 	flatMap,

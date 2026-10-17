@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { useMemManageParams } from "./useMemManageParams.ts";
 
 // mock @solidjs/router 的 useSearchParams：可控的 [store, setter]

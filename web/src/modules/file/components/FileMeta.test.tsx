@@ -1,7 +1,7 @@
 // ── FileMeta：卡片内的文件信息区（常驻展示，不依赖 hover） ──
 
 import { render } from "solid-js/web";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import type { FileItem } from "../api.ts";
 import FileMeta from "./FileMeta.tsx";
 

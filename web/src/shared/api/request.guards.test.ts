@@ -2,7 +2,14 @@
 // ── request.ts 守卫层与 streaming.ts 边界测试（审计 T2） ──
 // 每个用例通过 vi.resetModules + 动态 import 获取独立模块实例，
 // 隔离 _authFiredAt（401 弹窗 3s 去重）与 token.ts 内存缓存等模块态。
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vite-plus/test";
 
 // 全局 mock showToast：隔离 toast 定时器，避免测试结束后仍有 pending timer
 vi.mock("@shared/utils/toastStore.ts", () => ({

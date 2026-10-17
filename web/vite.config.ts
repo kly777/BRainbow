@@ -1,7 +1,7 @@
-/// <reference types="vitest" />
+/// <reference types="vite-plus/test" />
 
 import { fileURLToPath } from "node:url";
-import { defineConfig, loadEnv, type Plugin } from "vite";
+import { defineConfig, loadEnv, type Plugin, lazyPlugins } from "vite-plus";
 import solid from "vite-plugin-solid";
 import { generateAll } from "./scripts/generate-seo.ts";
 
@@ -34,7 +34,7 @@ export default defineConfig(({ command, mode }) => {
 	}
 	const apiTarget = env.VITE_API_TARGET ?? "http://localhost:3000";
 
-	// vitest 以 `mode: "test"` 运行（package.json 的 `vitest run` 不带 --mode）。
+	// vitest 以 `mode: "test"` 运行（`vp test run` 不带 --mode）。
 	//
 	// 测试里必须关掉 HMR（`hot: false`），否则**每个组件测试都在收集阶段就死**：
 	// solid-refresh 运行时用自己的模块 id 作根相对路径 `/@solid-refresh`，
@@ -49,7 +49,32 @@ export default defineConfig(({ command, mode }) => {
 	const isTest = mode === "test";
 
 	return {
-		plugins: [solid({ hot: !isTest }), seoPlugin(siteUrl)],
+		fmt: {
+			// 与项目原来的 Biome 口径对齐：tab 缩进、双引号、80 列、尾逗号。
+			printWidth: 80,
+			tabWidth: 2,
+			useTabs: true,
+			semi: true,
+			singleQuote: false,
+			trailingComma: "all",
+			// package.json 的字段顺序是人工排的，不交给 formatter 重排。
+			sortPackageJson: false,
+			ignorePatterns: [
+				"dist/**",
+				"src/components/kumo/**",
+				"**/*.css",
+				"e2e/.auth/**",
+				"test-results/**",
+				"playwright-report/**",
+			],
+		},
+		lint: {
+			ignorePatterns: ["dist/**", "src/components/kumo/**"],
+			jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
+			rules: { "vite-plus/prefer-vite-plus-imports": "error" },
+			options: { typeAware: true, typeCheck: true },
+		},
+		plugins: lazyPlugins(() => [solid({ hot: !isTest }), seoPlugin(siteUrl)]),
 		envDir,
 
 		css: {

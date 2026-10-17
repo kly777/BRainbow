@@ -3,7 +3,7 @@
 // 这里锁两条：**同一类型永远同色**（否则每次刷新都变色，颜色就不再是线索），
 // 以及**同族相近、跨族分开**（PDF 与 xlsx 不该像同一个东西）。
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import type { FileItem } from "../api.ts";
 import { shouldTint, tintHue } from "./thumbTint.ts";
 

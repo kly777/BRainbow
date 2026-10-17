@@ -47,17 +47,15 @@ export function useMemManageList(deps: {
 	);
 
 	// ── 列表查询参数快照（不含 id —— 点详情不重载列表） ──
-	const listQuery = createMemo(
-		(): ListKey => ({
-			q: params.searchQuery(),
-			state: params.filterState(),
-			sort: params.sortField(),
-			order: params.sortDir(),
-			page: params.page(),
-			tagMode: params.tagMode(),
-			tagFilters: deps.tagFilters(),
-		}),
-	);
+	const listQuery = createMemo((): ListKey => ({
+		q: params.searchQuery(),
+		state: params.filterState(),
+		sort: params.sortField(),
+		order: params.sortDir(),
+		page: params.page(),
+		tagMode: params.tagMode(),
+		tagFilters: deps.tagFilters(),
+	}));
 
 	// ── 列表资源：参数变化自动重取；refetch 时保留旧值（无闪烁） ──
 	const [list, { refetch }] = createResource<

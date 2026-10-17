@@ -4,7 +4,7 @@
 // 有数据时渲染单元格值、行展开回调带着行号。
 
 import { render } from "solid-js/web";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import type { ColumnInfo } from "../api.ts";
 import DbTable from "./DbTable.tsx";
 

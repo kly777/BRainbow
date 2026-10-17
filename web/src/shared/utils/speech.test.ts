@@ -1,7 +1,7 @@
 /**
  * speech 工具单元测试（stripMarkdown / containsCjk 纯函数）
  */
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { containsCjk, stripMarkdown } from "./speech.ts";
 
 describe("stripMarkdown", () => {

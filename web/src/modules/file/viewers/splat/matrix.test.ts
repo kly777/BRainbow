@@ -1,7 +1,7 @@
 // ── 3DGS 相机/矩阵（纯函数直测） ──
 // 钉住的是"约定"而不是实现细节：+x 右 / +y 下 / +z 前，可见点的相机空间 z > 0。
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import {
 	cross,
 	dot,

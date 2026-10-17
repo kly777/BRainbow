@@ -8,7 +8,7 @@
 import type { JSX } from "solid-js";
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { AsyncSection } from "./AsyncSection.tsx";
 
 function mount(node: () => JSX.Element): HTMLDivElement {

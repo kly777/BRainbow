@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // 时间轴的像素映射与重叠布局（对着 06-日历视图 §4 的验收表）。
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import {
 	type AxisBlock,
 	blockHeight,

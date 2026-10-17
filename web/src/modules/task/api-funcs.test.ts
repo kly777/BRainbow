@@ -1,7 +1,7 @@
 // ── fetchAllTasks：分页接口取全量（列表/看板/依赖图/选择器共用） ──
 
 import type { PaginatedResponse } from "@shared/api";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { fetchAllTasks, getAllTasksE, getTasksE } from "./api-funcs.ts";
 import type { Task } from "./api-types.ts";
 

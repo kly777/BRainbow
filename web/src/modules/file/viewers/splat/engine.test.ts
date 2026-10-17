@@ -3,7 +3,7 @@
 // worker 只是这层的通信适配器，所以这里能覆盖"给一份 3DGS 的 .ply，渲染前
 // 该拿到什么"：顶点数、包围盒、纹理布局，以及排序顺序确实跟着相机前向轴变。
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import {
 	buildPly,
 	buildSplat,

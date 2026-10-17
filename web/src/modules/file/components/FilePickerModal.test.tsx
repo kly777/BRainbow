@@ -4,7 +4,7 @@
 
 import { listFiles } from "@modules/file/api.ts";
 import { render } from "solid-js/web";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import FilePickerModal from "./FilePickerModal.tsx";
 
 vi.mock("@modules/file/api.ts", async (importOriginal) => {

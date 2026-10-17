@@ -9,7 +9,7 @@
 import { PAGE_PRELOADS, shouldPrefetch } from "@app/route-preloads.ts";
 import { ROUTES, toRouteDefs } from "@app/routes.ts";
 import { PATHS } from "@config/paths";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 vi.mock("@modules/card/api.ts", () => ({ getCardE: vi.fn() }));
 vi.mock("@modules/ontology/api.ts", () => ({ getOntoE: vi.fn() }));

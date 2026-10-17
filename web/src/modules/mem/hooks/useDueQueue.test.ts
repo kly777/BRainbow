@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { createRoot } from "solid-js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { DueResponse, MemItem } from "../api.ts";
 import { useDueQueue } from "./useDueQueue.ts";
 

@@ -5,7 +5,7 @@
 // 的查看器都自动获得查找。
 
 import { render } from "solid-js/web";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { PlainTextViewer } from "./PlainTextViewer.tsx";
 import { item } from "./test-fixtures.ts";
 

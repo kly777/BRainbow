@@ -1,6 +1,6 @@
 // ── 文件头识别与十六进制排版（纯函数直测） ──
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { hexRows, looksTextual, sniffKind } from "./magic.ts";
 
 const bytes = (...values: number[]) => new Uint8Array(values);

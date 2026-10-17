@@ -8,7 +8,7 @@
 
 import { getOntosE } from "@modules/ontology/api.ts";
 import { render } from "solid-js/web";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import OntologyListPage from "./OntologyList.tsx";
 
 // mock 叶子模块 api.ts 而非 barrel：hook 是从 "../api" 导入的

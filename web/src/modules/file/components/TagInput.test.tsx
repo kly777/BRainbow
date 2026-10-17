@@ -7,7 +7,7 @@
 // "组件自己不再取数" —— 早先各自 createResource，标签管理里改名后下拉还挂着旧标签。
 
 import { render } from "solid-js/web";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import TagFilter from "./TagFilter.tsx";
 import TagInput from "./TagInput.tsx";
 

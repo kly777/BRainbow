@@ -28,7 +28,7 @@
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 // vitest 从 web/ 启动（pnpm run test），与 css-modules-contract.test.ts 的假设一致
 const SRC_ROOT = join(process.cwd(), "src");

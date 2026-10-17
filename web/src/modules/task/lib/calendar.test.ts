@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // 日历纯计算的验收用例，逐条对着 06-日历视图 §3 的验收表（S4-a / S4-b / S4-i）
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vite-plus/test";
 import type { CalendarEvent } from "../api-types.ts";
 import {
 	type CalendarDensity,

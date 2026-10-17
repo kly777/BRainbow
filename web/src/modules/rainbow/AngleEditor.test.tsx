@@ -9,7 +9,7 @@ import Input from "@components/ui/atoms/Input.tsx";
 import { Angle } from "@shared/utils";
 import { createSignal, type JSX } from "solid-js";
 import { render } from "solid-js/web";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import AngleEditor from "./AngleEditor.tsx";
 
 function referenceClass(node: () => JSX.Element): string {

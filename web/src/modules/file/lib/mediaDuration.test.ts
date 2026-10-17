@@ -4,7 +4,7 @@
 // jsdom 不解码媒体，也不实现 URL.createObjectURL，所以这里注入一个假元素把
 // 三条出口走全：读到值 / 元素报错 / 超时。真实浏览器里的行为由这三条覆盖。
 
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { mediaKind, readMediaDuration, toMillis } from "./mediaDuration.ts";
 
 /** 假媒体元素：只保留用到的几个 API */

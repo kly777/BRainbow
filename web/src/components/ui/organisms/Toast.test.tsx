@@ -5,7 +5,14 @@
 
 import { dismissAll, showToast, toasts } from "@shared/utils/toastStore.ts";
 import { render } from "solid-js/web";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vite-plus/test";
 import ToastContainer from "./Toast.tsx";
 
 let dispose: (() => void) | undefined;

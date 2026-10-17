@@ -4,7 +4,7 @@
 // 迁移后仍成立的行为：唯一 h1、四态、上传弹窗的控件仍在且可输入。
 
 import { render } from "solid-js/web";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import ReadingList from "./ReadingList.tsx";
 
 vi.mock("@modules/reading/api.ts", async (importOriginal) => {

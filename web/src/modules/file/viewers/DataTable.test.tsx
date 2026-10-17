@@ -5,7 +5,7 @@
 
 import { copyText } from "@shared/utils";
 import { render } from "solid-js/web";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { DataTable } from "./DataTable.tsx";
 
 vi.mock("@shared/utils", async (importOriginal) => {

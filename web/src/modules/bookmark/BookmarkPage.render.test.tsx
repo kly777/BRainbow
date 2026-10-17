@@ -5,7 +5,7 @@
 
 import { SEARCH_DEBOUNCE_MS } from "@shared/utils";
 import { render } from "solid-js/web";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import BookmarkPage from "./BookmarkPage.tsx";
 
 vi.mock("./api.ts", async (importOriginal) => {

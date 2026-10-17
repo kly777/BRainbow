@@ -5,7 +5,7 @@
 // 不能停在空白上。真正的观感要人工在浏览器里看。
 
 import { render } from "solid-js/web";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { gltfNeedsExternalFiles, modelFormatOf } from "../lib/model.ts";
 import { __internal, ModelViewer } from "./ModelViewer.tsx";
 import { item } from "./test-fixtures.ts";

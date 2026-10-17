@@ -1,6 +1,6 @@
 // ── 文件元信息格式化：时长与像素尺寸 ──
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { fmtDimensions, fmtDuration, fmtDurationMs } from "./meta.ts";
 
 describe("fmtDuration", () => {

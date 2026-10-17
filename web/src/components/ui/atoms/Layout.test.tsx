@@ -9,7 +9,7 @@
 import { Row, Stack } from "@components/ui/atoms/Layout.tsx";
 import type { JSX } from "solid-js";
 import { render } from "solid-js/web";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 function mount(node: () => JSX.Element): HTMLDivElement {
 	const host = document.createElement("div");

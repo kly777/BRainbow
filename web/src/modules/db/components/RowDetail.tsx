@@ -72,7 +72,7 @@ const FieldValue: Component<{
 					type="button"
 					class={styles.fieldBtn}
 					title="复制该字段"
-					onClick={() => void props.onCopy(props.col().name, props.text())}
+					onClick={() => props.onCopy(props.col().name, props.text())}
 				>
 					{props.copiedKey() === props.col().name ? "已复制" : "复制"}
 				</button>
@@ -146,7 +146,7 @@ const RowDetailBody: Component<{
 			<button
 				type="button"
 				class={styles.copyBtn}
-				onClick={() => void props.onCopyRowJson()}
+				onClick={() => props.onCopyRowJson()}
 			>
 				{props.copiedKey() === "__row"
 					? "已复制 <Check size={14} />"

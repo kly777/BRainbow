@@ -7,16 +7,16 @@
 		"node": ">=24"
 	},
 	"scripts": {
-		"dev": "vite --mode dev",
-		"build": "vite build --mode prod",
-		"preview": "vite preview",
-		"typecheck": "tsc --noEmit",
-		"check": "tsc --noEmit && biome check src/ index.html && stylelint \"src/**/*.css\" \"!src/components/kumo/kumo.css\"",
-		"lint": "biome check --write src/ index.html && stylelint \"src/**/*.css\" \"!src/components/kumo/kumo.css\" --fix",
+		"dev": "vp dev --mode dev",
+		"build": "vp build --mode prod",
+		"preview": "vp preview",
+		"typecheck": "vp check --no-fmt --no-lint",
+		"check": "vp check && stylelint \"src/**/*.css\" \"!src/components/kumo/kumo.css\"",
+		"lint": "vp lint --fix && stylelint \"src/**/*.css\" \"!src/components/kumo/kumo.css\" --fix",
 		"lint:css": "stylelint \"src/**/*.css\" \"!src/components/kumo/kumo.css\"",
-		"fmt": "biome format --write .",
-		"test": "vitest run",
-		"test:watch": "vitest",
+		"fmt": "vp fmt",
+		"test": "vp test run",
+		"test:watch": "vp test",
 		"e2e": "playwright test"
 	},
 	"dependencies": {
@@ -38,7 +38,6 @@
 		"three": "^0.186.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.5.11",
 		"@playwright/test": "^1.63.0",
 		"@types/node": "^26.4.0",
 		"@types/three": "^0.186.0",
@@ -46,9 +45,9 @@
 		"stylelint": "^17.14.1",
 		"stylelint-config-standard": "^40.0.0",
 		"typescript": "~6.0.3",
-		"vite": "8.2.1",
+		"vite": "catalog:",
 		"vite-plugin-purgecss": "^0.2.13",
 		"vite-plugin-solid": "^2.11.14",
-		"vitest": "^4.1.10"
+		"vite-plus": "catalog:"
 	}
 }

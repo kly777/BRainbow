@@ -5,7 +5,7 @@
 import Button from "@components/ui/atoms/Button.tsx";
 import type { JSX } from "solid-js";
 import { render } from "solid-js/web";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import EmptyGuide from "./EmptyGuide.tsx";
 
 function mount(node: () => JSX.Element): HTMLDivElement {

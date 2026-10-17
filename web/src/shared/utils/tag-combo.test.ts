@@ -1,6 +1,6 @@
 // ── 标签输入判定逻辑（file / bookmark / mem 三处共用） ──
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import {
 	filterTagOptions,
 	hasExactTagMatch,

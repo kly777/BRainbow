@@ -5,7 +5,7 @@
 // 守卫维持，换成资源驱动后由这组断言钉住，防它回潮。
 
 import { render } from "solid-js/web";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { searchBookmarksE } from "../api.ts";
 import { useBookmarkSearch } from "./useBookmarkSearch.ts";
 

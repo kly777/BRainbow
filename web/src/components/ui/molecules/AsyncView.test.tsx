@@ -5,7 +5,7 @@
 import { AsyncView } from "@components/ui/molecules/AsyncView.tsx";
 import { createRoot, createSignal } from "solid-js";
 import { For, render } from "solid-js/web";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 describe("AsyncView children accessor seam", () => {
 	it("data 刷新不重建子树：input 保持同一节点", () => {

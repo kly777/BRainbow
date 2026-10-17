@@ -5,7 +5,7 @@
 // 这里钉住四条：渲染远端、删除成功后本地移除且不 refetch、删除失败回滚、生成后插到表头。
 
 import { render } from "solid-js/web";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { type ApiKeyInfo, createKeyE, deleteKeyE, listKeysE } from "./api.ts";
 import KeyPage from "./KeyPage.tsx";
 

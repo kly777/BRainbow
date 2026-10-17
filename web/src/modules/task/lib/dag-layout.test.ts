@@ -1,5 +1,5 @@
 import type { DagEdge, DagNode } from "@modules/task";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { layout } from "./dag-layout.ts";
 
 describe("layout", () => {

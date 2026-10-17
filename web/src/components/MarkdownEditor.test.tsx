@@ -8,7 +8,7 @@
 
 import { notifyError } from "@shared/utils";
 import { render } from "solid-js/web";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import MarkdownEditor, {
 	buildMarkdownRef,
 	type MarkdownFileRef,

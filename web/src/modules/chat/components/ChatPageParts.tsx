@@ -148,7 +148,7 @@ export function TreeListItem(props: {
 							class={`${styles.treeMenuItem} ${styles.treeMenuItemDanger}`}
 							onClick={() => {
 								setMenuOpen(false);
-								void props.onDelete();
+								props.onDelete();
 							}}
 						>
 							删除

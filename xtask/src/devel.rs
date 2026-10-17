@@ -15,7 +15,7 @@ use crate::error::{Error, Result};
 use crate::local::{self, Cmd};
 use crate::ui;
 
-/// `fmt`：cargo fmt + 前端 biome format。
+/// `fmt`：cargo fmt + 前端 Vite+ fmt。
 pub fn run_fmt(cfg: &Config) -> Result<()> {
     ui::info("格式化 Rust…");
     Cmd::new("cargo")
@@ -29,7 +29,7 @@ pub fn run_fmt(cfg: &Config) -> Result<()> {
         .run()
 }
 
-/// `lint`：clippy + 前端 biome/stylelint。
+/// `lint`：clippy + 前端 Vite+/stylelint。
 ///
 /// 用 `--workspace` 让 xtask 自己也被 lint（裸 `cargo clippy` 因为
 /// `default-members` 只覆盖应用本体）。

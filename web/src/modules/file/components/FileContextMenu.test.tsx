@@ -4,7 +4,7 @@
 // 读操作（查看详情 / 复制链接 / 下载）对谁都出现。
 
 import { render } from "solid-js/web";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import type { FileItem } from "../api.ts";
 import FileContextMenu from "./FileContextMenu.tsx";
 

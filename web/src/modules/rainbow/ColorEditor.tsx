@@ -65,8 +65,8 @@ function ColorRow(props: {
 
 	// ── 外部变化时同步（仅在失焦时）；各空间按粒度 round，避免浮点噪声 ──
 	createEffect(() => {
-		space();
-		props.color;
+		void space();
+		void props.color;
 		if (focused) return;
 
 		const c = props.color;

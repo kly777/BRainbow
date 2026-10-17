@@ -77,7 +77,7 @@ describe("fetchPly", () => {
 		expect(result.kind).toBe("ready");
 		expect(fetchSpy).toHaveBeenCalledTimes(1);
 		const init = fetchSpy.mock.calls[0]?.[1] as RequestInit;
-		expect((init.headers as Record<string, string>).Range).toBe(
+		expect(new Headers(init.headers).get("Range")).toBe(
 			`bytes=0-${PROBE_BYTES - 1}`,
 		);
 		if (result.kind === "ready") expect(result.bytes.length).toBe(body.length);
@@ -94,10 +94,8 @@ describe("fetchPly", () => {
 
 		const result = await fetchPly(item, MAX_PLY_BYTES, signal());
 		expect(fetchSpy).toHaveBeenCalledTimes(2);
-		const secondHeaders = fetchSpy.mock.calls[1]?.[1]?.headers as
-			| Record<string, string>
-			| undefined;
-		expect(secondHeaders?.Range).toBeUndefined();
+		const secondHeaders = fetchSpy.mock.calls[1]?.[1]?.headers;
+		expect(new Headers(secondHeaders).get("Range")).toBeNull();
 		if (result.kind === "ready") expect(result.bytes.length).toBe(full.length);
 	});
 

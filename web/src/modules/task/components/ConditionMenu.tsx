@@ -21,7 +21,7 @@ export interface ConditionMenuProps {
 	conditions: readonly ConditionKey[];
 	/** 条件之外的动作（子任务 / 父任务） */
 	extras?: readonly ConditionMenuExtra[];
-	onSelect: (key: ConditionKey | string) => void;
+	onSelect: (key: string) => void;
 	onClose: () => void;
 	/** 打开时把焦点放到第一项（任务行用）；录入框刻意不抢焦点，见 CaptureInput */
 	autoFocus?: boolean;

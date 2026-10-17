@@ -97,7 +97,7 @@ describe("贪心区间图着色（S5-c）", () => {
 			block(3, 60, 180),
 		]);
 		expect(laid).toHaveLength(3);
-		expect(laid.map((b) => b.column).sort()).toEqual([0, 1, 2]);
+		expect(laid.map((b) => b.column).sort((a, b) => a - b)).toEqual([0, 1, 2]);
 		expect(laid.every((b) => b.columns === 3)).toBe(true);
 	});
 

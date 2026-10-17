@@ -2,8 +2,10 @@
 
 /** URL 数字参数解析：非数字返回 null（useSearchParams 原始值场景共用） */
 export function parseUrlId(raw: unknown): number | null {
-	if (!raw || !/^\d+$/.test(String(raw))) return null;
-	return parseInt(String(raw), 10);
+	const text =
+		typeof raw === "string" || typeof raw === "number" ? String(raw) : "";
+	if (!/^\d+$/.test(text)) return null;
+	return parseInt(text, 10);
 }
 
 /** 触发浏览器下载一个 Blob（自动释放 object URL） */

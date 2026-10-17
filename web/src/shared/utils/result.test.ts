@@ -94,7 +94,7 @@ describe("mapErr", () => {
 	});
 
 	it("Ok 原样传递", () => {
-		const r = mapErr(ok(1), (e) => `wrapped: ${e}`);
+		const r = mapErr(ok(1), (e) => `wrapped: ${String(e)}`);
 		expect(r.ok && r.value).toBe(1);
 	});
 });
@@ -123,7 +123,7 @@ describe("match", () => {
 	it("匹配 Ok 分支", () => {
 		const msg = match(ok("Alice"), {
 			ok: (name) => `Hello ${name}`,
-			err: (e) => `Error: ${e}`,
+			err: (e) => `Error: ${String(e)}`,
 		});
 		expect(msg).toBe("Hello Alice");
 	});

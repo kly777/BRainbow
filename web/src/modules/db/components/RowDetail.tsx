@@ -256,8 +256,8 @@ const RowDetail: Component<RowDetailProps> = (props) => {
 
 	// 打开时自动聚焦面板、注册全局键盘事件
 	createEffect(() => {
-		props.table;
-		props.rowKey;
+		void props.table;
+		void props.rowKey;
 		panelRef?.focus();
 		const handler = (e: KeyboardEvent) => handleKeyDown(e);
 		document.addEventListener("keydown", handler);

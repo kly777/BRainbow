@@ -73,7 +73,7 @@ export function usePreviewText(
 		try {
 			const resp = await fetch(item().url, {
 				signal: controller.signal,
-				headers: { ...buildHeaders(), Range: range },
+				headers: buildHeaders({ Range: range }),
 			});
 			if (id !== requestId) return; // 已被更新的请求取代
 			if (!resp.ok) {
@@ -127,7 +127,7 @@ export function usePreviewText(
 
 	// 换文件就重新装载（键是 stored_id：同一个文件的重试走 reload）
 	createEffect(() => {
-		item().stored_id;
+		void item().stored_id;
 		void reload();
 	});
 

@@ -33,8 +33,8 @@ const DbTable: Component<DbTableProps> = (props) => {
 	const [showFilters, setShowFilters] = createSignal(false);
 	// 数据刷新或换表后展开/抽屉状态失效，自动收起
 	createEffect(() => {
-		props.rows;
-		props.tableName;
+		void props.rows;
+		void props.tableName;
 		setExpandedRow(null);
 		setDetailKey(null);
 	});

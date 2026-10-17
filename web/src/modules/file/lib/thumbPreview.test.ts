@@ -4,7 +4,7 @@
 // 判定错了会给每个文件都发请求（白花服务端 CPU），排版错了会把 HTML 标签、
 // 二进制垃圾直接糊在卡片上。
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import type { FileItem } from "../api.ts";
 import type { DocPreview } from "../hooks/usePreviewDoc.ts";
 import {

@@ -53,10 +53,9 @@ export function usePreviewBytes(item: () => FileItem, offset: () => number) {
 			try {
 				resp = await fetch(current.url, {
 					signal: controller.signal,
-					headers: {
-						...buildHeaders(),
+					headers: buildHeaders({
 						Range: `bytes=${start}-${start + HEX_SEGMENT_BYTES - 1}`,
-					},
+					}),
 				});
 			} catch {
 				setError(networkPreviewError());

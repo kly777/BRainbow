@@ -42,7 +42,7 @@ export const createMemE = (
 export const getAllMemsE = (
 	params?: MemQuery,
 ): Promise<PaginatedResponse<MemItem>> => {
-	const suffix = buildQuery({ ...(params ?? {}) }).slice(1);
+	const suffix = buildQuery({ ...params }).slice(1);
 	return request(`/mem/all${suffix ? `?${suffix}` : ""}`, {});
 };
 

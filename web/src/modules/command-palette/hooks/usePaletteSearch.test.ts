@@ -7,7 +7,14 @@
 
 import { SEARCH_DEBOUNCE_MS } from "@shared/utils/timing.ts";
 import { createRoot, createSignal } from "solid-js";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vite-plus/test";
 import { searchE } from "../api.ts";
 import type { Mode } from "./usePalette.ts";
 import { usePaletteSearch } from "./usePaletteSearch.ts";

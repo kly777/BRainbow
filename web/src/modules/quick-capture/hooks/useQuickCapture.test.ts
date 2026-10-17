@@ -9,7 +9,7 @@
 
 // @vitest-environment jsdom
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { detectType } from "./useQuickCapture.ts";
 
 describe("detectType：类型前缀", () => {

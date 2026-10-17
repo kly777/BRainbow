@@ -7,8 +7,7 @@ import {
 } from "@components/ui/atoms/control.ts";
 import { type JSX, splitProps } from "solid-js";
 
-export interface SelectProps
-	extends JSX.SelectHTMLAttributes<HTMLSelectElement> {
+export interface SelectProps extends JSX.SelectHTMLAttributes<HTMLSelectElement> {
 	size?: ControlSize;
 	tone?: ControlTone;
 	mono?: boolean;

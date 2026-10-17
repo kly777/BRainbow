@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import type { Task } from "../api-types.ts";
 import { toUpdatePayload } from "./task-payload.ts";
 

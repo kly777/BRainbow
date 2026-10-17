@@ -4,7 +4,7 @@ import {
 	showConfirm,
 } from "@shared/utils/confirmStore.ts";
 import { render } from "solid-js/web";
-import { afterEach, beforeEach, expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it } from "vite-plus/test";
 import ConfirmModalContainer from "./ConfirmModal.tsx";
 
 beforeEach(() => {

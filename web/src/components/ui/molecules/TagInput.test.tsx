@@ -3,7 +3,7 @@
 // file 与 bookmark 只是它的两个数据适配器（各自的测试在模块里）。
 
 import { render } from "solid-js/web";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import TagInput, { type TagOption } from "./TagInput.tsx";
 
 const OPTIONS: TagOption[] = [

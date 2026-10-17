@@ -7,10 +7,7 @@ export {
 	mentionsToDescription,
 	parseCapture,
 } from "./lib/capture.ts";
-export {
-	captureToCreateRequest,
-	toUpdatePayload,
-} from "./lib/task-payload.ts";
+export { captureToCreateRequest, toUpdatePayload } from "./lib/task-payload.ts";
 export { default as TaskManager } from "./TaskManager.tsx";
 export * from "./taskSeriesApi.ts";
 export * from "./timeWindowApi.ts";

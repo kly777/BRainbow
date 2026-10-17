@@ -4,7 +4,7 @@
 
 import type { ChatTree } from "@modules/chat";
 import { render } from "solid-js/web";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { ChatSidebar } from "./ChatSidebar.tsx";
 
 // 列表项的重命名 / AI 取名按钮会调接口，这里只渲染不点击，mock 掉避免真请求

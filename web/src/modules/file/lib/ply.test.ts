@@ -6,7 +6,7 @@
 //     字节序、截断与不支持的格式
 //   · .splat —— 定长 32 字节、布局与内部紧凑数组一致（零重排），以及长度校验
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import {
 	boundsFromPositions,
 	buildSplatData,
@@ -250,7 +250,7 @@ describe("buildSplatData：点云与异常", () => {
 		expect(data.bytes[26]).toBe(30);
 		expect(data.bytes[27]).toBe(255);
 		// 单位四元数：着色器按 (u8-128)/128 还原 → (1,0,0,0) 要写成 255/128/128/128
-		expect([...data.bytes.slice(28, 32)]).toEqual([255, 128, 128, 128]);
+		expect(Array.from(data.bytes.slice(28, 32))).toEqual([255, 128, 128, 128]);
 	});
 
 	it("点云保持文件顺序（没有 importance 可排）", () => {
@@ -371,8 +371,10 @@ describe("buildSplatDataFromSplat（.splat）", () => {
 		expect([texF[0], texF[1], texF[2]]).toEqual([1, 2, 3]);
 		expect([texF[8], texF[9], texF[10]]).toEqual([-4, 5, 6]);
 		// 颜色塞在奇数 texel 的四个分量里
-		expect([...texU8.slice(4 * 7, 4 * 7 + 4)]).toEqual([10, 20, 30, 40]);
-		expect([...texU8.slice(4 * 15, 4 * 15 + 4)]).toEqual([200, 150, 100, 50]);
+		expect(Array.from(texU8.slice(4 * 7, 4 * 7 + 4))).toEqual([10, 20, 30, 40]);
+		expect(Array.from(texU8.slice(4 * 15, 4 * 15 + 4))).toEqual([
+			200, 150, 100, 50,
+		]);
 	});
 
 	it("与 .ply 路径给出同一套取景范围（同内容两种格式）", () => {

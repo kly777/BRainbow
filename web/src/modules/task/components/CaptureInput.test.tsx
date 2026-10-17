@@ -5,7 +5,7 @@
 //  3. 空标题（纯符号 / 纯空白）不能提交（A1）。
 
 import { render } from "solid-js/web";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import CaptureInput, { type CaptureSubmit } from "./CaptureInput.tsx";
 
 function mount(

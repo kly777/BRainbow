@@ -13,7 +13,7 @@
 
 import { getFile } from "@modules/file/api.ts";
 import { render } from "solid-js/web";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import FileDetailPage from "./FileDetail.tsx";
 
 vi.mock("@modules/file/api.ts", async (importOriginal) => {

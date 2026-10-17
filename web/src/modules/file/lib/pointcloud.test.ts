@@ -4,7 +4,7 @@
 // 以及"按内容认格式"的三个判据。输出要能被引擎直接当"普通点云"渲染：
 // 小圆点（缩放 0.01）、单位四元数、颜色直取。
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { PlyError, SPLAT_ROW_BYTES } from "./ply.ts";
 import {
 	isPcdBytes,
@@ -25,9 +25,8 @@ const xyzAt = (bytes: Uint8Array, i: number) => {
 };
 
 /** 紧凑数组里的 rgba 字节 */
-const rgbaAt = (bytes: Uint8Array, i: number) => [
-	...bytes.slice(i * SPLAT_ROW_BYTES + 24, i * SPLAT_ROW_BYTES + 28),
-];
+const rgbaAt = (bytes: Uint8Array, i: number) =>
+	Array.from(bytes.slice(i * SPLAT_ROW_BYTES + 24, i * SPLAT_ROW_BYTES + 28));
 
 const encode = (text: string) => new TextEncoder().encode(text);
 
@@ -88,7 +87,7 @@ describe("parsePcd：ascii", () => {
 		// 点云的固定小尺度 + 单位四元数
 		const view = new DataView(data.bytes.buffer, data.bytes.byteOffset);
 		expect(view.getFloat32(12, true)).toBeCloseTo(0.01, 6);
-		expect([...data.bytes.slice(28, 32)]).toEqual([255, 128, 128, 128]);
+		expect(Array.from(data.bytes.slice(28, 32))).toEqual([255, 128, 128, 128]);
 	});
 
 	it("r/g/b 三列时按值域归一（0..255 与 0..1 都认）", () => {

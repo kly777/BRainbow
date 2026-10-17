@@ -7,8 +7,7 @@ import {
 } from "@components/ui/atoms/control.ts";
 import { type JSX, splitProps } from "solid-js";
 
-export interface TextareaProps
-	extends JSX.TextareaHTMLAttributes<HTMLTextAreaElement> {
+export interface TextareaProps extends JSX.TextareaHTMLAttributes<HTMLTextAreaElement> {
 	size?: ControlSize;
 	tone?: ControlTone;
 	mono?: boolean;

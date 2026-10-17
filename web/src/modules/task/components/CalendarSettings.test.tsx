@@ -4,7 +4,14 @@
 
 import { createRoot } from "solid-js";
 import { render } from "solid-js/web";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vite-plus/test";
 import { useTaskCalendar } from "../hooks/useTaskCalendar.ts";
 import CalendarSettings from "./CalendarSettings.tsx";
 import TaskCalendar from "./TaskCalendar.tsx";

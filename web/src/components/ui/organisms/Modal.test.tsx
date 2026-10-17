@@ -5,7 +5,7 @@
 import Modal from "@components/ui/organisms/Modal";
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 

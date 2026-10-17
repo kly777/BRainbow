@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // 日历纯计算的验收用例，逐条对着 06-日历视图 §3 的验收表（S4-a / S4-b / S4-i）
 
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vite-plus/test";
 import type { CalendarEvent } from "../api-types.ts";
 import {
 	type CalendarDensity,
@@ -194,7 +194,9 @@ describe("周起始日：locale + 设置 + 深链接（S4-i）", () => {
 	});
 
 	it("周末跟着 locale（zh-CN 是周六周日；CLDR 的顺序不保证，断言按集合比）", () => {
-		expect([...localeWeekendDays("zh-CN")].sort()).toEqual([0, 6]);
+		expect([...localeWeekendDays("zh-CN")].sort((a, b) => a - b)).toEqual([
+			0, 6,
+		]);
 		expect([...localeWeekendDays("en-US")].sort((a, b) => a - b)).toEqual([
 			0, 6,
 		]);

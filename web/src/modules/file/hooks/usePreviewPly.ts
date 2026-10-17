@@ -68,7 +68,7 @@ async function fetchPly(
 		onPhase?.({ kind: "probing" });
 		const probe = await fetch(item.url, {
 			signal: request.signal,
-			headers: { ...buildHeaders(), Range: `bytes=0-${PROBE_BYTES - 1}` },
+			headers: buildHeaders({ Range: `bytes=0-${PROBE_BYTES - 1}` }),
 		});
 		if (!probe.ok)
 			return { kind: "failed", message: `加载失败（HTTP ${probe.status}）` };

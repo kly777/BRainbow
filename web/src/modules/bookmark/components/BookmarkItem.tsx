@@ -45,9 +45,9 @@ export function BookmarkItem(props: {
 		new Set<string>(),
 	);
 
-	const handleCheckAccessibility = async () => {
+	const handleCheckAccessibility = () => {
 		setChecking(true);
-		await props.onCheckAccessibility();
+		props.onCheckAccessibility();
 		setChecking(false);
 	};
 

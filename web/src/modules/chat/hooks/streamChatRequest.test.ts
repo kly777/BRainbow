@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 // mock @components/ui 避免 handleGlobalError 内动态 import 挂起
 vi.mock("@components/ui", () => ({

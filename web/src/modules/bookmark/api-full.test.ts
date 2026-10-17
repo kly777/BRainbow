@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import {
 	createBookmarkE,
 	deleteBookmarkE,
@@ -251,9 +251,8 @@ describe("bookmark API", () => {
 
 	it("管理标签", async () => {
 		// 测试管理标签
-		const { cachedRequest, request, del, domains } = await import(
-			"@shared/api"
-		);
+		const { cachedRequest, request, del, domains } =
+			await import("@shared/api");
 		const mockCachedRequest = vi.mocked(cachedRequest);
 		const mockRequest = vi.mocked(request);
 		const mockDel = vi.mocked(del);

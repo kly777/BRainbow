@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import type { DirUsage, ModuleStats } from "./api.ts";
 import {
 	formatBackupUsage,

@@ -6,7 +6,7 @@
 
 import { copyTextWithToast } from "@shared/utils";
 import { render } from "solid-js/web";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { countLines, numberingOf, PreBlock } from "./PreBlock.tsx";
 
 vi.mock("@shared/utils", async (importOriginal) => {

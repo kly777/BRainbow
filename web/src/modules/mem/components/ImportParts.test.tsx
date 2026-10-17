@@ -5,7 +5,7 @@
 // 的展示分支。
 
 import { render } from "solid-js/web";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 // ImportResult 里有路由链接 <A>，它必须在 Route 上下文内 —— 单测里替换掉
 vi.mock("@solidjs/router", () => ({

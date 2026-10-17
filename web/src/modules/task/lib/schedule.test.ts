@@ -1,7 +1,7 @@
 // 落位的反馈契约（S5-d 具体文案 / S5-k 撤销而非确认框）。
 // API 层被 mock 掉，这里只测"我们怎么说话、失败了给不给反悔的路"。
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 const createTaskE = vi.fn();
 const updateTimeWindowE = vi.fn();

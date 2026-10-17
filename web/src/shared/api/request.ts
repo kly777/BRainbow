@@ -249,7 +249,7 @@ export const request = async <T>(
 		// 未登录时大请求体（如书签导入）可能被服务器/代理截断连接，
 		// 收不到 401 而是 NetworkError —— 兜底弹登录提示
 		if (!getToken()) {
-			await triggerAuthRequired();
+			triggerAuthRequired();
 		} else {
 			toast({
 				type: "error",

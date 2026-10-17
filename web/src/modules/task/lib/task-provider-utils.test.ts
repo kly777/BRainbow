@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import type { TaskStatusType } from "../api-types.ts";
 import { makeTemp, STATUS_API } from "./task-provider-utils.ts";
 

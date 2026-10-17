@@ -109,7 +109,7 @@ export function gaussianRow(
 	const { x = 0, y = 0, z = 0, dc = [0, 0, 0], opacity = 0 } = over;
 	const scale = over.scale ?? [0, 0, 0];
 	const rot = over.rot ?? [1, 0, 0, 0];
-	return [...[x, y, z], ...dc, opacity, ...scale, ...rot];
+	return [x, y, z, ...dc, opacity, ...scale, ...rot];
 }
 
 /** 紧凑数组里的 f32 读取（断言用） */

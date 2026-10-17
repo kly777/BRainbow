@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // 筛选规则的单测：条件之间是「且」、同一条件多值是「或」、空条件等价于不筛。
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import type { Task, TaskPriority, TaskStatusType } from "../api-types.ts";
 import {
 	applyFilter,

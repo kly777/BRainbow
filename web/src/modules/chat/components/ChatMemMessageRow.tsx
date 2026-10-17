@@ -59,7 +59,7 @@ export function MessageRow(props: {
 							type="button"
 							class={styles.msgBtn}
 							title="复制内容"
-							onClick={() => void copyNode(node)}
+							onClick={() => copyNode(node)}
 						>
 							复制
 						</button>

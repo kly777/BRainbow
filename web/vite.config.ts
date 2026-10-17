@@ -1,7 +1,7 @@
-/// <reference types="vitest" />
+/// <reference types="vite-plus/test" />
 
 import { fileURLToPath } from "node:url";
-import { defineConfig, loadEnv, type Plugin } from "vite";
+import { defineConfig, loadEnv, type Plugin, lazyPlugins } from "vite-plus";
 import solid from "vite-plugin-solid";
 import { generateAll } from "./scripts/generate-seo.ts";
 
@@ -34,7 +34,7 @@ export default defineConfig(({ command, mode }) => {
 	}
 	const apiTarget = env.VITE_API_TARGET ?? "http://localhost:3000";
 
-	// vitest 以 `mode: "test"` 运行（package.json 的 `vitest run` 不带 --mode）。
+	// vitest 以 `mode: "test"` 运行（`vp test run` 不带 --mode）。
 	//
 	// 测试里必须关掉 HMR（`hot: false`），否则**每个组件测试都在收集阶段就死**：
 	// solid-refresh 运行时用自己的模块 id 作根相对路径 `/@solid-refresh`，
@@ -49,7 +49,58 @@ export default defineConfig(({ command, mode }) => {
 	const isTest = mode === "test";
 
 	return {
-		plugins: [solid({ hot: !isTest }), seoPlugin(siteUrl)],
+		fmt: {
+			// 与项目原来的 Biome 口径对齐：tab 缩进、双引号、80 列、尾逗号。
+			printWidth: 80,
+			tabWidth: 2,
+			useTabs: true,
+			semi: true,
+			singleQuote: false,
+			trailingComma: "all",
+			// package.json 的字段顺序是人工排的，不交给 formatter 重排。
+			sortPackageJson: false,
+			ignorePatterns: [
+				"dist/**",
+				"src/components/kumo/**",
+				"**/*.css",
+				"e2e/.auth/**",
+				"test-results/**",
+				"playwright-report/**",
+			],
+		},
+		lint: {
+			ignorePatterns: ["dist/**", "src/components/kumo/**"],
+			jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
+			rules: {
+				"vite-plus/prefer-vite-plus-imports": "error",
+				// Solid 的 ref 是 `let x: T | undefined` + JSX `ref={x}` 赋值，
+				// Oxlint 看不到这条赋值路径；unbound-method 也误判 Solid 的解构函数。
+				"eslint/no-unassigned-vars": "off",
+				"typescript/unbound-method": "off",
+				// 事件处理器普遍是 fire-and-forget（错误由 provider / toast 统一处理）；
+				// Solid 的 createEffect 用表达式收集依赖；查询/测试 helper 对 unknown
+				// 显式字符串化。这些规则在本项目持续误报或收益很低，迁移时统一关闭。
+				"typescript/no-floating-promises": "off",
+			},
+			overrides: [
+				{
+					files: ["src/shared/api/query.ts", "src/modules/**/api-*.test.ts"],
+					rules: {
+						// 查询串与测试 helper 对 unknown 参数显式 String()，值域由调用方保证
+						"typescript/no-base-to-string": "off",
+					},
+				},
+				{
+					files: ["src/shared/api/request.ts"],
+					rules: {
+						// `toast()` 是同步通知函数；这里的 await 是历史写法
+						"typescript/await-thenable": "off",
+					},
+				},
+			],
+			options: { typeAware: true, typeCheck: true },
+		},
+		plugins: lazyPlugins(() => [solid({ hot: !isTest }), seoPlugin(siteUrl)]),
 		envDir,
 
 		css: {
@@ -146,6 +197,9 @@ export default defineConfig(({ command, mode }) => {
 		build: {
 			outDir: "dist",
 			emptyOutDir: true,
+			// three 的独立懒 chunk 已知约 736KB（首屏不加载）；把阈值提到 800KB，
+			// 既保留"又有东西异常变大"的提醒，又不让已知的 3D 查看器常驻警告。
+			chunkSizeWarningLimit: 800,
 			// JS 兼容基线 = vite 默认的 baseline-widely-available（2026-01-01 基线）：
 			// chrome111 / edge111 / firefox114 / safari16.4 / ios16.4
 			// 与 lightningcss 的 CSS 基线一致，显式写出便于调整

@@ -5,7 +5,7 @@
 // （详情页是文件汇集里的一条，相邻文件无语义关系；要翻一组图请走列表页）。
 
 import { render } from "solid-js/web";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { ImageViewer } from "./ImageViewer.tsx";
 import { item } from "./test-fixtures.ts";
 

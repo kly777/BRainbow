@@ -3,7 +3,7 @@
 // 零向量与俯视这两个退化情况最值得钉住：前者会让相机与目标重合（画面全黑），
 // 后者会让相机的"上方向"与视线平行（画面翻滚）。
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import {
 	cameraPositionFor,
 	normalize,

@@ -8,7 +8,7 @@
 import type { JSX } from "solid-js";
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { FileItem } from "../api.ts";
 import ImageLightbox from "./ImageLightbox.tsx";
 

@@ -3,7 +3,7 @@
 // 非管理员看到拒绝提示、管理员看到五张卡片、注册开关真的调接口、轮换要走确认框。
 
 import { render } from "solid-js/web";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import AdminPage from "./AdminPage.tsx";
 import {
 	getAdminSettingsE,

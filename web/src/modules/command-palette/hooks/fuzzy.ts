@@ -35,7 +35,7 @@ function levenshtein(a: string, b: string): number {
 	if (lb === 0) return la;
 
 	const d: number[][] = Array.from({ length: la + 1 }, () =>
-		new Array(lb + 1).fill(0),
+		Array.from({ length: lb + 1 }, () => 0),
 	);
 
 	for (let i = 0; i <= la; i++) d[i][0] = i;

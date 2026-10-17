@@ -83,9 +83,8 @@ export function toRouteDefs(config: RouteConfig[]): RouteDefinition[] {
 		component,
 		preload: PRELOADED_PATHS.has(path)
 			? async (args) => {
-					const { PAGE_PRELOADS, shouldPrefetch } = await import(
-						"@app/route-preloads.ts"
-					);
+					const { PAGE_PRELOADS, shouldPrefetch } =
+						await import("@app/route-preloads.ts");
 					if (!shouldPrefetch(args.intent)) return;
 					await PAGE_PRELOADS[path as PathValue]?.(args);
 				}

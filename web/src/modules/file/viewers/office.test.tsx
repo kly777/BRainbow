@@ -4,7 +4,14 @@
 // 怎么画"，以及三条容易坏的路：预览地址派生、类型对不上、后端报错要说给用户听。
 
 import { render } from "solid-js/web";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vite-plus/test";
 import { previewUrlOf } from "../hooks/usePreviewDoc.ts";
 import { ArchiveViewer } from "./ArchiveViewer.tsx";
 import { DatabaseViewer } from "./DatabaseViewer.tsx";

@@ -3,7 +3,7 @@
 // 都没有时只剩容器（调用方靠它做居中，不塌成 null）。
 
 import { render } from "solid-js/web";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import EmptyState from "./EmptyState.tsx";
 
 function mount(node: () => unknown) {

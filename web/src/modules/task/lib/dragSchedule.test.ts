@@ -1,7 +1,7 @@
 // 拖拽落位的反馈契约（Apple HIG，06-日历视图 §6.1）+ 键盘等价路径。
 // 每条测试都对着验收表的一个编号。
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { dragOffsetToMinute } from "./calendarAxis.ts";
 import type { DragBlock } from "./dragSchedule.ts";
 import {

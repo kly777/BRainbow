@@ -6,7 +6,7 @@
 import { Route, Router } from "@solidjs/router";
 import type { JSX } from "solid-js";
 import { render } from "solid-js/web";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import ConvTopBar from "./ConvTopBar.tsx";
 
 function mount(node: () => JSX.Element): HTMLDivElement {

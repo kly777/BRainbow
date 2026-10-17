@@ -12,7 +12,7 @@ import {
 	searchBookmarksE,
 } from "@modules/bookmark";
 import { createRoot } from "solid-js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useBookmarkPage } from "./useBookmarkPage.ts";
 
 vi.mock("@modules/bookmark/api.ts", () => ({

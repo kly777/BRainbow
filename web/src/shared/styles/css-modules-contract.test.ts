@@ -16,7 +16,7 @@
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 
 // vitest 从 web/ 启动（pnpm run test），与 scripts/generate-seo.ts 的相对路径假设一致
 const SRC_ROOT = toPosix(join(process.cwd(), "src"));
@@ -80,7 +80,7 @@ describe("CSS Module 类名引用契约", () => {
 		const cssFiles = files.filter((f) => f.endsWith(".module.css"));
 		const tsFiles = files.filter(
 			(f) =>
-				(/\.tsx?$/.test(f) || /\.ts$/.test(f)) &&
+				(/\.tsx?$/.test(f) || f.endsWith(".ts")) &&
 				!f.endsWith(".d.ts") &&
 				!f.includes(".test."),
 		);

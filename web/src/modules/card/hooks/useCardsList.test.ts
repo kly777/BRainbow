@@ -9,7 +9,7 @@ import {
 	searchCardsE,
 } from "@modules/card";
 import { createRoot } from "solid-js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useCardsList } from "./useCardsList.ts";
 
 vi.mock("@modules/card/api.ts", () => ({
@@ -191,8 +191,8 @@ describe("分页与加载更多", () => {
 		return withHook(async (h) => {
 			await seed(h, [], 3);
 			mockedGet.mockClear();
-			await h.handlePageChange(0);
-			await h.handlePageChange(4);
+			h.handlePageChange(0);
+			h.handlePageChange(4);
 			await flush();
 			expect(mockedGet).not.toHaveBeenCalled();
 		});

@@ -1,7 +1,7 @@
 // ── 全局搜索目标的 URL 解析、模块标签、导航候选 ──
 
 import { fillPath, isConcretePath, PATHS } from "@config/paths";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import {
 	buildIdleItems,
 	buildNavItems,
@@ -34,7 +34,7 @@ describe("resolveTargetUrl", () => {
 	});
 
 	it("未知类型回退到首页", () => {
-		// biome-ignore lint/suspicious/noExplicitAny: 模拟后端新增类型而前端未更新
+		// 模拟后端新增类型而前端未更新：这里故意越界用 any
 		const unknown = { type: "Nope", params: {} } as any;
 		expect(resolveTargetUrl(unknown)).toBe(PATHS.home);
 	});

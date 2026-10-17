@@ -2,7 +2,7 @@
 //
 // 重点是"以指针为中心"的滚动补偿，以及"100% = 原始像素"的显示口径。
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import {
 	canZoomIn,
 	canZoomOut,

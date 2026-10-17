@@ -11,7 +11,7 @@
 // 名字的正确性由 tokens-contract.test.ts 保证，两者合起来覆盖原先的失效面。
 
 import { readToken } from "@shared/styles";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vite-plus/test";
 import type { LayoutEdge, LayoutNode } from "./dag-layout.ts";
 import { drawGraph } from "./dag-render.ts";
 

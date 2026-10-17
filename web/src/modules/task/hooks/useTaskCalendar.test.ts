@@ -1,6 +1,13 @@
 // @vitest-environment jsdom
 import { createRoot } from "solid-js";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vite-plus/test";
 import { useTaskCalendar } from "./useTaskCalendar.ts";
 
 // 模拟依赖：notifyError 静音；其余（useListResource 等）走原实现 ——

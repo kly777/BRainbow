@@ -4,7 +4,14 @@
 
 import { createSignal, type JSX } from "solid-js";
 import { render } from "solid-js/web";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vite-plus/test";
 import SearchInput from "./SearchInput.tsx";
 
 const input = () => document.querySelector("input") as HTMLInputElement;

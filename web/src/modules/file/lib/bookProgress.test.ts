@@ -3,7 +3,7 @@
 // 存档只存"章号 + 章内比例"：存像素没意义（换字号/窗口后同一个像素落在别处）。
 // 解析必须**严格** —— 书籍被替换后旧章号可能越界，宁可从头读也不要跳到半路。
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import {
 	bookProgressKey,
 	clampFontScaleIndex,

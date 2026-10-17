@@ -31,7 +31,7 @@ const TableHeaderActions: Component<TableHeaderActionsProps> = (props) => (
 				variant="secondary"
 				size="sm"
 				disabled={props.exporting !== ""}
-				onClick={() => void props.onExport("csv")}
+				onClick={() => props.onExport("csv")}
 			>
 				{props.exporting === "csv" ? "导出中…" : "CSV"}
 			</Button>
@@ -39,7 +39,7 @@ const TableHeaderActions: Component<TableHeaderActionsProps> = (props) => (
 				variant="secondary"
 				size="sm"
 				disabled={props.exporting !== ""}
-				onClick={() => void props.onExport("json")}
+				onClick={() => props.onExport("json")}
 			>
 				{props.exporting === "json" ? "导出中…" : "JSON"}
 			</Button>

@@ -6,7 +6,7 @@
 //      骨架会插在旧内容上方把内容顶下去（/file/:id 的"沉一下"）。
 
 import { createRoot, createSignal } from "solid-js";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { useDetailResource } from "./useDetailResource.ts";
 
 const flush = () => new Promise((r) => setTimeout(r, 0));

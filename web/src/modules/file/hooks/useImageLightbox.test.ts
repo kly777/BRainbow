@@ -4,7 +4,7 @@
 // 可放大的那些"（判定与卡片/列表行共用 canZoom）。
 
 import { render } from "solid-js/web";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import type { FileItem } from "../api.ts";
 import { useImageLightbox } from "./useImageLightbox.ts";
 

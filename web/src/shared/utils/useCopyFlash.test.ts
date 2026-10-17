@@ -4,7 +4,7 @@
 // 前一个的定时器会把后一个的高亮提前掐掉）。
 
 import { render } from "solid-js/web";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { useCopyFlash } from "./useCopyFlash.ts";
 
 function setup(durationMs = 30) {

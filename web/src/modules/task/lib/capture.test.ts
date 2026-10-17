@@ -1,7 +1,7 @@
 // 单测矩阵照 doc/design/task-ux/03-录入模型.md §5 的八组抄下来 —— 每条都是规格，
 // 不是"顺手写的断言"：改了语法就得同时改这里与那份文档。
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import {
 	addTagToken,
 	parseCapture,

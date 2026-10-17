@@ -5,7 +5,7 @@
 
 import type { JSX } from "solid-js";
 import { render } from "solid-js/web";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vite-plus/test";
 import { LoadingSkeleton, SkeletonGrid, SkeletonList } from "./Skeleton.tsx";
 
 function mount(ui: () => JSX.Element) {

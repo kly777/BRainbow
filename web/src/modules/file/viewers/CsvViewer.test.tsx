@@ -5,7 +5,7 @@
 // 「全部展开」只在小表上出现，大表只能一批批翻。
 
 import { render } from "solid-js/web";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import { CsvViewer } from "./CsvViewer.tsx";
 import { item } from "./test-fixtures.ts";
 

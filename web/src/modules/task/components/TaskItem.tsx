@@ -150,7 +150,7 @@ function TaskItem(props: TaskItemProps) {
 		}
 	});
 
-	const choose = (key: ConditionKey | string) => {
+	const choose = (key: string) => {
 		if (key === "subtask") {
 			setMenuOpen(false);
 			setShowSubTaskInput(true);

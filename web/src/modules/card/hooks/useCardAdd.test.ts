@@ -3,7 +3,7 @@
 // mock 路由与 API 层，hook 在 createRoot 中运行（同 mem hooks 测试范式）。
 import { createCardE } from "@modules/card";
 import { createRoot } from "solid-js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useCardAdd } from "./useCardAdd.ts";
 
 vi.mock("@modules/card/api.ts", () => ({ createCardE: vi.fn() }));

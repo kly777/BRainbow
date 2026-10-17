@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { describeGatewayStatus, extractErrorBody } from "./request";
 
 function mockResponse(body: string, status = 400): Response {

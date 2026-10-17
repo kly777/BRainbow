@@ -4,7 +4,14 @@
 // 都是可写的普通属性 —— 手工派发 loadedmetadata / timeupdate 就能把整条链路跑通。
 
 import { render } from "solid-js/web";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vite-plus/test";
 import { AudioViewer } from "./AudioViewer.tsx";
 import { item } from "./test-fixtures.ts";
 import { VideoViewer } from "./VideoViewer.tsx";

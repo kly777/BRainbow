@@ -8,7 +8,7 @@ import Input from "@components/ui/atoms/Input.tsx";
 import Textarea from "@components/ui/atoms/Textarea.tsx";
 import type { JSX } from "solid-js";
 import { render } from "solid-js/web";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { getOntoE, updateOntoE } from "./api";
 import OntologyDetail from "./OntologyDetail.tsx";
 

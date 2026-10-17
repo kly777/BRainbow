@@ -2,7 +2,7 @@
 
 import type { JSX } from "solid-js";
 import { render } from "solid-js/web";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import InfoHint from "./InfoHint.tsx";
 
 /** 渲染一个 hint，返回宿主与 Tooltip 的 wrap span */

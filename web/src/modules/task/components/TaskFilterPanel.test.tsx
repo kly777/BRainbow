@@ -3,7 +3,7 @@
 
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import { EMPTY_FILTER, type TaskFilter } from "../lib/task-filter.ts";
 import TaskFilterPanel, { ActiveFilterChips } from "./TaskFilterPanel.tsx";
 

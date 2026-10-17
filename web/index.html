@@ -1,53 +1,59 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Brainbow</title>
-        <meta name="description" content="Brainbow 个人知识管理：间隔重复记忆、任务管理、知识卡片、AI 对话与英语阅读">
-        <meta name="theme-color" content="#2e7d64">
-        <link rel="canonical" href="%VITE_SITE_URL%/">
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-        <link rel="apple-touch-icon" href="/favicon.svg">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Brainbow</title>
+		<meta
+			name="description"
+			content="Brainbow 个人知识管理：间隔重复记忆、任务管理、知识卡片、AI 对话与英语阅读"
+		/>
+		<meta name="theme-color" content="#2e7d64" />
+		<link rel="canonical" href="%VITE_SITE_URL%/" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="apple-touch-icon" href="/favicon.svg" />
 
-        <!-- Open Graph（社交分享卡片） -->
-        <meta property="og:site_name" content="Brainbow">
-        <meta property="og:type" content="website">
-        <meta property="og:title" content="Brainbow">
-        <meta property="og:url" content="%VITE_SITE_URL%/">
-        <meta property="og:description" content="Brainbow 个人知识管理：间隔重复记忆、任务管理、知识卡片、AI 对话与英语阅读">
-        <meta name="twitter:card" content="summary">
+		<!-- Open Graph（社交分享卡片） -->
+		<meta property="og:site_name" content="Brainbow" />
+		<meta property="og:type" content="website" />
+		<meta property="og:title" content="Brainbow" />
+		<meta property="og:url" content="%VITE_SITE_URL%/" />
+		<meta
+			property="og:description"
+			content="Brainbow 个人知识管理：间隔重复记忆、任务管理、知识卡片、AI 对话与英语阅读"
+		/>
+		<meta name="twitter:card" content="summary" />
 
-        <script type="application/ld+json">
-            {
-                "@context": "https://schema.org",
-                "@type": "WebSite",
-                "name": "Brainbow",
-                "description": "个人知识管理：间隔重复记忆、任务管理、知识卡片、AI 对话与英语阅读",
-                "url": "%VITE_SITE_URL%/"
-            }
-        </script>
-    </head>
-    <body>
-        <div id="app"></div>
+		<script type="application/ld+json">
+			{
+				"@context": "https://schema.org",
+				"@type": "WebSite",
+				"name": "Brainbow",
+				"description": "个人知识管理：间隔重复记忆、任务管理、知识卡片、AI 对话与英语阅读",
+				"url": "%VITE_SITE_URL%/"
+			}
+		</script>
+	</head>
+	<body>
+		<div id="app"></div>
 
-        <noscript>
-            <div style="text-align: center; padding: 50px">
-                <h1>需要启用 JavaScript</h1>
-                <p>Brainbow 需要 JavaScript 才能正常运行。</p>
-                <p>请启用浏览器中的 JavaScript 功能，然后刷新页面。</p>
-            </div>
-        </noscript>
+		<noscript>
+			<div style="text-align: center; padding: 50px">
+				<h1>需要启用 JavaScript</h1>
+				<p>Brainbow 需要 JavaScript 才能正常运行。</p>
+				<p>请启用浏览器中的 JavaScript 功能，然后刷新页面。</p>
+			</div>
+		</noscript>
 
-        <script type="module" src="/src/app/index.tsx"></script>
+		<script type="module" src="/src/app/index.tsx"></script>
 
-        <script>
-            // 应用初始化失败兜底：仅当 app 容器尚未渲染任何内容时展示
-            (() => {
-                function showError() {
-                    const app = document.getElementById("app");
-                    if (!app || app.childElementCount > 0) return;
-                    app.innerHTML = `
+		<script>
+			// 应用初始化失败兜底：仅当 app 容器尚未渲染任何内容时展示
+			(() => {
+				function showError() {
+					const app = document.getElementById("app");
+					if (!app || app.childElementCount > 0) return;
+					app.innerHTML = `
                     <div style="text-align: center; padding: 50px;">
                         <h1>应用程序错误</h1>
                         <p>抱歉，应用程序遇到了一个错误。</p>
@@ -65,10 +71,10 @@
                         </button>
                     </div>
                 `;
-                }
-                window.addEventListener("error", showError);
-                window.addEventListener("unhandledrejection", showError);
-            })();
-        </script>
-    </body>
+				}
+				window.addEventListener("error", showError);
+				window.addEventListener("unhandledrejection", showError);
+			})();
+		</script>
+	</body>
 </html>

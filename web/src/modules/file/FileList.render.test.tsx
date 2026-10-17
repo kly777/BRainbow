@@ -2,7 +2,7 @@
 
 import { createRoot } from "solid-js";
 import { render } from "solid-js/web";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 // 模块级 mock：直接 mock 叶子模块 api.ts（mock index 会因 importOriginal
 // 加载 FileList→useFileList 循环绑定到未 mock 的命名空间，导致 hook 走真实 fetch）
@@ -65,9 +65,8 @@ describe("FileList 渲染", () => {
 	beforeEach(async () => {
 		document.body.innerHTML = "";
 		// 每个用例从"写操作正常成功"的默认桩开始，避免上一个用例的桩串味
-		const { deleteFile, updateFile, listFiles } = await import(
-			"@modules/file/api.ts"
-		);
+		const { deleteFile, updateFile, listFiles } =
+			await import("@modules/file/api.ts");
 		vi.mocked(deleteFile).mockReset().mockResolvedValue(undefined);
 		vi.mocked(updateFile)
 			.mockReset()

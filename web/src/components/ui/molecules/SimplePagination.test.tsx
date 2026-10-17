@@ -7,7 +7,7 @@ import Button from "@components/ui/atoms/Button.tsx";
 import SimplePagination from "@components/ui/molecules/SimplePagination.tsx";
 import type { ComponentProps, JSX } from "solid-js";
 import { render } from "solid-js/web";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 function mount(node: () => JSX.Element): HTMLDivElement {
 	const host = document.createElement("div");

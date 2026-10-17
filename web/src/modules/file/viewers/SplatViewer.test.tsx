@@ -6,7 +6,14 @@
 //  2. 渲染不了（无 WebGL2）或文件过大时给可见提示 + 下载入口，而不是白屏/卡死。
 
 import { render } from "solid-js/web";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vite-plus/test";
 import { buildPly, GAUSSIAN_PROPS, gaussianRow } from "../lib/ply-fixtures.ts";
 import { SplatViewer } from "./SplatViewer.tsx";
 import { item } from "./test-fixtures.ts";

@@ -3,7 +3,7 @@
 // 可访问名的取舍（带文案则它是 status，否则对读屏器隐藏）。
 
 import { render } from "solid-js/web";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import Spinner from "./Spinner.tsx";
 
 function mount(node: () => unknown) {

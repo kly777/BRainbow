@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { getConvConceptE, getConvDetailE, searchConvE } from "./api.ts";
 
 // 模拟依赖

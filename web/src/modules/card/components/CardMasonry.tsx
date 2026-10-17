@@ -51,8 +51,8 @@ const CardMasonry: Component<CardMasonryProps> = (props) => {
 
 	// 内容未撑满时自动加载下一页，直到填满视口或没有更多
 	createEffect(() => {
-		props.cards.length; // 依赖卡片变化
-		props.loadingMore; // 依赖加载状态
+		void props.cards.length; // 依赖卡片变化
+		void props.loadingMore; // 依赖加载状态
 		queueMicrotask(() => {
 			if (!scrollRef || !props.onLoadMore || props.loadingMore) return;
 			const { scrollWidth, clientWidth } = scrollRef;

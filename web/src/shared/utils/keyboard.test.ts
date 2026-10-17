@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // ── 键盘让路判定 ──
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import { isImeComposing, isTypingTarget } from "./keyboard.ts";
 
 function el(tag: string, editing = false): HTMLElement {

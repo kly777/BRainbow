@@ -140,9 +140,9 @@ enum Command {
     },
 
     // ── 本地开发循环 ──
-    /// 格式化：cargo fmt + 前端 biome format
+    /// 格式化：cargo fmt + 前端 Vite+ fmt
     Fmt,
-    /// 检查：clippy（workspace）+ 前端 biome/stylelint
+    /// 检查：clippy（workspace）+ 前端 Vite+/stylelint
     Lint,
     /// 后端测试（装了 cargo-nextest 就用它）
     Test {

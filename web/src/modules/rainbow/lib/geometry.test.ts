@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { RAINBOW_SQUARE_SIZE, rainbowGeometry } from "./geometry.ts";
 
 describe("rainbow geometry", () => {

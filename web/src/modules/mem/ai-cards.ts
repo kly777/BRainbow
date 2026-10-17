@@ -91,11 +91,15 @@ export function parseAiCards(raw: string): Result<AiCard[], string> {
 	return err("AI 返回的不是有效 JSON，请重试");
 }
 
+function textOf(value: unknown): string {
+	return typeof value === "string" ? value : "";
+}
+
 function toCards(items: readonly unknown[]): AiCard[] {
 	return items
 		.map((i) => ({
-			cue: String((i as { cue?: unknown })?.cue ?? "").trim(),
-			target: String((i as { target?: unknown })?.target ?? "").trim(),
+			cue: textOf((i as { cue?: unknown })?.cue).trim(),
+			target: textOf((i as { target?: unknown })?.target).trim(),
 		}))
 		.filter((c) => c.cue && c.target);
 }

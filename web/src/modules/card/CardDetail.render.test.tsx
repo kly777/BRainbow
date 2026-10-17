@@ -6,7 +6,7 @@
 
 import { getCardE } from "@modules/card";
 import { render } from "solid-js/web";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import CardDetailPage from "./CardDetail.tsx";
 
 vi.mock("@modules/card/api.ts", () => ({

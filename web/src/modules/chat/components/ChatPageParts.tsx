@@ -60,10 +60,10 @@ export function TreeListItem(props: {
 		if (title && title !== props.tree.title) props.onRename(title);
 	};
 
-	const runAiTitle = async () => {
+	const runAiTitle = () => {
 		setAiBusy(true);
 		setMenuOpen(false);
-		await props.onAiTitle();
+		props.onAiTitle();
 		setAiBusy(false);
 	};
 
@@ -139,7 +139,7 @@ export function TreeListItem(props: {
 							type="button"
 							class={styles.treeMenuItem}
 							disabled={aiBusy()}
-							onClick={() => void runAiTitle()}
+							onClick={() => runAiTitle()}
 						>
 							{aiBusy() ? "生成中…" : "AI 取标题"}
 						</button>
@@ -148,7 +148,7 @@ export function TreeListItem(props: {
 							class={`${styles.treeMenuItem} ${styles.treeMenuItemDanger}`}
 							onClick={() => {
 								setMenuOpen(false);
-								void props.onDelete();
+								props.onDelete();
 							}}
 						>
 							删除

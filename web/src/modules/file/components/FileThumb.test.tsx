@@ -2,7 +2,7 @@
 // 判定逻辑在 lib/thumbnail.ts（纯函数直测），这里锁渲染结果与降级行为。
 
 import { render } from "solid-js/web";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import type { FileItem } from "../api.ts";
 import { FileThumb } from "./FileThumb.tsx";
 

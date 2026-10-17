@@ -6,7 +6,14 @@
 
 import { createRoot } from "solid-js";
 import { render } from "solid-js/web";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vite-plus/test";
 import type { SlotSuggestion } from "../api-types.ts";
 import { useTaskCalendar } from "../hooks/useTaskCalendar.ts";
 import CalendarTimeGrid from "./CalendarTimeGrid.tsx";

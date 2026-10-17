@@ -6,7 +6,7 @@
 
 import { deleteCardE, getCardE, updateCardE } from "@modules/card";
 import { createRoot } from "solid-js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useCardEdit } from "./useCardEdit.ts";
 
 const routeParams: Record<string, string> = { id: "42" };

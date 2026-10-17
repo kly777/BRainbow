@@ -4,7 +4,7 @@
 
 import { searchTagsE } from "@modules/mem/api-tags.ts";
 import { render } from "solid-js/web";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import TagPicker from "./TagPicker.tsx";
 
 // mock 叶子模块：TagPicker 经 barrel 取到的是同一条绑定，但 mock barrel 时

@@ -99,7 +99,7 @@ export function textSnippet(raw: string, lineCount = TEXT_LINES): string[] {
 
 /**
  * 控制字符过滤（保留 `\n` 与 `\t`）。
- * 按码点判断而不是写正则字符类：biome 禁止在正则里出现控制字符范围。
+ * 按码点判断而不是写正则字符类：静态检查禁止在正则里出现控制字符范围。
  */
 function stripControlChars(input: string): string {
 	return Array.from(input)

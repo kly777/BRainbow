@@ -11,7 +11,7 @@
 // 类名形态 —— vitest 桩掉 CSS 后类名与浏览器里不同（`dueBadge` vs `due-badge`）。
 
 import { render } from "solid-js/web";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vite-plus/test";
 import type { Task } from "../api.ts";
 import { TaskEmpty } from "./TaskEmpty.tsx";
 import TaskItem from "./TaskItem.tsx";

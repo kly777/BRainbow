@@ -3,7 +3,7 @@
 // 最要紧的边界是"越界的深链"：链接可能是上一版文件留下的（那时有 30 章、现在只有 12 章），
 // 这时必须**当没给**（回到开头），而不是跳到一个不存在的位置。
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import {
 	buildViewParam,
 	parseIndexPayload,

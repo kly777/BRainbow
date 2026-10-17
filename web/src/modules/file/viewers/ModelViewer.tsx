@@ -70,9 +70,8 @@ async function renderModel(
 	view: { lookFrom: (dir: readonly number[]) => void; reset: () => void };
 }> {
 	const THREE = await import("three");
-	const { OrbitControls } = await import(
-		"three/addons/controls/OrbitControls.js"
-	);
+	const { OrbitControls } =
+		await import("three/addons/controls/OrbitControls.js");
 
 	// 按格式挑 loader。都用 `parse` 而不是 `load`：文件字节是我们自己带凭据取回来的，
 	// 让 loader 再去 fetch 一次会绕开私密文件的鉴权头

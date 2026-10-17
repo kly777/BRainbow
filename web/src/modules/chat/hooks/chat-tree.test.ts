@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import type { ChatNode } from "@modules/chat";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "vite-plus/test";
 import {
 	computeActivePath,
 	findBranchLeaf,

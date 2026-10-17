@@ -1,5 +1,5 @@
 import { createRoot } from "solid-js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import type { TreeDetail } from "../api.ts";
 import { useStreamChat } from "./useStreamChat.ts";
 

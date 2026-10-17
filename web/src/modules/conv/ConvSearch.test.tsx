@@ -5,7 +5,7 @@
 
 import { searchConvE } from "@modules/conv";
 import { render } from "solid-js/web";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import ConvSearch from "./ConvSearch.tsx";
 
 // mock 叶子模块（经 barrel 取到的同一条绑定，barrel 层 mock 在项目里踩过两次）

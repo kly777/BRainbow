@@ -23,6 +23,7 @@ export {
 	FiFile as File,
 	FiFileText as FileText,
 	FiFilm as Film,
+	FiFilter as Filter,
 	FiGrid as Grid,
 	FiImage as Image,
 	FiInfo as Info,

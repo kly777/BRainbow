@@ -18,6 +18,7 @@ import { TaskEmpty } from "./TaskEmpty.tsx";
 import TaskKanban from "./TaskKanban.tsx";
 import TaskList from "./TaskList.tsx";
 import { useTasks } from "./TaskProvider.tsx";
+import UpcomingPanel from "./UpcomingPanel.tsx";
 
 export interface TaskPanelProps {
 	viewMode: "list" | "kanban";
@@ -156,17 +157,29 @@ export default function TaskPanel(props: TaskPanelProps) {
 								/>
 							</Show>
 							<div class={styles.rightPanel}>
-								<FilterGroup
-									options={[
-										{ value: "calendar", label: "日历" },
-										{ value: "dag", label: "依赖图" },
-									]}
-									selected={props.rightTab}
-									onChange={(t) =>
-										props.onRightTabChange(t as "calendar" | "dag")
-									}
-								/>
+								<div class={styles.rightHeader}>
+									<h2 class={styles.rightTitle}>
+										{props.rightTab === "calendar" ? "日程" : "依赖图"}
+									</h2>
+									<FilterGroup
+										options={[
+											{ value: "calendar", label: "日历" },
+											{ value: "dag", label: "依赖图" },
+										]}
+										selected={props.rightTab}
+										onChange={(t) =>
+											props.onRightTabChange(t as "calendar" | "dag")
+										}
+									/>
+								</div>
 								<Show when={props.rightTab === "calendar"}>
+									<UpcomingPanel />
+									{/* 详情放在日历上方：点事件后不用滚过整张月历才看见 */}
+									<TaskDrawer
+										taskId={openTaskId()}
+										onClose={() => setOpenTaskId(null)}
+										onUpdate={updateTaskE}
+									/>
 									{/* 设置条放在日历自己上方，不占主工具条的常驻控件预算 */}
 									<CalendarSettings calendar={calendar} />
 									{/* 月网格 / 周·日时间轴共用同一份状态（见 hooks/useTaskCalendar） */}
@@ -196,11 +209,6 @@ export default function TaskPanel(props: TaskPanelProps) {
 											onOpenTask={setOpenTaskId}
 										/>
 									</Show>
-									<TaskDrawer
-										taskId={openTaskId()}
-										onClose={() => setOpenTaskId(null)}
-										onUpdate={updateTaskE}
-									/>
 								</Show>
 								<Show when={props.rightTab === "dag"}>
 									<TaskDag />

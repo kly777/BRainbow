@@ -156,10 +156,11 @@ describe("TaskItem：行解剖", () => {
 		);
 		expect(unnamed).toEqual([]);
 		// 顺带钉住命名口径：带任务标题，读屏才知道动的是哪一条
-		const edit = [...host.querySelectorAll("button")].find((b) =>
-			b.getAttribute("aria-label")?.startsWith("编辑任务"),
+		const add = [...host.querySelectorAll("button")].find((b) =>
+			b.getAttribute("aria-label")?.startsWith("给「写周报」添加条件"),
 		);
-		expect(edit?.getAttribute("aria-label")).toBe("编辑任务：写周报");
+		expect(add).not.toBeUndefined();
+		expect(add?.getAttribute("aria-label")).toBe("给「写周报」添加条件");
 	});
 
 	it("不渲染创建时间（它顶着日历图标会被读成截止，且不可操作）", () => {

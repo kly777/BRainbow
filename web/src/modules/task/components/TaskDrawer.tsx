@@ -3,8 +3,7 @@
 // 为什么不用 Modal：模态会盖住日历，而日历正是这次交互的参照物 ——
 // 看完详情想回到"那天还排了什么"时，日历得还在（S4-e）。
 //
-// 因此这里没有遮罩层、没有 `aria-modal`，Esc 关闭并把焦点还给触发它的那个事件条
-// （焦点归还是硬要求：抽屉盖在日历旁边，不还焦点就等于让键盘用户丢失位置）。
+// 因此这里没有遮罩层、没有 `aria-modal`，Esc 关闭并把焦点还给触发它的那个事件条。
 
 import { Button, Select } from "@components/ui";
 import { X } from "@components/ui/icons";
@@ -17,8 +16,8 @@ import {
 	Show,
 } from "solid-js";
 import { getTaskDetailE } from "../api.ts";
-import type { Task, TaskDetail } from "../api-types.ts";
-import EditTaskModal from "./EditTaskModal.tsx";
+import type { Task, TaskBlock } from "../api-types.ts";
+import RecurrenceForm from "./RecurrenceForm.tsx";
 import styles from "./TaskDrawer.module.css";
 import { TaskMeta } from "./TaskMeta.tsx";
 import { useTasks } from "./TaskProvider.tsx";
@@ -27,13 +26,12 @@ export interface TaskDrawerProps {
 	/** 要看的任务 id；null = 关闭 */
 	taskId: number | null;
 	onClose: () => void;
-	/** 更新（乐观更新由 provider 做） */
 	onUpdate: (taskId: number, updates: Partial<Task>) => void;
 }
 
 export default function TaskDrawer(props: TaskDrawerProps) {
-	const { updateStatus, tasks } = useTasks();
-	const [editing, setEditing] = createSignal(false);
+	const { updateStatus } = useTasks();
+	const [recurring, setRecurring] = createSignal(false);
 
 	// 换任务时重取：key 是 taskId，null 时不发请求
 	const [detail] = createResource(
@@ -41,14 +39,9 @@ export default function TaskDrawer(props: TaskDrawerProps) {
 		(id) => getTaskDetailE(id),
 	);
 
-	const close = () => {
-		setEditing(false);
-		props.onClose();
-	};
+	const close = () => props.onClose();
 
 	// S5-13：焦点归还 —— 记住打开抽屉时焦点在哪，关掉后还回去。
-	// 抽屉是**并排**而不是模态（不挡日历），所以不还焦点等于让键盘用户
-	// 关掉之后不知道自己回到了哪儿（同一个问题在命令面板那轮已经修过一次）
 	let opener: HTMLElement | null = null;
 	createEffect(() => {
 		if (props.taskId !== null) {
@@ -63,8 +56,6 @@ export default function TaskDrawer(props: TaskDrawerProps) {
 
 	return (
 		<Show when={props.taskId !== null}>
-			{/* 关闭浮层时把焦点还给打开前的元素（与命令面板同一道闸门） */}
-			{/* <aside> 隐含 role=complementary，不必再写一遍 */}
 			<aside
 				class={styles.drawer}
 				aria-label="任务详情"
@@ -96,11 +87,12 @@ export default function TaskDrawer(props: TaskDrawerProps) {
 								</label>
 								<Select
 									id="drawer-status"
+									class={styles.statusSelect}
 									value={data().task.status}
+									aria-label="任务状态"
 									onChange={(e) => {
-										const task = data().task;
 										updateStatus(
-											task.id,
+											data().task.id,
 											e.currentTarget.value as Task["status"],
 										);
 									}}
@@ -116,28 +108,17 @@ export default function TaskDrawer(props: TaskDrawerProps) {
 								<p class={styles.description}>{data().task.description}</p>
 							</Show>
 
-							{/*
-							 * 属性条：与列表行、看板卡片共用同一份（见 TaskMeta.tsx 顶部）。
-							 * 原来是抽屉自己的第三套写法（定义列表 + `⚠` 字符 + 标签 chip 单独一栏），
-							 * 同一个"逾期"在三处的形状与措辞都不一样。
-							 */}
 							<TaskMeta task={data().task} class={styles.taskMeta} />
 
-							{/* 三类时段分别列出：feasible / planned / actual（P11：承诺与兑现是两件事） */}
 							<WindowList
 								title="可行时段"
 								hint="我大概有空——不是安排"
-								items={data().available_slots}
+								items={data().feasible_blocks}
 							/>
 							<WindowList
 								title="计划时段"
 								hint="已安排"
-								items={data().planned_slots}
-							/>
-							<WindowList
-								title="实际执行"
-								hint="已兑现"
-								items={data().actual_slots}
+								items={data().planned_blocks}
 							/>
 
 							<Show when={data().depends_on.length > 0}>
@@ -149,34 +130,53 @@ export default function TaskDrawer(props: TaskDrawerProps) {
 					)}
 				</Show>
 
-				<footer class={styles.footer}>
-					<Button
-						variant="secondary"
-						size="sm"
-						onClick={() => setEditing(true)}
-					>
-						编辑
-					</Button>
-				</footer>
+				<Show when={detail()}>
+					<footer class={styles.footer}>
+						<Button
+							variant="secondary"
+							size="sm"
+							onClick={() => setRecurring(true)}
+							title="把这条任务设为循环"
+						>
+							设为重复
+						</Button>
+					</footer>
+				</Show>
 			</aside>
 
-			<Show when={editing() && detail()}>
-				<EditTaskModal
-					isOpen={editing()}
-					onClose={() => setEditing(false)}
-					task={detail()?.task ?? null}
-					allTasks={tasks()}
-					onSave={(taskId, updates) => props.onUpdate(taskId, updates)}
+			<Show when={recurring() && detail()}>
+				<RecurrenceForm
+					task={detail()?.task as Task}
+					isOpen={recurring()}
+					onClose={() => setRecurring(false)}
+					onSaved={() => setRecurring(false)}
 				/>
 			</Show>
 		</Show>
 	);
 }
 
+const formatBlock = (block: TaskBlock) => {
+	const start = new Date(block.start_at).toLocaleString("zh-CN", {
+		month: "numeric",
+		day: "numeric",
+		hour: "2-digit",
+		minute: "2-digit",
+	});
+	if (!block.end_at) {
+		return `${start} 起`;
+	}
+	const end = new Date(block.end_at).toLocaleString("zh-CN", {
+		hour: "2-digit",
+		minute: "2-digit",
+	});
+	return `${start}–${end}`;
+};
+
 const WindowList: Component<{
 	title: string;
 	hint: string;
-	items: TaskDetail["planned_slots"];
+	items: TaskBlock[];
 }> = (props) => (
 	<Show when={props.items.length > 0}>
 		<div class={styles.windowGroup}>
@@ -185,16 +185,7 @@ const WindowList: Component<{
 				<span class={styles.windowHint}>{props.hint}</span>
 			</h4>
 			<For each={props.items}>
-				{(window) => (
-					<p class={styles.windowItem}>
-						{new Date(window.start_time).toLocaleString("zh-CN", {
-							month: "numeric",
-							day: "numeric",
-							hour: "2-digit",
-							minute: "2-digit",
-						})}
-					</p>
-				)}
+				{(block) => <p class={styles.windowItem}>{formatBlock(block)}</p>}
 			</For>
 		</div>
 	</Show>

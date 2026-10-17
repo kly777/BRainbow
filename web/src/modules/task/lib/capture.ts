@@ -260,6 +260,27 @@ export function removeTagToken(text: string, name: string): string {
 }
 
 /**
+ * 整体替换标签 token（条件面板传进来的是**完整的一组**名字）。
+ *
+ * 与按名字逐个增删相比，这里对"用户一次改了多个"也成立：先删掉不在新集合里的，
+ * 再补上缺的，顺序沿用原文本的时间顺序 —— 标签的视觉顺序不重要，
+ * 重要的是文本里不残留旧标签。
+ */
+export function setTagTokens(text: string, names: readonly string[]): string {
+	let next = text;
+	const current = parseCapture(next).tags;
+	for (const existing of current) {
+		if (!names.includes(existing)) {
+			next = removeTagToken(next, existing);
+		}
+	}
+	for (const name of names) {
+		next = addTagToken(next, name);
+	}
+	return next;
+}
+
+/**
  * 提及本期**只解析不落库**：先存进 description 顶部的一行 Markdown 引用。
  *
  * 这样解析行为与存储行为解耦 —— 将来要加 `task_mention` 关联表，只需从这段文本回填，

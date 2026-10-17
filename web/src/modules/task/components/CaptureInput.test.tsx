@@ -174,78 +174,88 @@ describe("CaptureInput：第 1 层", () => {
 	});
 });
 
-describe("CaptureInput：两层是同一份状态", () => {
-	const openPanel = (host: HTMLElement) => {
+describe("CaptureInput：一句话 + 按需加条件", () => {
+	const openMenu = (host: HTMLElement) => {
 		const button = host.querySelector<HTMLButtonElement>(
-			'button[aria-controls="capture-panel"]',
+			'button[aria-controls="capture-conditions"]',
 		) as HTMLButtonElement;
 		button.click();
-		return host.querySelector<HTMLElement>("#capture-panel");
+		return host.querySelector<HTMLElement>("#capture-conditions");
 	};
 
-	it("展开后出现第 2 层的控件，焦点仍在标题框", () => {
-		const host = mount(vi.fn());
-		const input = titleInput(host) as HTMLInputElement;
-		input.focus();
-		const panel = openPanel(host);
+	const choose = (host: HTMLElement, label: string) => {
+		const button = [
+			...host.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+		].find((item) => item.textContent?.trim() === label);
+		button?.click();
+	};
 
-		expect(panel).not.toBeNull();
-		expect(host.querySelector("#capture-due")).not.toBeNull();
-		expect(host.querySelector("#capture-start")).not.toBeNull();
-		expect(host.querySelector("#capture-priority")).not.toBeNull();
-		expect(host.querySelector("#capture-effort")).not.toBeNull();
-		expect(document.activeElement).toBe(input);
+	it("点 + 打开条件菜单（不再是六个控件摊开）", () => {
+		const host = mount(vi.fn());
+		expect(openMenu(host)).not.toBeNull();
+		expect(host.textContent).toContain("计划时间");
+		expect(host.textContent).toContain("截止时间");
+		expect(host.textContent).toContain("优先级");
+		expect(host.textContent).toContain("预计时长");
+		expect(host.textContent).toContain("标签");
 	});
 
-	it("下拉里选 p2 → 标题行里的 `!p1` 变成 `!p2`（回写而不是两份状态）", () => {
+	it("菜单里选优先级 → 选 P2 → 标题行写出 `!p2`", () => {
 		const host = mount(vi.fn());
 		const input = titleInput(host) as HTMLInputElement;
-		type(input, "写周报 !p1");
-		openPanel(host);
+		type(input, "写周报");
+		openMenu(host);
+		choose(host, "优先级");
 
-		const select = host.querySelector<HTMLSelectElement>(
-			"#capture-priority",
-		) as HTMLSelectElement;
-		select.value = "p2";
-		select.dispatchEvent(new Event("change", { bubbles: true }));
+		const p2 = [...host.querySelectorAll<HTMLButtonElement>("button")].find(
+			(button) => button.textContent?.trim() === "P2",
+		);
+		p2?.click();
 
 		expect(input.value).toBe("写周报 !p2");
 	});
 
-	it("标题行写 `#工作` → 第 2 层的标签 chip 出现", () => {
+	it("菜单里选标签 → 输入回车 → 标题行出现 `#工作`", () => {
 		const host = mount(vi.fn());
 		const input = titleInput(host) as HTMLInputElement;
-		openPanel(host);
+		type(input, "买牛奶");
+		openMenu(host);
+		choose(host, "标签");
 
-		type(input, "买牛奶 #工作");
-		const panel = host.querySelector("#capture-panel") as HTMLElement;
-		expect(panel.textContent).toContain("工作");
+		const tagInput = host.querySelector<HTMLInputElement>(
+			'input[aria-label="给任务加标签"]',
+		) as HTMLInputElement;
+		type(tagInput, "工作");
+		press(tagInput, "Enter");
+
+		expect(input.value).toContain("#工作");
 	});
 
-	it("时长输入框落定后写回 `~60m`", () => {
+	it("菜单里选预计时长 → 60 分钟 → 写回 `~60m`", () => {
 		const host = mount(vi.fn());
 		const input = titleInput(host) as HTMLInputElement;
 		type(input, "写周报");
-		openPanel(host);
+		openMenu(host);
+		choose(host, "预计时长");
 
 		const effort = host.querySelector<HTMLInputElement>(
-			"#capture-effort",
+			'input[aria-label="预计时长（分钟）"]',
 		) as HTMLInputElement;
-		effort.value = "60";
-		effort.dispatchEvent(new Event("input", { bubbles: true }));
-		effort.dispatchEvent(new Event("change", { bubbles: true }));
+		type(effort, "60");
+		press(effort, "Enter");
 
 		expect(input.value).toBe("写周报 ~60m");
 	});
 
-	it("第 2 层填的日期进载荷（标题行里没有日期的位置）", () => {
+	it("菜单里选截止时间 → 填日期 → 进载荷（标题行里没有日期的位置）", () => {
 		const onSubmit = vi.fn();
 		const host = mount(onSubmit);
 		const input = titleInput(host) as HTMLInputElement;
-		openPanel(host);
+		openMenu(host);
+		choose(host, "截止时间");
 
 		const due = host.querySelector<HTMLInputElement>(
-			"#capture-due",
+			'input[placeholder="2026-10-03 15:00"]',
 		) as HTMLInputElement;
 		type(due, "2026-10-09 15:00");
 		due.dispatchEvent(new Event("blur", { bubbles: true }));
@@ -258,26 +268,26 @@ describe("CaptureInput：两层是同一份状态", () => {
 		expect(new Date(payload.dueAt as string).getMinutes()).toBe(0);
 	});
 
-	it("Esc 收起第 2 层（不提交）", () => {
+	it("Esc 收起菜单（不提交）", () => {
 		const onSubmit = vi.fn();
 		const host = mount(onSubmit);
 		const input = titleInput(host) as HTMLInputElement;
 		type(input, "写周报");
-		openPanel(host);
+		openMenu(host);
 
 		press(input, "Escape");
 
-		expect(host.querySelector("#capture-panel")).toBeNull();
+		expect(host.querySelector("#capture-conditions")).toBeNull();
 		expect(onSubmit).not.toHaveBeenCalled();
 		expect(input.value).toBe("写周报");
 	});
 
-	it("↓ 也能唤出第 2 层（键盘不必去够 [+]）", () => {
+	it("↓ 也能打开条件菜单（键盘不必去够 [+]）", () => {
 		const host = mount(vi.fn());
 		const input = titleInput(host) as HTMLInputElement;
 
 		press(input, "ArrowDown");
 
-		expect(host.querySelector("#capture-panel")).not.toBeNull();
+		expect(host.querySelector("#capture-conditions")).not.toBeNull();
 	});
 });

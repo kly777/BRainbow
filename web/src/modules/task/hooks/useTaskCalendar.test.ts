@@ -14,6 +14,10 @@ vi.mock("@modules/task/api.ts", () => ({
 	getCalendarEventsE: vi.fn(),
 }));
 
+vi.mock("../calendarApi.ts", () => ({
+	getEventsE: vi.fn(() => Promise.resolve([])),
+}));
+
 describe("useTaskCalendar", () => {
 	beforeEach(() => {
 		localStorage.clear();

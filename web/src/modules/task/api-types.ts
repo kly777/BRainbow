@@ -93,9 +93,8 @@ export interface TaskDetail {
 	task: Task;
 	depends_on: number[];
 	children: Task[];
-	available_slots: TimeWindow[];
-	planned_slots: TimeWindow[];
-	actual_slots: TimeWindow[];
+	feasible_blocks: TaskBlock[];
+	planned_blocks: TaskBlock[];
 }
 
 // ── Calendar Event ──
@@ -177,12 +176,24 @@ export interface DagView {
 	edges: DagEdge[];
 }
 
-// ── 时间窗口 ──
+// ── 时间块（feasible / planned） ──
+
+export interface TaskBlock {
+	id: number;
+	task_id: number;
+	kind: "feasible" | "planned";
+	start_at: string;
+	end_at: string | null;
+	fixed: boolean;
+	source: string;
+}
+
+// ── 兼容旧日历/建议代码的时间窗形状（由 timeWindowApi 适配到 /tasks/*/blocks） ──
 
 export interface TimeWindow {
 	id: number;
 	start_time: string;
-	end_time: string;
+	end_time: string | null;
 	window_type: string;
 	task_id: number;
 	user_id: number | null;

@@ -11,9 +11,13 @@ import { useTaskCalendar } from "../hooks/useTaskCalendar.ts";
 import TaskCalendar from "./TaskCalendar.tsx";
 
 const getCalendarEventsE = vi.fn();
+const getEventsE = vi.fn();
 vi.mock("@modules/task/api.ts", () => ({
 	getCalendarEventsE: (...args: unknown[]) => getCalendarEventsE(...args),
 	cachedRequest: vi.fn(),
+}));
+vi.mock("../calendarApi.ts", () => ({
+	getEventsE: (...args: unknown[]) => getEventsE(...args),
 }));
 
 const at = (y: number, m: number, d: number, h = 0, min = 0) =>
@@ -68,6 +72,7 @@ describe("TaskCalendar：结构与 a11y（S4-j）", () => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date(2024, 0, 15));
 		getCalendarEventsE.mockResolvedValue([]);
+		getEventsE.mockResolvedValue([]);
 	});
 	afterEach(() => {
 		while (calendars.length > 0) {

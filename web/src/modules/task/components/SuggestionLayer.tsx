@@ -173,6 +173,7 @@ export async function adoptSuggestion(
 	const covered = feasible.some(
 		(window) =>
 			new Date(window.start_time) <= new Date(start) &&
+			typeof window.end_time === "string" &&
 			new Date(window.end_time) >= new Date(end),
 	);
 	if (!covered && !(await confirmOutsideFeasible(start, end))) {

@@ -10,9 +10,13 @@ import { useTaskCalendar } from "../hooks/useTaskCalendar.ts";
 import CalendarTimeGrid from "./CalendarTimeGrid.tsx";
 
 const getCalendarEventsE = vi.fn();
+const getEventsE = vi.fn();
 vi.mock("@modules/task/api.ts", () => ({
 	getCalendarEventsE: (...args: unknown[]) => getCalendarEventsE(...args),
 	cachedRequest: vi.fn(),
+}));
+vi.mock("../calendarApi.ts", () => ({
+	getEventsE: (...args: unknown[]) => getEventsE(...args),
 }));
 
 const disposers: Array<() => void> = [];
@@ -78,6 +82,7 @@ describe("CalendarTimeGrid", () => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date(2024, 0, 15, 9, 0)); // 周一 09:00
 		getCalendarEventsE.mockResolvedValue([]);
+		getEventsE.mockResolvedValue([]);
 	});
 	afterEach(() => {
 		while (disposers.length > 0) {

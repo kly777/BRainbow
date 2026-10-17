@@ -18,12 +18,17 @@ import {
 } from "./SuggestionLayer.tsx";
 
 const getCalendarEventsE = vi.fn();
+const getEventsE = vi.fn();
 const getTimeWindowsE = vi.fn();
 const createTimeWindowE = vi.fn();
 
 vi.mock("@modules/task/api.ts", () => ({
 	getCalendarEventsE: (...args: unknown[]) => getCalendarEventsE(...args),
 	cachedRequest: vi.fn(),
+}));
+
+vi.mock("../calendarApi.ts", () => ({
+	getEventsE: (...args: unknown[]) => getEventsE(...args),
 }));
 
 vi.mock("../timeWindowApi.ts", () => ({
@@ -112,6 +117,7 @@ beforeEach(() => {
 	vi.useFakeTimers();
 	vi.setSystemTime(new Date(2024, 0, 15, 9, 0));
 	getCalendarEventsE.mockResolvedValue([]);
+	getEventsE.mockResolvedValue([]);
 	getTimeWindowsE.mockResolvedValue([]);
 	createTimeWindowE.mockResolvedValue({ id: 1 });
 	showConfirm.mockResolvedValue(true);

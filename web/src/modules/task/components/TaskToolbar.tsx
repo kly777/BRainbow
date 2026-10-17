@@ -5,10 +5,12 @@
 // 与全局浮窗共用同一套解析规则（lib/capture.ts）。
 
 import { FilterGroup, SearchInput, Select } from "@components/ui";
+import { Filter } from "@components/ui/icons";
 import type { TagOption } from "@components/ui/molecules/TagInput.tsx";
 import { notifySuccess } from "@shared/utils";
 import { createSignal, For, Show } from "solid-js";
 import { type CreateTaskRequest, getTagsE, type TaskSortKey } from "../api.ts";
+import { isFilterEmpty } from "../lib/task-filter.ts";
 import { captureToCreateRequest } from "../lib/task-payload.ts";
 import styles from "../TaskManager.module.css";
 import type { CaptureSubmit } from "./CaptureInput.tsx";
@@ -25,11 +27,11 @@ export interface TaskToolbarProps {
 
 /** 排序下拉的选项：smart 是默认（系统算"先做哪件"），其余是用户可选的显式口径 */
 const SORT_OPTIONS: readonly { value: TaskSortKey; label: string }[] = [
-	{ value: "smart", label: "智能" },
-	{ value: "due", label: "截止时间" },
-	{ value: "priority", label: "优先级" },
-	{ value: "effort", label: "工时" },
-	{ value: "created", label: "创建时间" },
+	{ value: "smart", label: "智能排序" },
+	{ value: "due", label: "按截止" },
+	{ value: "priority", label: "按优先级" },
+	{ value: "effort", label: "按工时" },
+	{ value: "created", label: "按创建" },
 ];
 
 export default function TaskToolbar(props: TaskToolbarProps) {
@@ -80,54 +82,61 @@ export default function TaskToolbar(props: TaskToolbarProps) {
 
 	return (
 		<div class={styles.toolbar}>
-			<FilterGroup
-				options={[
-					{ value: "list", label: "列表" },
-					{ value: "kanban", label: "看板" },
-				]}
-				selected={props.viewMode}
-				onChange={(v) => props.onViewChange(v as "list" | "kanban")}
-			/>
-
-			<div class={styles.searchBox}>
-				<SearchInput
-					value={props.searchQuery}
-					onSearch={doSearch}
-					placeholder="搜索任务…"
-				/>
-			</div>
-
-			{/* 状态/标签/优先级/截止合并进这一个按钮（常驻控件预算 ≤5） */}
-			<button
-				type="button"
-				class={styles.filterButton}
-				aria-expanded={filterOpen()}
-				aria-controls="task-filter-panel"
-				onClick={() => setFilterOpen(!filterOpen())}
-			>
-				筛选 ⚙
-			</button>
-			<ActiveFilterChips filter={filter()} onChange={setFilter} />
-
-			<Select
-				class={styles.sortSelect}
-				value={sort()}
-				onChange={(e) => setSort(e.currentTarget.value as TaskSortKey)}
-				aria-label="排序方式"
-				title="排序方式"
-			>
-				<For each={SORT_OPTIONS}>
-					{(option) => <option value={option.value}>{option.label}</option>}
-				</For>
-			</Select>
-
+			{/* 录入是这一页的主动作：放在最上面，先接住"想做的事" */}
 			<div class={styles.quickAddBox}>
 				{/* 父任务候选给的是当前列表（含层级）：够常用，又不为下拉多打一次请求 */}
 				<CaptureInput
-					placeholder="+ 快速添加… !p1 #标签 ~60m"
+					placeholder="写一件事，回车创建…"
 					parentCandidates={tasks()}
 					onSubmit={submit}
 				/>
+			</div>
+
+			<div class={styles.toolbarControls}>
+				<FilterGroup
+					class={styles.viewSwitch}
+					options={[
+						{ value: "list", label: "列表" },
+						{ value: "kanban", label: "看板" },
+					]}
+					selected={props.viewMode}
+					onChange={(v) => props.onViewChange(v as "list" | "kanban")}
+				/>
+
+				<div class={styles.searchBox}>
+					<SearchInput
+						value={props.searchQuery}
+						onSearch={doSearch}
+						placeholder="搜索任务…"
+					/>
+				</div>
+
+				{/* 状态/标签/优先级/截止合并进这一个按钮（常驻控件预算 ≤5） */}
+				<button
+					type="button"
+					class={styles.filterButton}
+					classList={{ [styles.filterButtonActive]: !isFilterEmpty(filter()) }}
+					aria-expanded={filterOpen()}
+					aria-controls="task-filter-panel"
+					aria-label="筛选任务"
+					onClick={() => setFilterOpen(!filterOpen())}
+				>
+					<Filter size={14} />
+					<span>筛选</span>
+				</button>
+				<ActiveFilterChips filter={filter()} onChange={setFilter} />
+
+				<Select
+					class={styles.sortSelect}
+					value={sort()}
+					onChange={(e) => setSort(e.currentTarget.value as TaskSortKey)}
+					aria-label="排序方式"
+					title="排序方式"
+				>
+					<For each={SORT_OPTIONS}>
+						{(option) => <option value={option.value}>{option.label}</option>}
+					</For>
+				</Select>
 			</div>
 
 			{/* 面板挂在工具条下方而非浮层：不遮内容，Esc / 点外面即可收起 */}

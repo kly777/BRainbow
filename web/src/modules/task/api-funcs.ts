@@ -12,12 +12,26 @@ export const MAX_PAGE_SIZE = 100;
 /** 拉全时的页数上限：个人工具用不到，只用来挡住异常循环 */
 const MAX_ALL_PAGES = 10;
 
+interface CalendarEventApi extends Omit<CalendarEvent, "end"> {
+	end: string | null;
+}
+
 export const getCalendarEventsE = (
 	start?: string,
 	end?: string,
 	status?: string,
 ): Promise<readonly CalendarEvent[]> => {
-	return cachedRequest(`/tasks/calendar${buildQuery({ start, end, status })}`);
+	return cachedRequest<readonly CalendarEventApi[]>(
+		`/tasks/calendar${buildQuery({ start, end, status })}`,
+	).then((items) =>
+		items.map((event) => ({
+			...event,
+			// 软计划点没有结束时刻：给 15 分钟占位，日历仍能画出一小段。
+			end:
+				event.end ??
+				new Date(new Date(event.start).getTime() + 15 * 60_000).toISOString(),
+		})),
+	);
 };
 
 export const getTasksE = (

@@ -31,7 +31,7 @@ export const TaskEmpty: Component<Props> = (props) => (
 				class={props.class}
 				icon={<List size={20} />}
 				title="还没有任务"
-				hint="在上面那一行写一句话就行，回车即创建 —— 截止、标签、优先级都可以以后再加。"
+				hint="在上面的输入框写一句话就行，回车即创建 —— 截止、标签、优先级都可以以后再加。"
 			/>
 		}
 	>

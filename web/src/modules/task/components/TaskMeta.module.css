@@ -1,26 +1,48 @@
-/* 任务属性条（列表行与看板卡片共用）—— 见 TaskMeta.tsx 顶部说明 */
+/* 任务属性条（列表行 / 看板卡片 / 抽屉共用）—— 见 TaskMeta.tsx 顶部 */
 
 .meta {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: var(--space-md);
+	gap: var(--space-2xs) var(--space-sm);
 	font-size: var(--text-xs);
 	color: var(--t-color-ink-muted);
 }
 
-/* "图标 + 文字"用行内 flex：直接放在 span 里会按文字基线对齐，12px 的图标显得飘高 */
-
-.due-badge,
-.effort-badge {
+/*
+ * chip 的基础形态。
+ *
+ * 它可能是 `<span>`（只读）也可能是 `<button>`（可点开编辑器），所以把
+ * 浏览器给按钮的默认外观全部抹平；修饰类（优先级边框、标签底色）在下面覆盖。
+ * `min-height` 守 24px（WCAG 2.5.8）—— 只读时也保持同样的行高，切换形态不跳。
+ */
+.meta-chip {
 	display: inline-flex;
 	align-items: center;
 	gap: var(--space-2xs);
-	font-variant-numeric: tabular-nums;
+	min-height: 1.5rem;
+	margin: 0;
+	padding: 0 var(--space-2xs);
+	border: none;
+	border-radius: var(--radius-xs);
+	background: none;
+	color: inherit;
+	font: inherit;
+	font-size: var(--text-xs);
+	line-height: var(--leading-tight);
+	white-space: nowrap;
+}
+
+button.meta-chip {
+	cursor: pointer;
+}
+
+button.meta-chip:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
 }
 
 /* 逾期：图标 + 文字 + 点下划线（不只换个颜色 —— WCAG 1.4.1） */
-
 .due-overdue {
 	color: var(--t-color-danger);
 	font-weight: 600;
@@ -31,13 +53,15 @@
 .priority-badge {
 	padding: 0 var(--space-2xs);
 	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-2xs);
 	font-weight: 600;
 	font-variant-numeric: tabular-nums;
 }
 
 .tag-chip {
 	padding: 0 var(--space-2xs);
-	border-radius: var(--radius-2xs);
 	background: var(--t-color-accent-soft);
+}
+
+.effort-badge {
+	font-variant-numeric: tabular-nums;
 }

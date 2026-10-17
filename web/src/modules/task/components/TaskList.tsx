@@ -1,5 +1,4 @@
-import { useModal } from "@shared/utils";
-import { createMemo, createSignal, For, Show } from "solid-js";
+import { createMemo, For, Show } from "solid-js";
 import type { Task } from "../api.ts";
 import type { TaskStatusKey } from "../lib/status-colors.ts";
 import {
@@ -10,7 +9,6 @@ import {
 	groupByStatus,
 	TASK_STATUS_KEYS,
 } from "../lib/task-group.ts";
-import EditTaskModal from "./EditTaskModal.tsx";
 import TaskItem from "./TaskItem.tsx";
 import styles from "./TaskList.module.css";
 import { useTasks } from "./TaskProvider.tsx";
@@ -32,7 +30,6 @@ interface TaskStatusSectionProps {
 	onDelete: (taskId: number) => void;
 	onUpdate: (taskId: number, updates: Partial<Task>) => void;
 	onAddSubTask?: (parentId: number, title: string) => Promise<void>;
-	onEdit: (task: Task) => void;
 }
 
 function TaskStatusSection(props: TaskStatusSectionProps) {
@@ -53,7 +50,6 @@ function TaskStatusSection(props: TaskStatusSectionProps) {
 								task={task}
 								onStatusChange={props.onStatusChange}
 								onDelete={props.onDelete}
-								onEdit={() => props.onEdit(task)}
 								children={props.childrenMap.get(task.id) || []}
 								onAddSubTask={props.onAddSubTask}
 								onUpdate={props.onUpdate}
@@ -68,23 +64,16 @@ function TaskStatusSection(props: TaskStatusSectionProps) {
 
 // 四个分组的标题（顺序与状态名来自 lib/task-group.ts 的单一来源）
 const SECTION_TITLES: Record<TaskStatusKey, string> = {
-	backlog: "待办列表",
+	backlog: "待办",
 	active: "进行中",
 	completed: "已完成",
 	archived: "已归档",
 };
 
 export default function TaskList(props: TaskListProps) {
-	const [editingTask, setEditingTask] = createSignal<Task | null>(null);
-	const editModal = useModal();
 	// smart 排序的默认视图按"今天 / 即将到期 / 收件箱"分组（设计文档 03 §4、08 S3-8）；
 	// 换成显式排序时按状态分组（那时用户要的是"按我选的维度看全部"）
 	const { sort } = useTasks();
-
-	const openEdit = (task: Task) => {
-		setEditingTask(task);
-		editModal.open();
-	};
 
 	// 父子映射与按状态分组：规则在 lib/（纯函数、有单测），这里只做响应式包装
 	const childrenMap = createMemo(() => buildChildrenMap(props.tasks));
@@ -119,7 +108,6 @@ export default function TaskList(props: TaskListProps) {
 								onDelete={props.onDelete}
 								onUpdate={props.onUpdate}
 								onAddSubTask={props.onAddSubTask}
-								onEdit={openEdit}
 							/>
 						)}
 					</For>
@@ -138,24 +126,11 @@ export default function TaskList(props: TaskListProps) {
 								onDelete={props.onDelete}
 								onUpdate={props.onUpdate}
 								onAddSubTask={props.onAddSubTask}
-								onEdit={openEdit}
 							/>
 						</Show>
 					)}
 				</For>
 			</Show>
-
-			{/* 编辑任务模态框 */}
-			<EditTaskModal
-				isOpen={editModal.isOpen()}
-				onClose={() => {
-					editModal.close();
-					setEditingTask(null);
-				}}
-				task={editingTask()}
-				allTasks={props.tasks}
-				onSave={props.onUpdate}
-			/>
 		</div>
 	);
 }

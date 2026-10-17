@@ -14,6 +14,10 @@ vi.mock("@modules/task/api.ts", () => ({
 	cachedRequest: vi.fn(),
 }));
 
+vi.mock("../calendarApi.ts", () => ({
+	getEventsE: vi.fn().mockResolvedValue([]),
+}));
+
 const disposers: Array<() => void> = [];
 
 function mountBoth() {

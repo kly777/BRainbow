@@ -3,11 +3,12 @@
 .drawer {
 	display: flex;
 	flex-direction: column;
-	gap: var(--space-sm);
+	gap: var(--space-md);
 	padding: var(--space-md);
 	background: var(--t-color-surface);
 	border: 1px solid var(--t-color-border);
 	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-sm);
 }
 
 .header {
@@ -15,12 +16,15 @@
 	align-items: flex-start;
 	justify-content: space-between;
 	gap: var(--space-sm);
+	padding-bottom: var(--space-sm);
+	border-bottom: 1px solid var(--t-color-surface-raised);
 }
 
 .title {
 	margin: 0;
-	font-size: var(--text-base);
+	font-size: var(--text-lg);
 	font-weight: 600;
+	line-height: var(--leading-tight);
 	color: var(--t-color-ink);
 	overflow-wrap: anywhere;
 }
@@ -59,7 +63,13 @@
 .row {
 	display: flex;
 	align-items: center;
+	justify-content: space-between;
 	gap: var(--space-sm);
+}
+
+select.status-select {
+	width: auto;
+	min-width: 7rem;
 }
 
 .label {
@@ -103,7 +113,12 @@
 }
 
 .window-item {
+	align-self: flex-start;
+	max-width: 100%;
 	margin: 0;
+	padding: var(--space-2xs) var(--space-sm);
+	border-radius: var(--radius-sm);
+	background: var(--t-color-surface-raised);
 	font-size: var(--text-xs);
 	color: var(--t-color-ink-muted);
 	font-variant-numeric: tabular-nums;
@@ -118,4 +133,6 @@
 .footer {
 	display: flex;
 	justify-content: flex-end;
+	padding-top: var(--space-sm);
+	border-top: 1px solid var(--t-color-surface-raised);
 }

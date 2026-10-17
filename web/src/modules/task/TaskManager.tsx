@@ -27,7 +27,7 @@ export default function TaskManager() {
 	return (
 		<TaskProvider>
 			<div class={styles.taskManager}>
-				<PageHead title="任务" desc="列表 · 看板 · 日历 · 依赖图" />
+				<PageHead title="任务" desc="记下想做的事，再安排时间" />
 				<TaskToolbar
 					viewMode={viewMode()}
 					onViewChange={setViewMode}

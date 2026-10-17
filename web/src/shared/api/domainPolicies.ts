@@ -49,6 +49,12 @@ export const DOMAIN_POLICIES: Record<DomainName, DomainPolicy> = {
 		],
 		singles: [/^GET \/bookmarks\/\d+/],
 	},
+	// 必须排在 tasks 之前：`/tasks/1/blocks` 也会被 tasks.singles 的
+	// `/^GET \/tasks\/\d+/` 命中，先手才能归到 timeWindows。
+	timeWindows: {
+		reads: [/^GET \/tasks\/\d+\/blocks(?:\?|$)/],
+		singles: [/^GET \/tasks\/blocks\/\d+/],
+	},
 	tasks: {
 		reads: [
 			/^GET \/tasks(?:\?|$)/,
@@ -69,10 +75,6 @@ export const DOMAIN_POLICIES: Record<DomainName, DomainPolicy> = {
 		staleMs: 60_000,
 	},
 	text: { reads: [/^GET \/text\b/] },
-	timeWindows: {
-		reads: [/^GET \/time-windows(?:\?|$)/],
-		singles: [/^GET \/time-windows\/\d+/],
-	},
 	files: {
 		reads: [
 			/^GET \/file(?:\?|$)/,

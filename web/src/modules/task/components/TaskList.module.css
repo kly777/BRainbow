@@ -3,10 +3,12 @@
 .task-list-panel {
 	display: flex;
 	flex-direction: column;
-	gap: var(--space-xl);
+	gap: var(--space-lg);
 	flex: 1;
 	min-height: 0;
 	overflow-y: auto;
+	scrollbar-gutter: stable;
+	padding-bottom: var(--space-lg);
 }
 
 .status-section {
@@ -21,20 +23,30 @@
  * 而这里四个段落名全是中文：uppercase 对中文无效，字距只会把中文抻得松散。
  */
 .status-title {
-	margin: 0 0 var(--space-md);
+	position: sticky;
+	top: 0;
+	z-index: 1;
+	margin: 0 0 var(--space-2xs);
+	padding: var(--space-xs) 0;
 	font-size: var(--text-sm);
 	font-weight: 600;
 	color: var(--t-color-ink);
 	display: flex;
 	align-items: center;
 	gap: var(--space-sm);
+	background: var(--t-color-bg);
 }
 
 /* 计数：弱化到 muted、常规字重、等宽数字 —— 它是标题的附注，不该和标题争重 */
 .status-count {
-	font-weight: 400;
+	padding: 0 var(--space-2xs);
+	border-radius: var(--radius-full);
+	background: var(--t-color-surface-raised);
+	font-size: var(--text-2xs);
+	font-weight: 500;
 	color: var(--t-color-ink-muted);
 	font-variant-numeric: tabular-nums;
+	line-height: 1.5;
 }
 
 .status-indicator {
@@ -74,8 +86,16 @@
 
 	/* 行内补属性展开时（:focus-within）给一点横向留白，图标不至于贴到边框 */
 	padding: var(--space-md) var(--space-sm);
-	border-bottom: 1px solid var(--t-color-surface-raised);
-	transition: background var(--t-transition-fast);
+	border-bottom: 1px solid
+		color-mix(in oklch, var(--t-color-border) 55%, transparent);
+	border-radius: var(--radius-md);
+	transition:
+		background var(--t-transition-fast),
+		box-shadow var(--t-transition-fast);
+}
+
+.task-item:last-child {
+	border-bottom: none;
 }
 
 /*
@@ -126,11 +146,50 @@
 	letter-spacing: -0.01em;
 }
 
+/* 标题是按钮：点它进入行内编辑（没有铅笔，编辑本来就不该是独立动作） */
+.title-button {
+	display: block;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	color: inherit;
+	font: inherit;
+	text-align: left;
+	cursor: text;
+}
+
+.title-button:hover {
+	color: var(--t-color-ink);
+}
+
+.title-button:focus-visible {
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: 2px;
+}
+
+/* 行内改标题：只改字，不新开一层表单 */
+.title-input {
+	width: 100%;
+	min-height: 1.75rem;
+	padding: var(--space-3xs, 0.25rem) var(--space-2xs);
+	font-size: var(--text-base);
+}
+
 .task-description {
 	margin: 0 0 var(--space-xs);
 	font-size: var(--text-sm);
 	color: var(--t-color-ink-muted);
 	line-height: var(--leading-normal);
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	overflow: hidden;
+}
+
+.task-meta {
+	margin-top: var(--space-2xs);
 }
 
 /* 子任务徽章（属性条本身在 TaskMeta.module.css，与看板卡片共用） */
@@ -161,34 +220,13 @@
 	gap: var(--space-xs);
 	align-items: center;
 	flex-shrink: 0;
-	opacity: 0;
+	opacity: 1;
 	transition: opacity var(--t-transition-fast);
 }
 
-/* 展开编辑时额外锁住可见：鼠标移向编辑器时不至于整组淡掉 */
-.task-actions:has(.inline-actions-open),
-.task-item:hover .task-actions,
-.task-item:focus-within .task-actions {
-	opacity: 1;
-}
+/* ── 行尾「+」：一个入口，菜单里再分条件 / 子任务 ── */
 
-@media (hover: none) {
-	.task-actions {
-		opacity: 1;
-	}
-}
-
-/* ── 行内补属性（标签 / 截止时间） ──
-   与外层 .task-actions 同一套显隐；展开时（inline-actions-open）额外锁住可见，
-   免得鼠标移向编辑器时整组淡掉。 */
-
-.inline-actions {
-	display: flex;
-	gap: var(--space-xs);
-	align-items: center;
-}
-
-.inline-button {
+.add-button {
 	/* 触摸目标 24px（WCAG 2.5.8） */
 	min-width: 1.5rem;
 	min-height: 1.5rem;
@@ -197,51 +235,52 @@
 	justify-content: center;
 	padding: 0;
 	background: none;
-	border: none;
-	border-radius: var(--radius-sm);
-	cursor: pointer;
-	font-size: var(--text-sm);
-	line-height: 1;
-}
-
-.inline-button:hover {
-	background: var(--t-color-surface-raised);
-}
-
-.inline-editor {
-	display: flex;
-	align-items: center;
-	gap: var(--space-sm);
-	padding: var(--space-sm) 0;
-}
-
-.inline-date-input {
-	padding: var(--space-xs) var(--space-sm);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
-	font: inherit;
-	font-size: var(--text-sm);
-}
-
-.inline-editor-clear {
-	padding: var(--space-xs) var(--space-sm);
-	background: none;
-	border: none;
-	border-radius: var(--radius-sm);
 	color: var(--t-color-ink-muted);
-	font-size: var(--text-xs);
+	border: none;
+	border-radius: var(--radius-sm);
 	cursor: pointer;
+
+	/* 常驻但压低存在感：不藏到只有 hover 才出现 */
+	opacity: 0.55;
+	transition:
+		opacity var(--t-transition-fast),
+		background var(--t-transition-fast),
+		color var(--t-transition-fast);
 }
 
-.inline-editor-clear:hover {
+.add-button:hover,
+.add-button[aria-expanded="true"] {
+	background: var(--t-color-surface-raised);
 	color: var(--t-color-ink);
-	text-decoration: underline;
 }
 
-/*
- * ── 状态：行首的圆点 ──
+.add-button:focus-visible {
+	opacity: 1;
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: 2px;
+}
+
+.task-actions:has(.actions-open) .add-button,
+.task-item:hover .add-button {
+	opacity: 1;
+}
+
+/* 条件菜单 / 编辑器展开时，操作组保持可见（鼠标移向菜单时不至于整组淡掉） */
+.actions-open {
+	opacity: 1;
+}
+
+@media (hover: none) {
+	.task-actions {
+		opacity: 1;
+	}
+
+	.delete-button {
+		opacity: 1;
+	}
+}
+
+/* ── 状态：行首的圆点 ──
  *
  * 还是一个原生 `<select>`（键盘、读屏、原生下拉全都照旧），只是把它**画成**圆点：
  * `appearance: none` 去掉原生外观，文字透明、尺寸收到 1.125rem。
@@ -304,40 +343,6 @@
 	outline-offset: 2px;
 }
 
-.edit-button {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	padding: var(--space-xs) var(--space-sm);
-	background: none;
-	color: var(--t-color-ink-muted);
-	border: none;
-	border-radius: var(--radius-md);
-	cursor: pointer;
-	transition:
-		background var(--t-transition-fast),
-		color var(--t-transition-fast);
-}
-
-.sub-task-button {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	padding: var(--space-xs) var(--space-sm);
-	background: none;
-	color: var(--t-color-ink-muted);
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	cursor: pointer;
-	font-size: var(--text-base);
-	font-weight: 500;
-	transition:
-		background var(--t-transition-fast),
-		color var(--t-transition-fast),
-		border-color var(--t-transition-fast);
-	line-height: var(--leading-tight);
-}
-
 .delete-button {
 	display: inline-flex;
 	align-items: center;
@@ -348,9 +353,28 @@
 	border: none;
 	border-radius: var(--radius-md);
 	cursor: pointer;
+
+	/* 破坏性动作默认不抢眼，行悬停或键盘聚焦时才现形 */
+	opacity: 0;
 	transition:
+		opacity var(--t-transition-fast),
 		background var(--t-transition-fast),
 		color var(--t-transition-fast);
+}
+
+.delete-button:hover {
+	background: var(--t-color-danger-subtle);
+	color: var(--t-color-danger);
+}
+
+.delete-button:focus-visible {
+	opacity: 1;
+	outline: 2px solid var(--t-color-accent);
+	outline-offset: 2px;
+}
+
+.task-item:hover .delete-button {
+	opacity: 1;
 }
 
 .sub-task-form {
@@ -411,6 +435,32 @@
 	background: var(--t-color-surface-raised);
 }
 
+.task-item:focus-within {
+	background: var(--t-color-surface-raised);
+}
+
+/* 进行中：左侧一道很轻的强调线，扫一眼就知道"手上这件" */
+.task-item[data-status="active"] {
+	box-shadow: inset 2px 0 0 var(--t-color-accent);
+}
+
+/* 已完成：标题划掉并降权，行本身仍然可读、可点开改状态 */
+.task-item[data-status="completed"] .title-button {
+	color: var(--t-color-ink-faint);
+	text-decoration: line-through;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 0.18em;
+}
+
+.task-item[data-status="completed"] .task-description,
+.task-item[data-status="completed"] .task-meta {
+	opacity: 0.72;
+}
+
+.task-item[data-status="archived"] {
+	opacity: 0.62;
+}
+
 /*
  * 窄屏：操作组落到第二行、右对齐，但**状态圆点仍与标题同行**。
  * 原来这里是 `flex-direction: column`（整行纵向堆叠）—— 那时行首没有东西，
@@ -431,22 +481,6 @@
 
 .status-select:hover {
 	border-color: var(--t-color-border);
-}
-
-.edit-button:hover {
-	background: var(--t-color-surface-raised);
-	color: var(--t-color-ink);
-}
-
-.sub-task-button:hover {
-	background: var(--t-color-bg);
-	color: var(--t-color-ink);
-	border-color: var(--t-color-border);
-}
-
-.delete-button:hover {
-	background: var(--t-color-danger-subtle);
-	color: var(--t-color-danger);
 }
 
 .sub-task-input::placeholder {

@@ -1,45 +1,39 @@
-// ── 录入框：两层结构（P1/P3）──
+// ── 录入框：一句话 + 按需加条件 ──
 //
-// 第 1 层：常驻单行 + 实时解析预览。写 `写周报 !p1 #工作 ~60m` 回车就建，
-// 焦点留在框里（连续录入 5 条 = 5 次「输入 + 回车」，中间零鼠标）。
-// 第 2 层：`[+]`（或 ↓ / Alt+↓）唤出的六个控件，全部可选 —— 展开时焦点**仍在标题框**。
+// 与任务行同一套心智（09-条件式任务行）：
+// - 第 1 层永远只有单行 + 回车即建；`!p1` / `#标签` / `~60m` 继续解析。
+// - 行尾 `+` 打开条件菜单（计划/截止/优先级/时长/标签/父任务）。
+// - 已加的条件以 chip 排在输入框下方；点 chip 改/移除；没加的不占位。
+// - 日期没有符号，只能从 `+` 加；优先级/标签/时长与标题里的 token 是同一份状态。
 //
-// 两层是同一份状态的两种输入方式：标题行里的 `!p1` 与下拉里的 p1 是同一个值，
-// 改任一侧另一侧跟着变（回写走 lib/capture.ts 的 token 替换，纯文本、无中间态）。
-// 日期**没有符号**，所以它只在第 2 层存在。
-//
-// 无障碍：
-// - 标题框有 aria-label；`[+]` 有 aria-expanded 与 aria-controls，且 tabindex=-1
-//   （键盘用 ↓ 唤出，不必为它多按一次 Tab）
-// - 展开后第 2 层的控件是真控件、Tab 能到（**刻意不锁 Tab**：把焦点锁在输入框里
-//   会构成键盘陷阱，WCAG 2.1.2）
-// - 输入法组字期间回车/方向键不抢（与命令面板同一道闸门）
+// 提交后焦点回到标题框（连续录入的命门），失败时原文与条件一并还原 ——
+// 这两条在上一轮已经用测试钉住，重构时不许丢。
 
 import { Button, Input, Select } from "@components/ui";
-// TagInput 刻意不在 @components/ui 的 barrel 里导出（见那份说明：会把首屏撑大），
-// 所以按路径取
-import TagInput, {
-	type TagOption,
-} from "@components/ui/molecules/TagInput.tsx";
-import { isImeComposing } from "@shared/utils";
-import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
+import type { TagOption } from "@components/ui/molecules/TagInput.tsx";
+import { isImeComposing, notifyWarning } from "@shared/utils";
+import { type Component, createMemo, createSignal, For, Show } from "solid-js";
 import type { Task, TaskPriority } from "../api.ts";
 import { getTagsE } from "../api.ts";
 import {
-	addTagToken,
 	mentionsToDescription,
 	parseCapture,
-	removeTagToken,
 	setEffortToken,
 	setPriorityToken,
+	setTagTokens,
 } from "../lib/capture.ts";
 import {
-	DATE_HELPER,
-	formatDateInput,
-	parseDateInput,
-	toDateInputValue,
-} from "../lib/dateInput.ts";
+	type ConditionKey,
+	type ConditionValues,
+	formatEffort,
+	formatPlan,
+	missingConditions,
+	validateTimeRange,
+} from "../lib/conditions.ts";
+import { formatDue } from "../lib/task-group.ts";
 import styles from "./CaptureInput.module.css";
+import ConditionEditor from "./ConditionEditor.tsx";
+import ConditionMenu from "./ConditionMenu.tsx";
 
 /** 提交载荷：标题与四类属性（含本期不落库的提及）都在这里 */
 export interface CaptureSubmit {
@@ -70,7 +64,7 @@ export interface CaptureInputProps {
 	onSubmit: (
 		payload: CaptureSubmit,
 	) => boolean | undefined | Promise<boolean | undefined>;
-	/** 父任务候选；缺省（或不给）时不显示"父任务"控件 */
+	/** 父任务候选；缺省（或不给）时不显示"父任务"这一项 */
 	parentCandidates?: readonly Task[];
 	placeholder?: string;
 	class?: string;
@@ -79,44 +73,109 @@ export interface CaptureInputProps {
 /** 标签补全的输入去抖（设计文档 S2-8：200ms） */
 const TAG_SEARCH_DEBOUNCE_MS = 200;
 
+/** 已加条件的 chip：点它回到对应编辑器 */
+const ConditionChip: Component<{
+	label: string;
+	ariaLabel: string;
+	onClick: () => void;
+	class?: string;
+}> = (props) => (
+	<button
+		type="button"
+		class={`${styles.chip}${props.class ? ` ${props.class}` : ""}`}
+		onClick={props.onClick}
+		aria-label={props.ariaLabel}
+	>
+		{props.label}
+	</button>
+);
+
 export default function CaptureInput(props: CaptureInputProps) {
 	let inputRef: HTMLInputElement | undefined;
+	let plusRef: HTMLButtonElement | undefined;
+
 	const [text, setText] = createSignal("");
-	const [expanded, setExpanded] = createSignal(false);
-	// 日期与父任务没有符号可回写，是第 2 层自己的状态
+	const [menuOpen, setMenuOpen] = createSignal(false);
+	const [editing, setEditing] = createSignal<ConditionKey | "parent" | null>(
+		null,
+	);
+	// 日期与父任务没有符号可回写，是面板自己的状态
 	const [startAt, setStartAt] = createSignal<Date | null>(null);
 	const [dueAt, setDueAt] = createSignal<Date | null>(null);
 	const [parentId, setParentId] = createSignal<number | null>(null);
-	const [effortDraft, setEffortDraft] = createSignal("");
 
 	const parsed = createMemo(() => parseCapture(text()));
+
+	/** 条件值：优先级/标签/时长来自标题里的 token，日期/父任务来自本地状态 */
+	const values = createMemo<ConditionValues>(() => ({
+		startAt: startAt()?.toISOString() ?? null,
+		dueAt: dueAt()?.toISOString() ?? null,
+		priority: parsed().priority,
+		effortMinutes: parsed().effortMinutes,
+		tags: parsed().tags,
+	}));
+
 	/** 纯符号 / 纯空格：标题为空，不能提交（A1） */
 	const titleMissing = () => parsed().cleanTitle.length === 0;
+	const timeError = () => validateTimeRange(values().startAt, values().dueAt);
 
-	const canSubmit = () => !titleMissing();
+	const parentTitle = () =>
+		props.parentCandidates?.find((task) => task.id === parentId())?.title ??
+		`#${parentId()}`;
 
-	const effortFieldId = "capture-effort";
+	const anyValue = () =>
+		values().startAt !== null ||
+		values().dueAt !== null ||
+		values().priority !== null ||
+		values().effortMinutes !== null ||
+		values().tags.length > 0 ||
+		parentId() !== null;
 
-	// 文本侧的时长变化要反映到输入框（除非用户正在那个框里打字）
-	createEffect(() => {
-		const minutes = parsed().effortMinutes;
-		if (document.activeElement?.id !== effortFieldId) {
-			setEffortDraft(minutes === null ? "" : String(minutes));
+	/**
+	 * 条件变更：与任务行同一个契约 —— 先校验时间关系，再写回唯一真相
+	 * （优先级/标签/时长写文本 token；日期/父任务写本地状态）。
+	 */
+	const applyCondition = (patch: Partial<ConditionValues>): string | null => {
+		const next = { ...values(), ...patch };
+		const error = validateTimeRange(next.startAt, next.dueAt);
+		if (error) {
+			return error;
 		}
-	});
+		if (patch.startAt !== undefined) {
+			setStartAt(patch.startAt ? new Date(patch.startAt) : null);
+		}
+		if (patch.dueAt !== undefined) {
+			setDueAt(patch.dueAt ? new Date(patch.dueAt) : null);
+		}
+		if (patch.priority !== undefined) {
+			setText(setPriorityToken(text(), patch.priority));
+		}
+		if (patch.effortMinutes !== undefined) {
+			setText(setEffortToken(text(), patch.effortMinutes));
+		}
+		if (patch.tags !== undefined) {
+			setText(setTagTokens(text(), patch.tags));
+		}
+		return null;
+	};
 
 	const reset = () => {
 		setText("");
 		setStartAt(null);
 		setDueAt(null);
 		setParentId(null);
-		setExpanded(false);
-		setEffortDraft("");
+		setMenuOpen(false);
+		setEditing(null);
 	};
 
 	/** 提交后清空并**把焦点还给标题框**（A3：连续录入的命门） */
 	const submit = async (keepText: boolean) => {
-		if (!canSubmit()) {
+		if (titleMissing()) {
+			return;
+		}
+		const invalidRange = timeError();
+		if (invalidRange) {
+			notifyWarning(invalidRange);
 			return;
 		}
 		const result = parsed();
@@ -142,10 +201,12 @@ export default function CaptureInput(props: CaptureInputProps) {
 		// 先乐观清空、**立刻**清：回车即清是连着录入的手感（P2），
 		// 放在 await 之后会让输入框在网络往返期间还留着原文，连按两下就建出两条。
 		if (keepText) {
-			// 连写多条：只清第 2 层的日期/父任务，标题留着改改再发
+			// 连写多条：只清条件，标题留着改改再发
 			setStartAt(null);
 			setDueAt(null);
 			setParentId(null);
+			setEditing(null);
+			setMenuOpen(false);
 		} else {
 			reset();
 		}
@@ -163,6 +224,16 @@ export default function CaptureInput(props: CaptureInputProps) {
 		inputRef?.focus();
 	};
 
+	const openMenu = () => {
+		setEditing(null);
+		setMenuOpen(true);
+	};
+
+	const closeMenu = () => {
+		setMenuOpen(false);
+		queueMicrotask(() => plusRef?.focus());
+	};
+
 	const onKeyDown = (e: KeyboardEvent) => {
 		if (isImeComposing(e)) {
 			return; // 组字期间的回车是选词，不是提交
@@ -172,15 +243,17 @@ export default function CaptureInput(props: CaptureInputProps) {
 			void submit(e.shiftKey);
 			return;
 		}
-		if (e.key === "ArrowDown" && !expanded()) {
+		if (e.key === "ArrowDown" && !menuOpen() && editing() === null) {
 			e.preventDefault();
-			setExpanded(true);
+			openMenu();
 			return;
 		}
 		if (e.key === "Escape") {
 			e.preventDefault();
-			if (expanded()) {
-				setExpanded(false);
+			if (menuOpen()) {
+				setMenuOpen(false);
+			} else if (editing() !== null) {
+				setEditing(null);
 			} else {
 				setText("");
 			}
@@ -201,6 +274,11 @@ export default function CaptureInput(props: CaptureInputProps) {
 			}, TAG_SEARCH_DEBOUNCE_MS);
 		});
 
+	const conditionEditing = () => {
+		const value = editing();
+		return value === "parent" ? null : value;
+	};
+
 	return (
 		<div class={`${styles.capture}${props.class ? ` ${props.class}` : ""}`}>
 			<div class={styles.row}>
@@ -214,38 +292,114 @@ export default function CaptureInput(props: CaptureInputProps) {
 					onKeyDown={onKeyDown}
 				/>
 				<Button
+					ref={plusRef}
 					variant="ghost"
 					size="sm"
 					class={styles.expandButton}
 					tabindex={-1}
-					aria-expanded={expanded()}
-					aria-controls="capture-panel"
-					aria-label={expanded() ? "收起更多选项" : "更多选项"}
-					title={expanded() ? "收起更多选项（↓）" : "更多选项（↓）"}
-					onClick={() => setExpanded(!expanded())}
+					aria-expanded={menuOpen()}
+					aria-haspopup="menu"
+					aria-controls="capture-conditions"
+					aria-label={menuOpen() ? "收起添加菜单" : "添加条件"}
+					title={menuOpen() ? "收起添加菜单（↓）" : "添加条件（↓）"}
+					onClick={() => (menuOpen() ? closeMenu() : openMenu())}
 				>
-					{expanded() ? "−" : "+"}
+					{menuOpen() ? "−" : "+"}
 				</Button>
 			</div>
 
-			{/* 实时预览：把"系统听懂了多少"摆在明面上（P8：不允许无法解释的结果） */}
-			<Show when={text().trim().length > 0}>
+			{/* 空框时的第一句引导：不占已开始输入后的空间 */}
+			<Show
+				when={
+					text().trim() === "" &&
+					!anyValue() &&
+					!menuOpen() &&
+					editing() === null
+				}
+			>
+				<p class={styles.guide}>
+					回车创建 · ↓ 加计划/截止/标签 · 也可直接写{" "}
+					<code class={styles.guideCode}>!p1 #工作 ~60m</code>
+				</p>
+			</Show>
+
+			{/* 已加的条件：有值才出现，点 chip 回到对应编辑器 */}
+			<Show when={anyValue()}>
+				<div class={styles.chips}>
+					<Show when={formatPlan(values().startAt, values().effortMinutes)}>
+						{(label) => (
+							<ConditionChip
+								label={label()}
+								ariaLabel="编辑计划时间"
+								onClick={() => setEditing("start")}
+							/>
+						)}
+					</Show>
+					<Show when={formatDue(values().dueAt)}>
+						{(due) => (
+							<ConditionChip
+								label={due().text}
+								ariaLabel="编辑截止时间"
+								onClick={() => setEditing("due")}
+							/>
+						)}
+					</Show>
+					<Show when={values().priority}>
+						{(priority) => (
+							<ConditionChip
+								label={priority().toUpperCase()}
+								ariaLabel="编辑优先级"
+								onClick={() => setEditing("priority")}
+							/>
+						)}
+					</Show>
+					<Show when={values().effortMinutes}>
+						{(minutes) => (
+							<ConditionChip
+								label={`⏱${formatEffort(minutes())}`}
+								ariaLabel="编辑预计时长"
+								onClick={() => setEditing("effort")}
+							/>
+						)}
+					</Show>
+					<For each={values().tags}>
+						{(tag) => (
+							<ConditionChip
+								label={`#${tag}`}
+								ariaLabel={`编辑标签「${tag}」`}
+								onClick={() => setEditing("tags")}
+							/>
+						)}
+					</For>
+					<Show when={parentId() !== null}>
+						<ConditionChip
+							label={`父：${parentTitle()}`}
+							ariaLabel="编辑父任务"
+							onClick={() => setEditing("parent")}
+						/>
+					</Show>
+				</div>
+			</Show>
+
+			{/* 实时预览：只留"系统没听懂 / 不能提交"的提醒；已识别的值在 chips 里 */}
+			<Show
+				when={
+					titleMissing() ||
+					timeError() !== null ||
+					parsed().unparsed.length > 0 ||
+					parsed().mentions.length > 0
+				}
+			>
 				<div class={styles.preview} aria-live="polite">
-					<Show when={titleMissing()}>
+					<Show when={titleMissing() && text().trim().length > 0}>
 						<span class={styles.previewWarning}>
 							只有符号没有标题，写点内容才能建
 						</span>
 					</Show>
-					<Show when={parsed().priority}>
-						{(priority) => (
-							<span class={styles.chip}>{priority().toUpperCase()}</span>
+					<Show when={timeError()}>
+						{(message) => (
+							<span class={styles.previewWarning}>{message()}</span>
 						)}
-					</Show>
-					<For each={parsed().tags}>
-						{(tag) => <span class={styles.chip}>#{tag}</span>}
-					</For>
-					<Show when={parsed().effortMinutes}>
-						{(minutes) => <span class={styles.chip}>⏱{minutes()}m</span>}
 					</Show>
 					<Show when={parsed().mentions.length > 0}>
 						<span class={styles.chipMuted}>
@@ -261,241 +415,76 @@ export default function CaptureInput(props: CaptureInputProps) {
 				</div>
 			</Show>
 
-			<Show when={expanded()}>
-				<div id="capture-panel" class={styles.panel}>
-					<DateField
-						label="截止时间"
-						value={dueAt()}
-						onChange={setDueAt}
-						testId="capture-due"
+			<Show when={menuOpen()}>
+				<div id="capture-conditions">
+					<ConditionMenu
+						conditions={missingConditions(values())}
+						extras={
+							(props.parentCandidates?.length ?? 0) > 0 && parentId() === null
+								? [{ key: "parent", label: "父任务" }]
+								: []
+						}
+						onSelect={(key) => {
+							setMenuOpen(false);
+							setEditing(key === "parent" ? "parent" : (key as ConditionKey));
+						}}
+						onClose={closeMenu}
+						label="添加"
 					/>
-					<DateField
-						label="开始时间"
-						value={startAt()}
-						onChange={setStartAt}
-						testId="capture-start"
-					/>
-
-					<div class={styles.field}>
-						<label class={styles.label} for="capture-priority">
-							优先级
-						</label>
-						<Select
-							id="capture-priority"
-							value={parsed().priority ?? ""}
-							onChange={(e) => {
-								const value = e.currentTarget.value;
-								setText(
-									setPriorityToken(
-										text(),
-										value === "" ? null : (value as TaskPriority),
-									),
-								);
-							}}
-						>
-							<option value="">（未设置）</option>
-							<option value="p1">p1 · 最急</option>
-							<option value="p2">p2</option>
-							<option value="p3">p3</option>
-							<option value="p4">p4</option>
-						</Select>
-					</div>
-
-					<div class={styles.field}>
-						<label class={styles.label} for={effortFieldId}>
-							预计时长（分钟）
-						</label>
-						<Input
-							id={effortFieldId}
-							type="number"
-							min="1"
-							class={styles.effortInput}
-							value={effortDraft()}
-							onInput={(e) => setEffortDraft(e.currentTarget.value)}
-							onChange={(e) => {
-								const minutes = Number(e.currentTarget.value);
-								setText(
-									setEffortToken(
-										text(),
-										!minutes || minutes <= 0 ? null : Math.round(minutes),
-									),
-								);
-							}}
-						/>
-					</div>
-
-					<div class={styles.field}>
-						<span class={styles.label}>标签</span>
-						<TagInput
-							selected={parsed().tags}
-							onAdd={(name) => setText(addTagToken(text(), name))}
-							onRemove={(name) => setText(removeTagToken(text(), name))}
-							search={searchTags}
-							placeholder="标签名（Enter 确认）"
-							ariaLabel="给任务加标签"
-						/>
-					</div>
-
-					<Show when={(props.parentCandidates?.length ?? 0) > 0}>
-						<div class={styles.field}>
-							<label class={styles.label} for="capture-parent">
-								父任务
-							</label>
-							<Select
-								id="capture-parent"
-								value={parentId() ?? ""}
-								onChange={(e) =>
-									setParentId(
-										e.currentTarget.value === ""
-											? null
-											: Number(e.currentTarget.value),
-									)
-								}
-							>
-								<option value="">（无）</option>
-								<For each={props.parentCandidates}>
-									{(candidate) => (
-										<option value={candidate.id}>{candidate.title}</option>
-									)}
-								</For>
-							</Select>
-						</div>
-					</Show>
 				</div>
 			</Show>
-		</div>
-	);
-}
 
-interface DateFieldProps {
-	label: string;
-	value: Date | null;
-	onChange: (value: Date | null) => void;
-	testId: string;
-}
+			<Show keyed when={conditionEditing()}>
+				{(condition) => (
+					<ConditionEditor
+						condition={condition}
+						values={values()}
+						onChange={applyCondition}
+						onClose={() => {
+							setEditing(null);
+							queueMicrotask(() => inputRef?.focus());
+						}}
+						searchTags={searchTags}
+					/>
+				)}
+			</Show>
 
-/**
- * 日期控件（MD3 契约）：文本输入 + 日历图标。
- *
- * - **打字是主路径**，日历图标只是可选的快捷方式（MD3：它"reduces the amount of
- *   key presses"，不是必经之路）
- * - **失焦或回车才解析并格式化**：输入过程中绝不改用户敲的字（禁输入掩码 —— MD3 的
- *   理由读屏用户听到的与看到的不一致）
- * - 格式写在下方 helper 里（不是 placeholder），格式规格见 lib/dateInput.ts
- * - 清空 = 把文本删光（"我设错了"是必需场景，不额外加清空按钮）
- */
-function DateField(props: DateFieldProps) {
-	let pickerRef: HTMLInputElement | undefined;
-	let textRef: HTMLInputElement | undefined;
-	const [draft, setDraft] = createSignal(
-		props.value ? formatDateInput(props.value) : "",
-	);
-	const [invalid, setInvalid] = createSignal(false);
-
-	// 外部（提交后重置）改了值：跟着走，但用户正在这个框里打字时不抢
-	createEffect(() => {
-		const value = props.value;
-		if (document.activeElement !== textRef) {
-			setDraft(value ? formatDateInput(value) : "");
-			setInvalid(false);
-		}
-	});
-
-	/** 失焦 / 回车才落定：认得出就格式化，认不出就标记无效（不偷偷丢掉用户写的字） */
-	const commit = () => {
-		const text = draft().trim();
-		if (text === "") {
-			setInvalid(false);
-			props.onChange(null);
-			return;
-		}
-		const date = parseDateInput(text);
-		if (date) {
-			setInvalid(false);
-			setDraft(formatDateInput(date));
-			props.onChange(date);
-		} else {
-			setInvalid(true);
-		}
-	};
-
-	return (
-		<div class={styles.field}>
-			<label class={styles.label} for={props.testId}>
-				{props.label}
-			</label>
-			<div class={styles.dateRow}>
-				<Input
-					ref={textRef}
-					id={props.testId}
-					class={styles.dateInput}
-					value={draft()}
-					placeholder="2026-10-03 15:00"
-					invalid={invalid()}
-					aria-describedby={`${props.testId}-helper`}
-					onInput={(e) => {
-						setDraft(e.currentTarget.value);
-						setInvalid(false);
-					}}
-					onBlur={commit}
-					onKeyDown={(e) => {
-						if (isImeComposing(e)) {
-							return;
+			<Show when={editing() === "parent"}>
+				<fieldset class={styles.editor} aria-label="编辑父任务">
+					<div class={styles.editorHeader}>
+						<span class={styles.editorTitle}>父任务</span>
+						<button
+							type="button"
+							class={styles.editorDone}
+							onClick={() => {
+								setEditing(null);
+								queueMicrotask(() => inputRef?.focus());
+							}}
+							aria-label="收起父任务编辑"
+						>
+							完成
+						</button>
+					</div>
+					<Select
+						value={parentId() ?? ""}
+						onChange={(e) =>
+							setParentId(
+								e.currentTarget.value === ""
+									? null
+									: Number(e.currentTarget.value),
+							)
 						}
-						if (e.key === "Enter") {
-							// 回车只落定这个框，不提交整条（还在填属性）
-							e.preventDefault();
-							e.stopPropagation();
-							commit();
-						}
-						if (e.key === "Escape") {
-							// Esc 撤掉这一格的改动，也不冒泡去收面板
-							e.stopPropagation();
-							setDraft(props.value ? formatDateInput(props.value) : "");
-							setInvalid(false);
-						}
-					}}
-				/>
-				<button
-					type="button"
-					class={styles.calendarButton}
-					aria-label={`选择${props.label}`}
-					onClick={() => {
-						const picker = pickerRef;
-						if (!picker) {
-							return;
-						}
-						// showPicker 是可选能力：老浏览器上退回"点一下原生框"
-						if (typeof picker.showPicker === "function") {
-							picker.showPicker();
-						} else {
-							picker.focus();
-						}
-					}}
-				>
-					📅
-				</button>
-				<input
-					ref={pickerRef}
-					class={styles.picker}
-					type="datetime-local"
-					tabindex={-1}
-					aria-label={`${props.label}（日历选择）`}
-					value={toDateInputValue(props.value)}
-					onChange={(e) => {
-						const picked = e.currentTarget.value;
-						const date = picked ? new Date(picked) : null;
-						if (date) {
-							setDraft(formatDateInput(date));
-						}
-						setInvalid(false);
-						props.onChange(date);
-					}}
-				/>
-			</div>
-			<span id={`${props.testId}-helper`} class={styles.helper}>
-				{DATE_HELPER}
-			</span>
+						aria-label="父任务"
+					>
+						<option value="">（无）</option>
+						<For each={props.parentCandidates}>
+							{(candidate) => (
+								<option value={candidate.id}>{candidate.title}</option>
+							)}
+						</For>
+					</Select>
+				</fieldset>
+			</Show>
 		</div>
 	);
 }

@@ -1,6 +1,7 @@
 import { notifyError, useListResource } from "@shared/utils";
-import { createMemo, createSignal } from "solid-js";
+import { createMemo, createResource, createSignal } from "solid-js";
 import { type CalendarEvent, getCalendarEventsE } from "../api.ts";
+import { type ExternalEvent, getEventsE } from "../calendarApi.ts";
 import {
 	type CalendarDensity,
 	columnWeekday,
@@ -56,6 +57,8 @@ export interface TaskCalendarApi {
 	segmentsFor: (key: string) => readonly DaySegment[];
 	/** 某天的事件（徽标判定用） */
 	eventsFor: (key: string) => readonly CalendarEvent[];
+	/** 某天的独立日程（生日/纪念日/节日，不属于 task） */
+	externalEventsFor: (key: string) => readonly ExternalEvent[];
 	changeMonth: (delta: number) => void;
 	/** 回到今天（S4-7：现状只有 ±1 翻月，翻到远处就回不来了） */
 	goToToday: () => void;
@@ -128,8 +131,17 @@ export function useTaskCalendar(weekParam?: () => string | undefined) {
 		onError: () => notifyError("获取日历事件失败"),
 	});
 
+	// 独立日程：与任务时间块并行取；失败只当没有（日历不该因此空掉）
+	const [external, { refetch: refetchExternal }] = createResource(
+		monthRange,
+		(range) => getEventsE(range.start, range.end).catch(() => [] as const),
+	);
+
 	/** 重新取数（拖拽落位之后刷新日历用） */
-	const reload = () => void list.refetch();
+	const reload = () => {
+		void list.refetch();
+		void refetchExternal();
+	};
 
 	/** 跨日切分后按天归组（同一份结果喂给事件条与徽标判定） */
 	const segmentsByDay = createMemo(() =>
@@ -147,6 +159,18 @@ export function useTaskCalendar(weekParam?: () => string | undefined) {
 				unique.set(segment.event.task_id, segment.event);
 			}
 			map.set(key, [...unique.values()]);
+		}
+		return map;
+	});
+
+	/** 独立日程按 occurrence_on（本地日期）归组；没有 occurrence_on 时退回 start_at */
+	const externalByDay = createMemo(() => {
+		const map = new Map<string, ExternalEvent[]>();
+		for (const event of external() ?? []) {
+			const key = event.occurrence_on ?? dayKey(new Date(event.start_at));
+			const list = map.get(key);
+			if (list) list.push(event);
+			else map.set(key, [event]);
 		}
 		return map;
 	});
@@ -200,6 +224,7 @@ export function useTaskCalendar(weekParam?: () => string | undefined) {
 		setDensity,
 		segmentsFor: (key: string) => segmentsByDay().get(key) ?? [],
 		eventsFor: (key: string) => eventsByDay().get(key) ?? [],
+		externalEventsFor: (key: string) => externalByDay().get(key) ?? [],
 		changeMonth,
 		goToToday,
 		today,

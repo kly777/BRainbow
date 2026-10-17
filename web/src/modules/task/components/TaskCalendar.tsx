@@ -17,6 +17,7 @@ import {
 	Show,
 } from "solid-js";
 import type { CalendarEvent } from "../api.ts";
+import type { ExternalEvent } from "../calendarApi.ts";
 import type { TaskCalendarApi } from "../hooks/useTaskCalendar.ts";
 import {
 	type DaySegment,
@@ -128,6 +129,8 @@ const CalendarDayCell: Component<{
 	today: boolean;
 	segments: readonly DaySegment[];
 	events: readonly CalendarEvent[];
+	/** 独立日程：生日/纪念日/节日（不属于 task，不参与任务事件条） */
+	externalEvents: readonly ExternalEvent[];
 	collapsedCount: number;
 	/** roving tabindex：当前格 tabindex=0，其余 -1 → 整个网格只占一个 Tab 停靠点 */
 	isFocusedCell: boolean;
@@ -182,6 +185,25 @@ const CalendarDayCell: Component<{
 					<For each={visible()}>
 						{(segment) => (
 							<EventBar segment={segment} onOpen={props.onOpenTask} />
+						)}
+					</For>
+					{/* 独立日程：生日/纪念日/节日。不占任务事件条的位置，也不参与折叠计数 */}
+					<For each={props.externalEvents}>
+						{(event) => (
+							<span
+								class={styles.externalEvent}
+								data-kind={event.kind}
+								title={[
+									event.title,
+									event.age !== null ? `${event.age} 岁` : "",
+									event.years !== null ? `${event.years} 周年` : "",
+								]
+									.filter(Boolean)
+									.join(" · ")}
+							>
+								{event.kind === "birthday" ? "🎂 " : ""}
+								{event.title}
+							</span>
 						)}
 					</For>
 					{/* 折叠行常占位：内容是"+N 更多"，不 hover 才出现 */}
@@ -345,6 +367,11 @@ export default function TaskCalendar(props: TaskCalendarProps) {
 													cell.date ? m.segmentsFor(dayKey(cell.date)) : []
 												}
 												events={cell.date ? m.eventsFor(dayKey(cell.date)) : []}
+												externalEvents={
+													cell.date
+														? m.externalEventsFor(dayKey(cell.date))
+														: []
+												}
 												collapsedCount={m.collapsedCount()}
 												isFocusedCell={index() === focusedIndex()}
 												registerCell={registerCell}

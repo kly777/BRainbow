@@ -1,0 +1,44 @@
+.form {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-sm);
+}
+
+.row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-md);
+}
+
+.field {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	gap: var(--space-3xs, 0.25rem);
+	min-width: 7rem;
+}
+
+.label {
+	font-size: var(--text-xs);
+	color: var(--t-color-ink-muted);
+}
+
+.weekdays {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--space-xs);
+}
+
+.weekday {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--space-2xs);
+	font-size: var(--text-sm);
+	color: var(--t-color-ink);
+}
+
+.error {
+	margin: 0;
+	font-size: var(--text-xs);
+	color: var(--t-color-danger);
+}

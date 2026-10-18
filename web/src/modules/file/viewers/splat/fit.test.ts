@@ -7,7 +7,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vite-plus/test";
-import type { SplatBounds } from "../../lib/ply.ts";
+import type { SplatBounds } from "../../model/ply.ts";
 import {
 	boxCorners,
 	cornerPoints,

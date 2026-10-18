@@ -14,7 +14,11 @@ import {
 	it,
 	vi,
 } from "vite-plus/test";
-import { buildPly, GAUSSIAN_PROPS, gaussianRow } from "../lib/ply-fixtures.ts";
+import {
+	buildPly,
+	GAUSSIAN_PROPS,
+	gaussianRow,
+} from "../model/ply-fixtures.ts";
 import { SplatViewer } from "./SplatViewer.tsx";
 import { item } from "./test-fixtures.ts";
 

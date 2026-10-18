@@ -12,7 +12,7 @@ import {
 	it,
 	vi,
 } from "vite-plus/test";
-import { previewUrlOf } from "../hooks/usePreviewDoc.ts";
+import { previewUrlOf } from "../view/usePreviewDoc.ts";
 import { ArchiveViewer } from "./ArchiveViewer.tsx";
 import { DatabaseViewer } from "./DatabaseViewer.tsx";
 import { DocxViewer } from "./DocxViewer.tsx";

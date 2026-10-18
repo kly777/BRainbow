@@ -4,8 +4,8 @@
 import { fmtFull, formatBytes } from "@shared/utils";
 import { Show } from "solid-js";
 import type { FileItem } from "../api.ts";
-import { categoryLabel } from "../lib/category.ts";
-import { fmtDimensions, fmtDurationMs } from "../lib/meta.ts";
+import { categoryLabel } from "../model/category.ts";
+import { fmtDimensions, fmtDurationMs } from "../model/meta.ts";
 import styles from "./FileMeta.module.css";
 
 export default function FileMeta(props: { item: FileItem }) {

@@ -36,11 +36,11 @@ import TagFilter from "./components/TagFilter.tsx";
 import TagManager from "./components/TagManager.tsx";
 import UploadPanel from "./components/UploadPanel.tsx";
 import styles from "./FileList.module.css";
-import { useFileDropZone, usePasteFiles } from "./hooks/useFileDropZone.ts";
-import { useFileList } from "./hooks/useFileList.ts";
-import { useImageLightbox } from "./hooks/useImageLightbox.ts";
-import { useListScroll } from "./hooks/useListScroll.ts";
-import { CATEGORIES, categoryLabel } from "./lib/category.ts";
+import { useFileDropZone, usePasteFiles } from "./view/useFileDropZone.ts";
+import { useFileList } from "./view/useFileList.ts";
+import { useImageLightbox } from "./view/useImageLightbox.ts";
+import { useListScroll } from "./view/useListScroll.ts";
+import { CATEGORIES, categoryLabel } from "./model/category.ts";
 
 /** 列表滚动位置的 sessionStorage 键（从详情返回时恢复） */
 const SCROLL_KEY = "file-list-scroll-top";

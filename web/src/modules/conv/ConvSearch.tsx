@@ -11,7 +11,7 @@ import { fmtLocal } from "@shared/utils";
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
 import styles from "./ConvSearch.module.css";
-import { useConvSearch } from "./hooks/useConvSearch.ts";
+import { useConvSearch } from "./view/useConvSearch.ts";
 
 const fieldLabel: Record<string, string> = {
 	title: "标题",

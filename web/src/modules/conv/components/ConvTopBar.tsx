@@ -1,6 +1,6 @@
 import { BackLink } from "@components/ui";
 import styles from "../ConvDetail.module.css";
-import { typeLabel } from "../hooks/type-labels.ts";
+import { typeLabel } from "../view/type-labels.ts";
 
 interface Props {
 	title: string;

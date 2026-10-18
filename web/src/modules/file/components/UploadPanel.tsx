@@ -2,7 +2,7 @@ import { Button } from "@components/ui";
 import { X } from "@components/ui/icons";
 import { type Component, For, Show } from "solid-js";
 import styles from "../FileList.module.css";
-import type { UploadTask } from "../hooks/useFileList.ts";
+import type { UploadTask } from "../view/useFileList.ts";
 
 /** 上传进度面板：批量/大文件时显示每个文件的进度与结果 */
 const UploadPanel: Component<{

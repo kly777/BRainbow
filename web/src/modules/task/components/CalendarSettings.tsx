@@ -14,8 +14,8 @@ import { For } from "solid-js";
 import type {
 	CalendarGranularity,
 	TaskCalendarApi,
-} from "../hooks/useTaskCalendar.ts";
-import type { CalendarDensity, Weekday } from "../lib/calendar.ts";
+} from "../data/useTaskCalendar.ts";
+import type { CalendarDensity, Weekday } from "../model/calendar.ts";
 import styles from "./TaskCalendar.module.css";
 
 /** 起始日选项：`跟随区域设置` = null（CLDR firstDay），其余是显式选择 */

@@ -18,7 +18,7 @@ import {
 } from "solid-js";
 import type { CalendarEvent } from "../api.ts";
 import type { ExternalEvent } from "../calendarApi.ts";
-import type { TaskCalendarApi } from "../hooks/useTaskCalendar.ts";
+import type { TaskCalendarApi } from "../data/useTaskCalendar.ts";
 import {
 	type DaySegment,
 	dayKey,
@@ -26,7 +26,7 @@ import {
 	formatSegmentTime,
 	hasFeasible,
 	hasOverdue,
-} from "../lib/calendar.ts";
+} from "../model/calendar.ts";
 import styles from "./TaskCalendar.module.css";
 
 /** 事件条：时间前缀 + 标题 + 优先级角标 + 跨日断口 */

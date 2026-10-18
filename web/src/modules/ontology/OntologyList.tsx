@@ -4,7 +4,7 @@ import { Show } from "solid-js";
 import { CreateOntoModal } from "./components/CreateOntoModal.tsx";
 import OntologyGrid from "./components/OntologyGrid.tsx";
 import OntologyTable from "./components/OntologyTable.tsx";
-import { useOntologyList } from "./hooks/useOntologyList.ts";
+import { useOntologyList } from "./view/useOntologyList.ts";
 import styles from "./OntologyList.module.css";
 
 const OntologyListPage: Component = () => {

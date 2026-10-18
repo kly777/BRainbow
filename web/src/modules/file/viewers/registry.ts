@@ -14,10 +14,10 @@ import {
 	isArchiveName,
 	isEpubName,
 	isSqliteName,
-} from "../lib/filename.ts";
-import { modelFormatOf } from "../lib/model.ts";
-import { isSplatLikeName } from "../lib/ply.ts";
-import { isPointCloudName } from "../lib/pointcloud.ts";
+} from "../model/filename.ts";
+import { modelFormatOf } from "../model/model.ts";
+import { isSplatLikeName } from "../model/ply.ts";
+import { isPointCloudName } from "../model/pointcloud.ts";
 import { ArchiveViewer } from "./ArchiveViewer.tsx";
 import { AudioViewer } from "./AudioViewer.tsx";
 import { CodeViewer } from "./CodeViewer.tsx";

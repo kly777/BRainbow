@@ -11,7 +11,7 @@ import DbTable from "./components/DbTable";
 import PaginationBar from "./components/PaginationBar";
 import TableHeaderActions from "./components/TableHeaderActions";
 import styles from "./DbViewer.module.css";
-import { useDbViewer } from "./hooks/useDbViewer.ts";
+import { useDbViewer } from "./view/useDbViewer.ts";
 
 const DB: Component = () => {
 	const m = useDbViewer();

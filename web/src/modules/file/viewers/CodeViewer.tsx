@@ -1,6 +1,6 @@
 import { Markdown } from "@components/ui";
 import { Show } from "solid-js";
-import { codeFence, codeLang } from "../lib/filename.ts";
+import { codeFence, codeLang } from "../model/filename.ts";
 import { PreBlock } from "./PreBlock.tsx";
 import { TextContent } from "./TextContent.tsx";
 import type { ViewerComponent } from "./types.ts";

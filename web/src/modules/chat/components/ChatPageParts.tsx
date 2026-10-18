@@ -11,7 +11,7 @@ import {
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
 import type { ChatNode, ChatTree } from "../api.ts";
 import { updateTreeE } from "../api.ts";
-import type { useChatPage } from "../hooks/useChatPage.ts";
+import type { useChatPage } from "../view/useChatPage.ts";
 import styles from "./ChatPageParts.module.css";
 
 // ── 树列表项 ──

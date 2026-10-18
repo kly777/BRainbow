@@ -16,7 +16,7 @@ import styles from "./CardsList.module.css";
 import CardFilter from "./components/CardFilter.tsx";
 import CardMasonry from "./components/CardMasonry.tsx";
 
-import { useCardsList } from "./hooks/useCardsList.ts";
+import { useCardsList } from "./view/useCardsList.ts";
 
 const CardPreview = (props: { content: string }) => (
 	<div class={styles.previewSection}>

@@ -11,19 +11,19 @@
 
 import { formatBytes } from "@shared/utils";
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
-import { type PlyPhase, usePreviewPly } from "../hooks/usePreviewPly.ts";
+import { type PlyPhase, usePreviewPly } from "../view/usePreviewPly.ts";
 import {
 	gltfNeedsExternalFiles,
 	MODEL_MAX_BYTES,
 	modelFormatOf,
-} from "../lib/model.ts";
+} from "../model/model.ts";
 import {
 	cameraPositionFor,
 	upVectorFor,
 	VIEW_DIRECTIONS,
 	VIEW_PRESET_LABELS,
 	VIEW_PRESETS,
-} from "../lib/modelView.ts";
+} from "../model/modelView.ts";
 import type { ViewerComponent } from "./types.ts";
 import styles from "./viewers.module.css";
 

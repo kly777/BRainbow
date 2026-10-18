@@ -12,7 +12,7 @@ import {
 	it,
 	vi,
 } from "vite-plus/test";
-import { useTaskCalendar } from "../hooks/useTaskCalendar.ts";
+import { useTaskCalendar } from "../data/useTaskCalendar.ts";
 import CalendarSettings from "./CalendarSettings.tsx";
 import TaskCalendar from "./TaskCalendar.tsx";
 

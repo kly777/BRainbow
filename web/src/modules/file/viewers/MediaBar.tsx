@@ -6,7 +6,7 @@
 
 import type { Component } from "solid-js";
 import { Show } from "solid-js";
-import type { MediaPlayback } from "../hooks/useMediaPlayback.ts";
+import type { MediaPlayback } from "../view/useMediaPlayback.ts";
 import styles from "./viewers.module.css";
 
 export const MediaBar: Component<{ playback: MediaPlayback }> = (props) => (

@@ -17,8 +17,8 @@ import {
 } from "@modules/file/markdown-editor-support.tsx";
 import { copyTextWithToast, fmtInterval, fmtLocal } from "@shared/utils";
 import { Show } from "solid-js";
-import type { UseMemReview } from "../hooks/useMemReviewTypes.ts";
-import { useSpeech } from "../hooks/useSpeech.ts";
+import type { UseMemReview } from "../view/useMemReviewTypes.ts";
+import { useSpeech } from "../view/useSpeech.ts";
 import styles from "./ReviewCard.module.css";
 
 type Speech = ReturnType<typeof useSpeech>;

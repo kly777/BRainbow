@@ -1,7 +1,7 @@
 import type { Angle, Color } from "@shared/utils";
 import { createMemo } from "solid-js";
 import { For } from "solid-js/web";
-import { rainbowGeometry } from "./lib/geometry.ts";
+import { rainbowGeometry } from "./model/geometry.ts";
 
 export type ShapeRender =
 	| "auto"

@@ -1,7 +1,7 @@
 // ── v2 标签过滤栏：外壳 + TagPicker（模式切换/chips/清空由 picker 承担） ──
 
 import { Show } from "solid-js";
-import type { UseMemReview } from "../hooks/useMemReviewTypes.ts";
+import type { UseMemReview } from "../view/useMemReviewTypes.ts";
 import styles from "./FilterBar.module.css";
 import TagPicker from "./TagPicker.tsx";
 

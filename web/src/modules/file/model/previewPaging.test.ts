@@ -4,7 +4,7 @@
 // 游标指定的那个容器从偏移处给行。所以合并规则是"**只追加到那个容器**，其余保持不动"。
 
 import { describe, expect, it } from "vite-plus/test";
-import type { DocPreview } from "../hooks/usePreviewDoc.ts";
+import type { DocPreview } from "../view/usePreviewDoc.ts";
 import { hasMore, mergePage, previewUrlWithCursor } from "./previewPaging.ts";
 
 const sheetPage = (rows: string[][], cursor?: string): DocPreview => ({

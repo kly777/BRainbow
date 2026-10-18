@@ -11,7 +11,7 @@ import {
 	draggedSideWidth,
 	parseSideWidth,
 	sideWidthKey,
-} from "../lib/splitPane.ts";
+} from "../model/splitPane.ts";
 
 /** 键盘微调一次的像素数（与鼠标拖拽共用同一套夹取） */
 export const KEYBOARD_STEP_PX = 16;

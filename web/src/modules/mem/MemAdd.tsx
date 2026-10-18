@@ -19,7 +19,7 @@ import {
 	ImportResult,
 	ImportTagInput,
 } from "./components/ImportParts.tsx";
-import { useMemAdd } from "./hooks/useMemAdd.ts";
+import { useMemAdd } from "./view/useMemAdd.ts";
 import styles from "./MemAdd.module.css";
 
 export default function MemAdd() {

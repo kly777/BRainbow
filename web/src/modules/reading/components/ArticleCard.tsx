@@ -5,7 +5,7 @@ import { fmtLocal } from "@shared/utils";
 import { A } from "@solidjs/router";
 import type { Component } from "solid-js";
 import type { ArticleSummary } from "../api.ts";
-import { knownLevel, knownPercent } from "../lib/reading-stats.ts";
+import { knownLevel, knownPercent } from "../model/reading-stats.ts";
 import styles from "../ReadingList.module.css";
 
 export interface ArticleCardProps {

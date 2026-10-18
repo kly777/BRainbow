@@ -8,7 +8,7 @@ import FilterBar from "./components/FilterBar.tsx";
 import MnemonicSettingsModal from "./components/MnemonicSettingsModal.tsx";
 import ReviewCard from "./components/ReviewCard.tsx";
 import Sidebar from "./components/Sidebar.tsx";
-import { useMemPage } from "./hooks/useMemPage.ts";
+import { useMemPage } from "./view/useMemPage.ts";
 import styles from "./MemPage.module.css";
 
 export default function MemPage() {

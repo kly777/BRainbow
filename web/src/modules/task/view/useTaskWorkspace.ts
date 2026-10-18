@@ -9,7 +9,7 @@ import { createEffect, createMemo, createSignal } from "solid-js";
 import type { TagOption } from "@components/ui/molecules/TagInput.tsx";
 import { useTasks } from "../data/TaskProvider.tsx";
 import { taskRepository } from "../data/taskRepository.ts";
-import { useTaskCalendar } from "../hooks/useTaskCalendar.ts";
+import { useTaskCalendar } from "../data/useTaskCalendar.ts";
 import { EMPTY_FILTER, isFilterEmpty } from "../model/task-filter.ts";
 import { captureToCreateRequest } from "../model/task-payload.ts";
 import {

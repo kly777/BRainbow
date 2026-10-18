@@ -1,7 +1,7 @@
 import { Button } from "@components/ui";
 import { type Component, createSignal, For, Show } from "solid-js";
-import type { DatabaseTable } from "../hooks/usePreviewDoc.ts";
-import { parseIndexPayload } from "../lib/viewLink.ts";
+import type { DatabaseTable } from "../view/usePreviewDoc.ts";
+import { parseIndexPayload } from "../model/viewLink.ts";
 import { DataTable } from "./DataTable.tsx";
 import { DocContent } from "./DocContent.tsx";
 import { PreviewState } from "./PreviewState.tsx";

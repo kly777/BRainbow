@@ -5,7 +5,7 @@ import { useNavigate } from "@solidjs/router";
 import { fillPath, PATHS } from "@config/paths";
 import type { Task } from "../api.ts";
 import type { TaskStatusType } from "../api-types.ts";
-import { statusToken } from "../lib/status-colors.ts";
+import { statusToken } from "../model/status-colors.ts";
 import { TaskMeta } from "../components/TaskMeta.tsx";
 import { useTasks } from "../data/TaskProvider.tsx";
 import styles from "./TaskBoard.module.css";

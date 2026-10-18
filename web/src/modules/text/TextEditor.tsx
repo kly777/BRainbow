@@ -1,5 +1,5 @@
 import { For } from "solid-js";
-import { useTextEditor } from "./hooks/useTextEditor.ts";
+import { useTextEditor } from "./view/useTextEditor.ts";
 import styles from "./TextEditor.module.css";
 
 export default function TextEditor() {

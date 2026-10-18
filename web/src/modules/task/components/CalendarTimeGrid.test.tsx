@@ -13,7 +13,7 @@ import {
 	vi,
 } from "vite-plus/test";
 import type { CalendarEvent } from "../api-types.ts";
-import { useTaskCalendar } from "../hooks/useTaskCalendar.ts";
+import { useTaskCalendar } from "../data/useTaskCalendar.ts";
 import CalendarTimeGrid from "./CalendarTimeGrid.tsx";
 
 const getCalendarEventsE = vi.fn();

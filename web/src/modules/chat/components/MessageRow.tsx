@@ -3,7 +3,7 @@
 import { Markdown as MarkdownRenderer } from "@components/ui";
 import { Show } from "solid-js";
 import type { ChatNode } from "../api.ts";
-import type { useChatPage } from "../hooks/useChatPage.ts";
+import type { useChatPage } from "../view/useChatPage.ts";
 import { BranchBar } from "./BranchBar.tsx";
 import { copyNode } from "./ChatPageParts.tsx";
 import styles from "./MessageRow.module.css";

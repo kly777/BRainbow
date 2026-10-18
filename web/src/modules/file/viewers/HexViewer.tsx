@@ -1,12 +1,9 @@
 import { Button } from "@components/ui";
 import { formatBytes } from "@shared/utils";
 import { createEffect, createSignal, For, on, Show } from "solid-js";
-import {
-	HEX_SEGMENT_BYTES,
-	usePreviewBytes,
-} from "../hooks/usePreviewBytes.ts";
-import { hexRows, sniffKind } from "../lib/magic.ts";
-import { parseIndexPayload } from "../lib/viewLink.ts";
+import { HEX_SEGMENT_BYTES, usePreviewBytes } from "../view/usePreviewBytes.ts";
+import { hexRows, sniffKind } from "../model/magic.ts";
+import { parseIndexPayload } from "../model/viewLink.ts";
 import { PreviewError } from "./PreviewError.tsx";
 import { PreviewState } from "./PreviewState.tsx";
 import type { ViewerComponent } from "./types.ts";

@@ -2,7 +2,7 @@ import { Badge } from "@components/ui";
 import { X } from "@components/ui/icons";
 import { fmtRelative, parseUtc } from "@shared/utils";
 import { type Component, For, Show } from "solid-js";
-import { memStateMeta } from "../../lib/mem-manage-utils.ts";
+import { memStateMeta } from "../../model/mem-manage-utils.ts";
 import styles from "../ManageTable.module.css";
 import { previewText, type RowInput } from "./types.ts";
 

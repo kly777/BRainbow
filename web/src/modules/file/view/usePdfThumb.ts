@@ -13,7 +13,7 @@ import {
 	observeOnce,
 	unobserve,
 	wantsPdfThumb,
-} from "../lib/pdfThumb.ts";
+} from "../model/pdfThumb.ts";
 
 /** 返回 [首页缩略图的 blob URL, 把宿主元素交进来] */
 export function usePdfThumb(item: () => FileItem) {

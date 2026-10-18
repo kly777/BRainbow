@@ -19,7 +19,7 @@ vi.mock("@shared/utils", () => ({
 	},
 }));
 
-vi.mock("../lib/geometry.ts", () => ({
+vi.mock("../model/geometry.ts", () => ({
 	RAINBOW_SQUARE_SIZE: 400,
 	rainbowGeometry: vi.fn(() => ({
 		rectWidth: 100,

@@ -1,7 +1,7 @@
 import { fmtLocal } from "@shared/utils";
 import { type Component, For } from "solid-js";
 import styles from "../BookmarkDetail.module.css";
-import type { BookmarkItem } from "../hooks/useBookmarkDetail.ts";
+import type { BookmarkItem } from "../view/useBookmarkDetail.ts";
 
 /** 书签详情的查看态：标题（页面唯一的 h1）/ URL / 时间 / 备注 / 标签 */
 export const BookmarkView: Component<{ bm: BookmarkItem }> = (props) => (

@@ -8,7 +8,7 @@
 // "kind 不一致"或"没有游标"都退化成原样返回，不抛错（客户端不该因为服务端少给一个
 // 字段就崩）。
 
-import type { DocPreview } from "../hooks/usePreviewDoc.ts";
+import type { DocPreview } from "../view/usePreviewDoc.ts";
 
 /** 这一页响应还有更多吗（游标是不透明串，原样回传给服务端即可取下一页） */
 export function hasMore(data: DocPreview | undefined): boolean {

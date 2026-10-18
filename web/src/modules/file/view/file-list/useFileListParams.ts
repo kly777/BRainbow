@@ -5,7 +5,7 @@
 
 import { enumParam, numParam, strParam, useUrlParams } from "@shared/utils";
 import type { FileCategoryFilter, SortOrder } from "../../api.ts";
-import { CATEGORIES } from "../../lib/category.ts";
+import { CATEGORIES } from "../../model/category.ts";
 
 /**
  * 分类筛选的全部取值：`""`（全部）+ 五个真实分类。

@@ -8,7 +8,7 @@ import {
 	buildSplat,
 	GAUSSIAN_PROPS,
 	gaussianRow,
-} from "../../lib/ply-fixtures.ts";
+} from "../../model/ply-fixtures.ts";
 import { createSplatRunner, type SplatRunHandlers } from "./runner.ts";
 
 const bytesOf = (...zs: number[]) =>

@@ -10,7 +10,7 @@ import {
 	GAUSSIAN_PROPS,
 	gaussianRow,
 	POINT_PROPS,
-} from "../../lib/ply-fixtures.ts";
+} from "../../model/ply-fixtures.ts";
 import { createSplatEngine, TEX_WIDTH } from "./engine.ts";
 
 /** 沿 z 轴排开的一串高斯（每 4 个单位一个），用于验证深度排序 */

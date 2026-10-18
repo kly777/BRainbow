@@ -5,7 +5,7 @@ import { PATHS } from "@config/paths";
 
 import { A } from "@solidjs/router";
 import { type Component, For, Show } from "solid-js";
-import type { PreviewRow } from "../hooks/useMemAdd.ts";
+import type { PreviewRow } from "../view/useMemAdd.ts";
 import styles from "./ImportParts.module.css";
 
 // ── 格式说明（档案说明卡） ──

@@ -1,7 +1,7 @@
 import { formatBytes } from "@shared/utils";
 import { createEffect, createSignal, on, onCleanup, Show } from "solid-js";
-import { type PlyPhase, usePreviewPly } from "../hooks/usePreviewPly.ts";
-import type { SplatBounds } from "../lib/ply.ts";
+import { type PlyPhase, usePreviewPly } from "../view/usePreviewPly.ts";
+import type { SplatBounds } from "../model/ply.ts";
 import { DownloadPanel } from "./DownloadPanel.tsx";
 import {
 	applyOps,

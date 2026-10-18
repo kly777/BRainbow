@@ -6,7 +6,7 @@ import {
 	getTypeEmoji,
 	getTypeHint,
 	useQuickCapture,
-} from "./hooks/useQuickCapture.ts";
+} from "./view/useQuickCapture.ts";
 import styles from "./QuickCapture.module.css";
 
 export default function QuickCapture() {

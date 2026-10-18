@@ -8,9 +8,9 @@ import { type FileTag, listFileTags } from "./api.ts";
 import FileEditForm from "./components/FileEditForm.tsx";
 import FileInfoList from "./components/FileInfoList.tsx";
 import styles from "./FileDetail.module.css";
-import { useFileDetail } from "./hooks/useFileDetail.ts";
-import { useSplitPane } from "./hooks/useSplitPane.ts";
-import { buildViewParam, viewStateOf } from "./lib/viewLink.ts";
+import { useFileDetail } from "./view/useFileDetail.ts";
+import { useSplitPane } from "./view/useSplitPane.ts";
+import { buildViewParam, viewStateOf } from "./model/viewLink.ts";
 import { PreviewStage } from "./viewers/PreviewStage.tsx";
 import { ViewLinkContext } from "./viewers/viewLink.ts";
 

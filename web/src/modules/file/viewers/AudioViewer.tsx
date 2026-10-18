@@ -1,4 +1,4 @@
-import { useMediaPlayback } from "../hooks/useMediaPlayback.ts";
+import { useMediaPlayback } from "../view/useMediaPlayback.ts";
 import { MediaBar } from "./MediaBar.tsx";
 import { PreviewMedia } from "./PreviewMedia.tsx";
 import type { ViewerComponent } from "./types.ts";

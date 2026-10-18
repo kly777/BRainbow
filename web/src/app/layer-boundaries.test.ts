@@ -213,7 +213,16 @@ describe("分层依赖方向契约", () => {
 
 		expect(registered).toEqual(dirs);
 		for (const dir of dirs) {
-			expect(existsSync(join(moduleRoot, dir, "index.ts"))).toBe(true);
+			const root = join(moduleRoot, dir);
+			expect(existsSync(join(root, "index.ts"))).toBe(true);
+			// 分层统一：纯规则进 model/，页面状态进 view/；不再有 hooks/ 与 lib/ 两个大杂烩
+			expect(
+				existsSync(join(root, "hooks")),
+				`${dir}/hooks 应迁移到 view/`,
+			).toBe(false);
+			expect(existsSync(join(root, "lib")), `${dir}/lib 应迁移到 model/`).toBe(
+				false,
+			);
 		}
 	});
 

@@ -12,7 +12,7 @@ import {
 	httpPreviewError,
 	networkPreviewError,
 	type PreviewErrorInfo,
-} from "../lib/previewError.ts";
+} from "../model/previewError.ts";
 import { totalFromContentRange } from "./usePreviewPly.ts";
 
 /** 十六进制查看器每段展示的字节数（256 行） */

@@ -9,7 +9,7 @@ import { Button } from "@components/ui";
 import { AlertTriangle, Download, RefreshCw } from "@components/ui/icons";
 import { type Component, Show } from "solid-js";
 import type { FileItem } from "../api.ts";
-import type { PreviewErrorInfo } from "../lib/previewError.ts";
+import type { PreviewErrorInfo } from "../model/previewError.ts";
 import { PreviewState } from "./PreviewState.tsx";
 
 export const PreviewError: Component<{

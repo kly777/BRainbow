@@ -12,7 +12,10 @@ import {
 } from "@shared/utils";
 import { createSignal } from "solid-js";
 import { deleteFile, type FileItem, updateFile } from "../../api.ts";
-import { batchAddTagNotice, batchDeleteNotice } from "../../lib/op-notices.ts";
+import {
+	batchAddTagNotice,
+	batchDeleteNotice,
+} from "../../model/op-notices.ts";
 
 export function useFileBatch(deps: {
 	items: () => FileItem[];

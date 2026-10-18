@@ -13,8 +13,8 @@ import { Check, X } from "@components/ui/icons";
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
 import ArticleContent from "./components/ArticleContent";
-import { useReadingDetail } from "./hooks/useReadingDetail.ts";
-import { knownPercent } from "./lib/reading-stats.ts";
+import { useReadingDetail } from "./view/useReadingDetail.ts";
+import { knownPercent } from "./model/reading-stats.ts";
 import styles from "./ReadingDetail.module.css";
 
 export default function ReadingDetail() {

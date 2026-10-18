@@ -5,7 +5,7 @@ import { AlertTriangle } from "@components/ui/icons";
 import { fillPath, PATHS } from "@config/paths";
 import { Show } from "solid-js";
 import styles from "../BookmarkPage.module.css";
-import type { useBookmarkPage } from "../hooks/useBookmarkPage.ts";
+import type { useBookmarkPage } from "../view/useBookmarkPage.ts";
 import TagInput from "./TagInput.tsx";
 
 export function BookmarkFormModal(props: {

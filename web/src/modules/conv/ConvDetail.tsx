@@ -7,8 +7,8 @@ import { fmtLocal } from "@shared/utils";
 import { For, Show } from "solid-js";
 import styles from "./ConvDetail.module.css";
 import ConvTopBar from "./components/ConvTopBar.tsx";
-import { typeLabel } from "./hooks/type-labels.ts";
-import { useConvDetail } from "./hooks/useConvDetail.ts";
+import { typeLabel } from "./view/type-labels.ts";
+import { useConvDetail } from "./view/useConvDetail.ts";
 
 export default function ConvDetailPage() {
 	const m = useConvDetail();

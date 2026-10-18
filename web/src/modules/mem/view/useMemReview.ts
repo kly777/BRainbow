@@ -9,7 +9,7 @@ import {
 	calcAvgCardTime,
 	calcMaxLearning,
 	DEFAULT_CARD_TIME_SECS,
-} from "../lib/mem-calcs.ts";
+} from "../model/mem-calcs.ts";
 import { useDueQueue } from "./useDueQueue.ts";
 import type { UseMemReview } from "./useMemReviewTypes.ts";
 import { useMemTagFilter } from "./useMemTagFilter.ts";

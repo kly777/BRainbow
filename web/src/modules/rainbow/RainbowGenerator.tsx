@@ -2,8 +2,8 @@ import { Button, FilterGroup } from "@components/ui";
 import type { Component } from "solid-js";
 import AngleEditor from "./AngleEditor";
 import ColorEditor from "./ColorEditor";
-import { useRainbowGenerator } from "./hooks/useRainbowGenerator.ts";
-import { RAINBOW_SQUARE_SIZE } from "./lib/geometry.ts";
+import { useRainbowGenerator } from "./view/useRainbowGenerator.ts";
+import { RAINBOW_SQUARE_SIZE } from "./model/geometry.ts";
 import { RainbowDrawer, type ShapeRender } from "./RainbowDrawer";
 import styles from "./RainbowGenerator.module.css";
 

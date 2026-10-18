@@ -21,7 +21,7 @@ import {
 	startOfDay,
 	startOfWeek,
 	type Weekday,
-} from "../lib/calendar.ts";
+} from "../model/calendar.ts";
 
 /** 视图粒度。当前粒度是**信息**不是命令 —— 用户必须随时知道自己在看哪一层，
  *  所以它常驻在日历那一行（06-日历视图 §2） */

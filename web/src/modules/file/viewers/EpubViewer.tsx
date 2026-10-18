@@ -1,6 +1,6 @@
 import { Button } from "@components/ui";
 import { createEffect, createSignal, For, onCleanup, Show } from "solid-js";
-import type { BookChapter } from "../hooks/usePreviewDoc.ts";
+import type { BookChapter } from "../view/usePreviewDoc.ts";
 import {
 	bookProgressKey,
 	clampFontScaleIndex,
@@ -10,8 +10,8 @@ import {
 	parseFontScaleIndex,
 	scrollRatioOf,
 	serializeBookProgress,
-} from "../lib/bookProgress.ts";
-import { parseIndexPayload } from "../lib/viewLink.ts";
+} from "../model/bookProgress.ts";
+import { parseIndexPayload } from "../model/viewLink.ts";
 import { DocContent } from "./DocContent.tsx";
 import { SanitizedHtml } from "./SanitizedHtml.tsx";
 import type { ViewerComponent } from "./types.ts";

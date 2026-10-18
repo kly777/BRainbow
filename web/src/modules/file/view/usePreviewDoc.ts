@@ -11,12 +11,12 @@ import {
 	httpPreviewError,
 	networkPreviewError,
 	type PreviewErrorInfo,
-} from "../lib/previewError.ts";
+} from "../model/previewError.ts";
 import {
 	hasMore,
 	mergePage,
 	previewUrlWithCursor,
-} from "../lib/previewPaging.ts";
+} from "../model/previewPaging.ts";
 
 /** 一张表（服务端已把单元格转成显示用文本） */
 export interface SheetData {

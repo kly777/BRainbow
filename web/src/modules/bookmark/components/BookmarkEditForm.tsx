@@ -2,7 +2,7 @@ import { Button, Input, Textarea } from "@components/ui";
 import { Sparkles } from "@components/ui/icons";
 import { For, Show } from "solid-js";
 import styles from "../BookmarkDetail.module.css";
-import type { useBookmarkDetail } from "../hooks/useBookmarkDetail.ts";
+import type { useBookmarkDetail } from "../view/useBookmarkDetail.ts";
 import TagInput from "./TagInput.tsx";
 
 /**

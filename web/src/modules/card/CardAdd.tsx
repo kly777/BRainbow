@@ -6,7 +6,7 @@ import {
 } from "@modules/file/markdown-editor-support.tsx";
 import { type Component, Show } from "solid-js";
 import styles from "./CardAdd.module.css";
-import { useCardAdd } from "./hooks/useCardAdd.ts";
+import { useCardAdd } from "./view/useCardAdd.ts";
 
 const CardAddPage: Component = () => {
 	const m = useCardAdd();

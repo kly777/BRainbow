@@ -1,5 +1,5 @@
 import { For } from "solid-js";
-import type { OntologyItem } from "../hooks/useOntologyList.ts";
+import type { OntologyItem } from "../view/useOntologyList.ts";
 import styles from "../OntologyList.module.css";
 import OntologyDeleteButton from "./OntologyDeleteButton.tsx";
 

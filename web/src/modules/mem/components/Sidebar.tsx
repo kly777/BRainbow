@@ -2,7 +2,7 @@
 
 import { X } from "@components/ui/icons";
 import { createEffect, For, Show } from "solid-js";
-import type { UseMemReview } from "../hooks/useMemReviewTypes.ts";
+import type { UseMemReview } from "../view/useMemReviewTypes.ts";
 import styles from "./Sidebar.module.css";
 
 interface SidebarProps {

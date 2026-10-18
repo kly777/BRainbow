@@ -14,7 +14,7 @@ import {
 	httpPreviewError,
 	networkPreviewError,
 	type PreviewErrorInfo,
-} from "../lib/previewError.ts";
+} from "../model/previewError.ts";
 
 /** 私密文件换 blob 的失败（公开文件不走这条路，恒为 undefined） */
 export interface PreviewUrlState {

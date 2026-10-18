@@ -5,7 +5,7 @@ import { Show } from "solid-js";
 import styles from "./BookmarkDetail.module.css";
 import BookmarkEditForm from "./components/BookmarkEditForm.tsx";
 import BookmarkView from "./components/BookmarkView.tsx";
-import { useBookmarkDetail } from "./hooks/useBookmarkDetail.ts";
+import { useBookmarkDetail } from "./view/useBookmarkDetail.ts";
 
 export default function BookmarkDetail() {
 	const m = useBookmarkDetail();

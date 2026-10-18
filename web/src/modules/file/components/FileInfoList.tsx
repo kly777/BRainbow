@@ -3,7 +3,7 @@ import { copyTextWithToast, fmtLocal, formatBytes } from "@shared/utils";
 import { For, Show } from "solid-js";
 import type { FileItem } from "../api.ts";
 import styles from "../FileDetail.module.css";
-import { categoryLabel } from "../lib/category.ts";
+import { categoryLabel } from "../model/category.ts";
 
 /**
  * 侧栏的查看模式：可见性 / 类型 / 大小 / 尺寸 / 时间 / 内容哈希 + 标签 + 元信息。

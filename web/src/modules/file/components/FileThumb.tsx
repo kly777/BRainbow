@@ -12,19 +12,19 @@ import { File as FileIcon, Lock } from "@components/ui/icons";
 import { type Component, createSignal, Match, Show, Switch } from "solid-js";
 import type { FileItem } from "../api.ts";
 import styles from "../FileList.module.css";
-import { usePdfThumb } from "../hooks/usePdfThumb.ts";
-import { useThumbPreview } from "../hooks/useThumbPreview.ts";
-import { fileExt } from "../lib/filename.ts";
-import { fmtDurationMs } from "../lib/meta.ts";
+import { usePdfThumb } from "../view/usePdfThumb.ts";
+import { useThumbPreview } from "../view/useThumbPreview.ts";
+import { fileExt } from "../model/filename.ts";
+import { fmtDurationMs } from "../model/meta.ts";
 import {
 	canThumb,
 	preferContain,
 	thumbBackdrop,
 	thumbSrc,
 	thumbSrcSet,
-} from "../lib/thumbnail.ts";
-import type { ThumbPreview } from "../lib/thumbPreview.ts";
-import { shouldTint, tintHue } from "../lib/thumbTint.ts";
+} from "../model/thumbnail.ts";
+import type { ThumbPreview } from "../model/thumbPreview.ts";
+import { shouldTint, tintHue } from "../model/thumbTint.ts";
 
 /** 非图片文件：用后缀名徽章替代通用文件图标，一眼看出类型；
  *  无后缀时回退到通用文件图标 */

@@ -10,13 +10,13 @@ import { getErrorMessage } from "@shared/api";
 import { notifyError, notifyInfo, notifySuccess } from "@shared/utils";
 import { createSignal, onCleanup } from "solid-js";
 import { uploadFileWithProgress } from "../../api.ts";
-import { readMediaDuration } from "../../lib/mediaDuration.ts";
+import { readMediaDuration } from "../../model/mediaDuration.ts";
 import {
 	batchUploadNotice,
 	type Notice,
 	singleUploadNotice,
-} from "../../lib/op-notices.ts";
-import { validateUploadFile } from "../../lib/uploadLimits.ts";
+} from "../../model/op-notices.ts";
+import { validateUploadFile } from "../../model/uploadLimits.ts";
 
 /** 并发上传数（批量拖入时避免打满连接） */
 const UPLOAD_CONCURRENCY = 3;

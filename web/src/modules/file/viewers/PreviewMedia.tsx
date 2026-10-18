@@ -2,7 +2,7 @@
 
 import { type Component, type JSX, Show } from "solid-js";
 import type { FileItem } from "../api.ts";
-import { usePreviewUrl } from "../hooks/usePreviewUrl.ts";
+import { usePreviewUrl } from "../view/usePreviewUrl.ts";
 import { PreviewError } from "./PreviewError.tsx";
 import { PreviewState } from "./PreviewState.tsx";
 

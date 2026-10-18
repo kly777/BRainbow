@@ -11,7 +11,7 @@ import { Button } from "@components/ui";
 import { formatBytes } from "@shared/utils";
 import { type Component, type JSX, Show } from "solid-js";
 import type { FileItem } from "../api.ts";
-import { type PreviewText, usePreviewText } from "../hooks/usePreviewText.ts";
+import { type PreviewText, usePreviewText } from "../view/usePreviewText.ts";
 import { FindOverlay } from "./FindOverlay.tsx";
 import { PreviewError } from "./PreviewError.tsx";
 import { PreviewState } from "./PreviewState.tsx";

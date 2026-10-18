@@ -7,7 +7,7 @@
 
 import { type Component, type JSX, Show } from "solid-js";
 import type { FileItem } from "../api.ts";
-import { type DocPreview, usePreviewDoc } from "../hooks/usePreviewDoc.ts";
+import { type DocPreview, usePreviewDoc } from "../view/usePreviewDoc.ts";
 import { FindOverlay } from "./FindOverlay.tsx";
 import { PreviewError } from "./PreviewError.tsx";
 import { PreviewState } from "./PreviewState.tsx";

@@ -13,7 +13,7 @@ import { BookmarkFormModal } from "./components/BookmarkFormModal.tsx";
 import { BookmarkItem } from "./components/BookmarkItem.tsx";
 import TagFilter from "./components/TagFilter.tsx";
 import TagManager from "./components/TagManager.tsx";
-import { useBookmarkPage } from "./hooks/useBookmarkPage.ts";
+import { useBookmarkPage } from "./view/useBookmarkPage.ts";
 
 const BatchBar: Component<{
 	b: ReturnType<typeof useBookmarkPage>;

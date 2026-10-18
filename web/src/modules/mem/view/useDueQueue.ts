@@ -8,7 +8,7 @@ import {
 	insertRevisit,
 	revisitGapFor,
 	shouldDropRevisit,
-} from "../lib/revisit.ts";
+} from "../model/revisit.ts";
 
 // 会话预估缓存：retention 重计算，60s 内不重复请求
 const ESTIMATE_TTL = 60_000;

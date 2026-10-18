@@ -16,7 +16,7 @@ import { createSignal, For, Show } from "solid-js";
 import type { Bookmark } from "../api.ts";
 import { setBookmarkTagsE, suggestBookmarkTagsE } from "../api.ts";
 import styles from "../BookmarkPage.module.css";
-import { extractDomain } from "../lib/url.ts";
+import { extractDomain } from "../model/url.ts";
 import Favicon from "./Favicon.tsx";
 
 export function BookmarkItem(props: {

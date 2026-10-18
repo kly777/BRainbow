@@ -15,7 +15,7 @@ import {
 } from "solid-js";
 import type { FileItem } from "../api.ts";
 import { listFiles } from "../api.ts";
-import { categoryLabel } from "../lib/category.ts";
+import { categoryLabel } from "../model/category.ts";
 import styles from "./FilePickerModal.module.css";
 import { FileThumb } from "./FileThumb.tsx";
 

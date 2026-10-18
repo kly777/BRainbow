@@ -6,7 +6,7 @@
 
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 import type { FileItem } from "../api.ts";
-import type { DocPreview } from "../hooks/usePreviewDoc.ts";
+import type { DocPreview } from "../view/usePreviewDoc.ts";
 import {
 	clearThumbPreviewCache,
 	coverOf,

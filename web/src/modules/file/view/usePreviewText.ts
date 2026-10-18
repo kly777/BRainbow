@@ -19,7 +19,7 @@ import {
 	httpPreviewError,
 	networkPreviewError,
 	type PreviewErrorInfo,
-} from "../lib/previewError.ts";
+} from "../model/previewError.ts";
 import { totalFromContentRange } from "./usePreviewPly.ts";
 
 /** 一次取多少字节（首屏、载入更多、看结尾都用它） */

@@ -25,7 +25,7 @@ import {
 } from "solid-js";
 import { Portal } from "solid-js/web";
 import type { FileItem } from "../api.ts";
-import { usePreviewUrl } from "../hooks/usePreviewUrl.ts";
+import { usePreviewUrl } from "../view/usePreviewUrl.ts";
 import {
 	canZoomIn,
 	canZoomOut,
@@ -35,7 +35,7 @@ import {
 	stepScale,
 	toggledScale,
 	zoomedScroll,
-} from "../lib/lightboxZoom.ts";
+} from "../model/lightboxZoom.ts";
 import styles from "./ImageLightbox.module.css";
 
 interface Props {

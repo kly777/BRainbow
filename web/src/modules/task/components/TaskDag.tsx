@@ -11,8 +11,8 @@ import {
 } from "solid-js";
 import type { Task } from "../api.ts";
 import { fetchAllTasks, getAllTasksE, getDagE } from "../api.ts";
-import { layout } from "../lib/dag-layout.ts";
-import { calcAutoOffset, drawGraph, hitTestNode } from "../lib/dag-render.ts";
+import { layout } from "../model/dag-layout.ts";
+import { calcAutoOffset, drawGraph, hitTestNode } from "../model/dag-render.ts";
 import styles from "./TaskDag.module.css";
 
 // ── 任务选择器 ──

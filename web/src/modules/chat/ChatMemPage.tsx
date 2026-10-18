@@ -10,8 +10,8 @@ import styles from "./ChatMemPage.module.css";
 import { MessageRow as ChatMemMessageRow } from "./components/ChatMemMessageRow.tsx";
 import { ChatSidebar, ToggleSidebar } from "./components/ChatSidebar.tsx";
 import { Composer } from "./components/Composer.tsx";
-import { useAutoScroll } from "./hooks/useAutoScroll.ts";
-import { useChatMem } from "./hooks/useChatMem.ts";
+import { useAutoScroll } from "./view/useAutoScroll.ts";
+import { useChatMem } from "./view/useChatMem.ts";
 
 export default function ChatMemPage() {
 	const c = useChatMem();

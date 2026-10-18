@@ -9,7 +9,7 @@
 
 import { type Accessor, createMemo, createSignal } from "solid-js";
 import type { FileItem } from "../api.ts";
-import { canZoom } from "../lib/thumbnail.ts";
+import { canZoom } from "../model/thumbnail.ts";
 
 export interface ImageLightboxState {
 	/** 可放大的图片（灯箱里翻页的范围） */

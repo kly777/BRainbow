@@ -11,7 +11,7 @@ import {
 import { fmtLocal } from "@shared/utils";
 import { type Component, Show } from "solid-js";
 import styles from "./CardEdit.module.css";
-import { useCardEdit } from "./hooks/useCardEdit.ts";
+import { useCardEdit } from "./view/useCardEdit.ts";
 
 const DirtyBadge: Component<{ dirty: boolean }> = (props) => (
 	<Show when={props.dirty}>

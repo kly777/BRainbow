@@ -12,13 +12,13 @@ import {
 	isPlyBytes,
 	type SplatBounds,
 	type SplatData,
-} from "../../lib/ply.ts";
+} from "../../model/ply.ts";
 import {
 	isPcdBytes,
 	looksLikeTextPoints,
 	parsePcd,
 	parseTextPoints,
-} from "../../lib/pointcloud.ts";
+} from "../../model/pointcloud.ts";
 
 /**
  * 按**内容**挑解析器 —— 三种都各有自己的头，所以不必靠调用方传格式名

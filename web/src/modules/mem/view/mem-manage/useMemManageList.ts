@@ -12,8 +12,8 @@ import type {
 	SortDir,
 	SortField,
 	TagMode,
-} from "../../lib/mem-manage-utils.ts";
-import { fetchAllMems } from "../../lib/mem-manage-utils.ts";
+} from "../../model/mem-manage-utils.ts";
+import { fetchAllMems } from "../../model/mem-manage-utils.ts";
 import type { MemManageParams } from "../useMemManageParams.ts";
 
 /** 列表查询参数快照类型（不含 id） */

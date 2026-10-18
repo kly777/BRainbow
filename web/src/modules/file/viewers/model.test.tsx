@@ -6,7 +6,7 @@
 
 import { render } from "solid-js/web";
 import { afterEach, describe, expect, it, vi } from "vite-plus/test";
-import { gltfNeedsExternalFiles, modelFormatOf } from "../lib/model.ts";
+import { gltfNeedsExternalFiles, modelFormatOf } from "../model/model.ts";
 import { __internal, ModelViewer } from "./ModelViewer.tsx";
 import { item } from "./test-fixtures.ts";
 

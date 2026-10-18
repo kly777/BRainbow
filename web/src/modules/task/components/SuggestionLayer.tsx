@@ -23,7 +23,7 @@ import { showToast } from "@components/ui";
 import { notifySuccess } from "@shared/errors";
 import { For, Show } from "solid-js";
 import type { SlotSuggestion } from "../api-types.ts";
-import { minutesToPixels } from "../lib/calendarAxis.ts";
+import { minutesToPixels } from "../model/calendarAxis.ts";
 import { createTimeWindowE, getTimeWindowsE } from "../timeWindowApi.ts";
 import styles from "./SuggestionLayer.module.css";
 

@@ -14,7 +14,7 @@ import { createResource, For, Show } from "solid-js";
 import { getGroupedBookmarksE } from "./api.ts";
 import styles from "./BookmarkPage.module.css";
 import TagGroupCard, { BookmarkLink } from "./components/TagGroupCard.tsx";
-import { useBookmarkSearch } from "./hooks/useBookmarkSearch.ts";
+import { useBookmarkSearch } from "./view/useBookmarkSearch.ts";
 
 export default function BookmarkPage() {
 	const navigate = useNavigate();

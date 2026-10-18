@@ -11,7 +11,7 @@ import {
 	optionDomId,
 	type Suggestion,
 	usePalette,
-} from "./hooks/usePalette.ts";
+} from "./view/usePalette.ts";
 
 /** 列表容器 id：输入框的 `aria-controls` 指向它（combobox 与 listbox 的规范关联） */
 const LISTBOX_ID = "palette-listbox";

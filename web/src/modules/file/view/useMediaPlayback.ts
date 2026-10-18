@@ -18,7 +18,7 @@ import {
 	SPEED_STEPS,
 	speedKey,
 	worthSaving,
-} from "../lib/mediaPlayback.ts";
+} from "../model/mediaPlayback.ts";
 
 /** 两次写档之间至少间隔（毫秒） */
 const SAVE_INTERVAL_MS = 5000;

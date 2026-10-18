@@ -1,7 +1,7 @@
 import { type Component, Show } from "solid-js";
 import type { FileItem } from "../api.ts";
 import styles from "../FileList.module.css";
-import { canZoom } from "../lib/thumbnail.ts";
+import { canZoom } from "../model/thumbnail.ts";
 import FileCardEdit from "./FileCardEdit.tsx";
 import FileCardView from "./FileCardView.tsx";
 import { FileThumb } from "./FileThumb.tsx";

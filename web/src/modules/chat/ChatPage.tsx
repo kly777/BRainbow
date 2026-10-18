@@ -11,8 +11,8 @@ import {
 import { ChatSidebar, ToggleSidebar } from "./components/ChatSidebar.tsx";
 import { Composer } from "./components/Composer.tsx";
 import { MessageRow } from "./components/MessageRow.tsx";
-import { useAutoScroll } from "./hooks/useAutoScroll.ts";
-import { useChatPage } from "./hooks/useChatPage.ts";
+import { useAutoScroll } from "./view/useAutoScroll.ts";
+import { useChatPage } from "./view/useChatPage.ts";
 
 const ChatNodeList = (props: { c: ReturnType<typeof useChatPage> }) => (
 	<For each={props.c.activePath()}>

@@ -38,7 +38,7 @@
 // 6.55 机位下有 **40~55% 的点出画**（相机落在模型内部）。能转移的是它的**构图统计**
 // （上面的 0.83/8.5%）与**环绕定点的比例**（下面 ORBIT_PIVOT_RATIO）。
 
-import type { SplatBounds } from "../../lib/ply.ts";
+import type { SplatBounds } from "../../model/ply.ts";
 import {
 	add,
 	cameraBasis,

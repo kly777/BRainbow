@@ -19,8 +19,8 @@ import {
 	Show,
 } from "solid-js";
 import type { CalendarEvent, SlotSuggestion } from "../api-types.ts";
-import type { TaskCalendarApi } from "../hooks/useTaskCalendar.ts";
-import { dayKey, isSameDay, MINUTES_PER_DAY } from "../lib/calendar.ts";
+import type { TaskCalendarApi } from "../data/useTaskCalendar.ts";
+import { dayKey, isSameDay, MINUTES_PER_DAY } from "../model/calendar.ts";
 import {
 	type AxisBlock,
 	blockHeight,
@@ -31,7 +31,7 @@ import {
 	layoutOverlaps,
 	minutesToPixels,
 	projectToDay,
-} from "../lib/calendarAxis.ts";
+} from "../model/calendarAxis.ts";
 import {
 	blocksOfDay,
 	cancelDrag,
@@ -43,7 +43,7 @@ import {
 	onPointerUp,
 	parseTimeInput,
 	previewDrop,
-} from "../lib/dragSchedule.ts";
+} from "../model/dragSchedule.ts";
 import styles from "./CalendarTimeGrid.module.css";
 import {
 	CapacityBar,

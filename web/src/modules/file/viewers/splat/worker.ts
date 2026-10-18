@@ -7,7 +7,7 @@
 // 线上 CSP 的 script-src 是 'self' 且没有 worker-src，blob: 的 worker 会被拦掉；
 // 模块 worker 由打包器输出成同源 chunk，正好落在 'self' 里。
 
-import type { SplatBounds } from "../../lib/ply.ts";
+import type { SplatBounds } from "../../model/ply.ts";
 import { createSplatEngine, TEX_WIDTH } from "./engine.ts";
 
 export interface SplatLoadRequest {

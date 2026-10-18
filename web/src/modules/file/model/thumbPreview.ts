@@ -13,8 +13,8 @@
 // 不是"必须显示"：任何一步失败都静默退回徽章。
 
 import type { FileItem } from "../api.ts";
-import type { DocPreview } from "../hooks/usePreviewDoc.ts";
-import { previewUrlOf } from "../hooks/usePreviewDoc.ts";
+import type { DocPreview } from "../view/usePreviewDoc.ts";
+import { previewUrlOf } from "../view/usePreviewDoc.ts";
 
 /** 文本缩略的渲染行数上限。
  *

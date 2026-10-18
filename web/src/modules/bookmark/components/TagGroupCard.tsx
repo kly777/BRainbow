@@ -4,7 +4,7 @@ import { For, Show } from "solid-js";
 import type { Bookmark } from "../api.ts";
 import { incrementBookmarkVisitE } from "../api.ts";
 import styles from "../BookmarkPage.module.css";
-import { extractDomain } from "../lib/url.ts";
+import { extractDomain } from "../model/url.ts";
 import Favicon from "./Favicon.tsx";
 
 /** 单条书签：favicon + 标题 + 访问次数角标；点击异步记一次访问（不阻塞跳转） */

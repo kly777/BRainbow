@@ -3,7 +3,7 @@ import { Plus, X } from "@components/ui/icons";
 import { type Component, For, Show } from "solid-js";
 import type { FileTag } from "../api.ts";
 import styles from "../FileDetail.module.css";
-import type { MetaEntry, useFileDetail } from "../hooks/useFileDetail.ts";
+import type { MetaEntry, useFileDetail } from "../view/useFileDetail.ts";
 import TagInput from "./TagInput.tsx";
 
 const MetaRowEditor: Component<{

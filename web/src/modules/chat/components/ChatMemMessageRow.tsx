@@ -5,7 +5,7 @@ import { copyTextWithToast } from "@shared/utils";
 import { type Component, createSignal, For, Show } from "solid-js";
 import type { ChatNode } from "../api.ts";
 import styles from "../ChatMemPage.module.css";
-import type { useChatMem } from "../hooks/useChatMem.ts";
+import type { useChatMem } from "../view/useChatMem.ts";
 import { BranchBar } from "./BranchBar.tsx";
 import { MessageShell } from "./MessageShell.tsx";
 import { PREVIEW_LEN } from "./preview.ts";

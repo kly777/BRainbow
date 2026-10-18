@@ -5,7 +5,7 @@
 
 import { createEffect, createSignal, onCleanup } from "solid-js";
 import type { FileItem } from "../api.ts";
-import { loadThumbPreview, type ThumbPreview } from "../lib/thumbPreview.ts";
+import { loadThumbPreview, type ThumbPreview } from "../model/thumbPreview.ts";
 
 /** 这个文件的内容缩略（可能一开始拿不到，稍后由回调补上） */
 export function useThumbPreview(item: () => FileItem) {

@@ -14,13 +14,13 @@ import {
 	strParam,
 	useUrlParams,
 } from "@shared/utils";
-import type { TagMode } from "../lib/mem-manage-utils.ts";
+import type { TagMode } from "../model/mem-manage-utils.ts";
 import {
 	type SortDir,
 	type SortField,
 	VALID_SORT_FIELDS,
 	VALID_STATES,
-} from "../lib/mem-manage-utils.ts";
+} from "../model/mem-manage-utils.ts";
 
 export interface UseMemManageParamsResult {
 	searchQuery: () => string;

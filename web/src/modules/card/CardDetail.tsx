@@ -7,7 +7,7 @@ import {
 import { fmtLocal } from "@shared/utils";
 import { type Component, Show } from "solid-js";
 import styles from "./CardDetail.module.css";
-import { useCardDetail } from "./hooks/useCardDetail.ts";
+import { useCardDetail } from "./view/useCardDetail.ts";
 
 const CardDetailPage: Component = () => {
 	const m = useCardDetail();

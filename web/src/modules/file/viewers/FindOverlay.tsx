@@ -23,7 +23,7 @@ import {
 	findInTextNodes,
 	MAX_MATCHES,
 	type TextMatch,
-} from "../lib/findInText.ts";
+} from "../model/findInText.ts";
 import styles from "./viewers.module.css";
 
 /** 容器里的全部文本节点（按文档顺序） */

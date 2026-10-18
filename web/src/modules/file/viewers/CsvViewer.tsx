@@ -1,6 +1,6 @@
 import { Button } from "@components/ui";
 import { type Component, createMemo, createSignal, Show } from "solid-js";
-import { parseCsv } from "../lib/csv.ts";
+import { parseCsv } from "../model/csv.ts";
 import { DataTable } from "./DataTable.tsx";
 import { TextContent } from "./TextContent.tsx";
 import type { ViewerComponent } from "./types.ts";

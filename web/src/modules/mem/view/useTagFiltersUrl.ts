@@ -3,7 +3,7 @@
 import { tryAsync } from "@shared/utils";
 import { createSignal, onMount } from "solid-js";
 import { listTagsE, searchTagsE, type TagInfo } from "../api.ts";
-import type { TagMode } from "../lib/mem-manage-utils.ts";
+import type { TagMode } from "../model/mem-manage-utils.ts";
 import type { UseMemManageParamsResult } from "./useMemManageParams.ts";
 
 export function useTagFiltersUrl(params: UseMemManageParamsResult) {

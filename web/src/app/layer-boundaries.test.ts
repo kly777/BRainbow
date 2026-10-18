@@ -26,8 +26,9 @@
 // 存量越界记在 ALLOWED 白名单里，逐文件、逐 import 精确登记并附理由；
 // 白名单条目一旦不再被用到（越界已修）本测试会失败，逼着人删掉——不会烂在那里。
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
+import { MODULE_KINDS, type ModuleKind } from "@config/module-registry.ts";
 import { describe, expect, it } from "vite-plus/test";
 
 // vitest 从 web/ 启动（pnpm run test），与 css-modules-contract.test.ts 的假设一致
@@ -200,5 +201,52 @@ describe("分层依赖方向契约", () => {
 		}
 
 		expect(violations.length).toBe(0);
+	});
+
+	it("所有模块都有类型，且有公共入口", () => {
+		const moduleRoot = join(SRC_ROOT, "modules");
+		const dirs = readdirSync(moduleRoot, { withFileTypes: true })
+			.filter((entry) => entry.isDirectory())
+			.map((entry) => entry.name)
+			.sort();
+		const registered = Object.keys(MODULE_KINDS).sort();
+
+		expect(registered).toEqual(dirs);
+		for (const dir of dirs) {
+			expect(existsSync(join(moduleRoot, dir, "index.ts"))).toBe(true);
+		}
+	});
+
+	it("模块类型依赖方向：domain 不依赖 capability，platform/tool 不编排业务", () => {
+		const forbidden: Partial<Record<ModuleKind, readonly ModuleKind[]>> = {
+			domain: ["capability"],
+			platform: ["domain", "capability"],
+			tool: ["domain", "capability", "platform"],
+		};
+		const moduleRoot = join(SRC_ROOT, "modules");
+		const files = walk(moduleRoot).filter(
+			(f) => /\.tsx?$/.test(f) && !f.endsWith(".d.ts") && !f.includes(".test."),
+		);
+
+		const violations: string[] = [];
+		for (const file of files) {
+			const rel = relative(moduleRoot, file).split("\\").join("/");
+			const sourceName = rel.split("/")[0];
+			const sourceKind = MODULE_KINDS[sourceName];
+			if (!sourceKind) continue;
+			const denied = forbidden[sourceKind] ?? [];
+			const source = readFileSync(file, "utf8");
+			for (const spec of specifiersOf(source)) {
+				const match = spec.match(/^@modules\/([^/]+)/);
+				if (!match || match[1] === sourceName) continue;
+				const targetKind = MODULE_KINDS[match[1]];
+				if (!targetKind || !denied.includes(targetKind)) continue;
+				violations.push(
+					`${rel}: ${sourceKind} 模块不应依赖 ${targetKind} 模块 ${spec}`,
+				);
+			}
+		}
+
+		expect(violations).toEqual([]);
 	});
 });

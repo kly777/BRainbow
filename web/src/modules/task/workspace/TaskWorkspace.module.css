@@ -3,7 +3,7 @@
 	max-width: 1560px;
 	min-height: 100%;
 	margin: 0 auto;
-	padding: var(--space-lg) var(--space-xl) var(--space-2xl);
+	padding: var(--space-lg) var(--space-xl) 6rem;
 }
 
 .main {
@@ -14,10 +14,10 @@
 
 .hero {
 	display: flex;
-	align-items: flex-end;
+	align-items: center;
 	justify-content: space-between;
 	gap: var(--space-lg);
-	padding-bottom: var(--space-md);
+	padding-bottom: var(--space-sm);
 	border-bottom: 1px solid var(--t-color-border);
 }
 
@@ -25,28 +25,14 @@
 	min-width: 0;
 }
 
-.eyebrow {
-	margin: 0 0 var(--space-2xs);
-	color: var(--t-color-ink-faint);
-	font-size: var(--text-2xs);
-	font-weight: 600;
-	letter-spacing: 0.12em;
-}
-
 .title {
 	margin: 0;
 	color: var(--t-color-ink);
 	font-family: var(--t-font-display);
-	font-size: var(--text-2xl);
+	font-size: var(--text-lg);
 	font-weight: 620;
 	line-height: var(--leading-tight);
 	letter-spacing: -0.02em;
-}
-
-.subtitle {
-	margin: var(--space-2xs) 0 0;
-	color: var(--t-color-ink-faint);
-	font-size: var(--text-sm);
 }
 
 .hero-tools {
@@ -98,8 +84,7 @@
 	width: 13rem;
 }
 
-.filter-button,
-.command-button {
+.filter-button {
 	display: inline-flex;
 	align-items: center;
 	gap: var(--space-2xs);
@@ -113,8 +98,7 @@
 	cursor: pointer;
 }
 
-.filter-button:hover,
-.command-button:hover {
+.filter-button:hover {
 	border-color: var(--t-color-accent);
 	color: var(--t-color-ink);
 }
@@ -125,8 +109,7 @@
 	color: var(--t-color-accent-strong);
 }
 
-.filter-button:focus-visible,
-.command-button:focus-visible {
+.filter-button:focus-visible {
 	outline: 2px solid var(--t-color-accent);
 	outline-offset: 2px;
 }

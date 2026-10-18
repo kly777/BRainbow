@@ -39,8 +39,40 @@ describe("parseTodoCommand", () => {
 			kind: "list",
 			query: "周报",
 		});
-		expect(parseTodoCommand("do #12")).toEqual({ kind: "do", id: 12 });
-		expect(parseTodoCommand("undo 12")).toEqual({ kind: "undo", id: 12 });
+		expect(parseTodoCommand("do #12")).toEqual({ kind: "do", ids: [12] });
+		expect(parseTodoCommand("undo 12")).toEqual({ kind: "undo", ids: [12] });
+		expect(parseTodoCommand("do 12, 15 20")).toEqual({
+			kind: "do",
+			ids: [12, 15, 20],
+		});
+	});
+
+	it("addm / append / prepend / replace", () => {
+		expect(parseTodoCommand("addm 买菜 | (A) 写周报 +工作")).toMatchObject({
+			kind: "add-many",
+			items: [
+				{ title: "买菜" },
+				{ title: "写周报", priority: "p1", tags: ["工作"] },
+			],
+		});
+		expect(parseTodoCommand("append 7 补充一句")).toEqual({
+			kind: "edit",
+			id: 7,
+			mode: "append",
+			text: "补充一句",
+		});
+		expect(parseTodoCommand("prepend 7 先做")).toEqual({
+			kind: "edit",
+			id: 7,
+			mode: "prepend",
+			text: "先做",
+		});
+		expect(parseTodoCommand("replace 7 新标题")).toEqual({
+			kind: "edit",
+			id: 7,
+			mode: "replace",
+			text: "新标题",
+		});
 	});
 
 	it("pri 支持两种参数顺序，depri 清空", () => {
@@ -54,7 +86,14 @@ describe("parseTodoCommand", () => {
 			id: 12,
 			priority: "p2",
 		});
-		expect(parseTodoCommand("depri 12")).toEqual({ kind: "depri", id: 12 });
+		expect(parseTodoCommand("depri 12")).toEqual({
+			kind: "depri",
+			ids: [12],
+		});
+		expect(parseTodoCommand("depri 12 15")).toEqual({
+			kind: "depri",
+			ids: [12, 15],
+		});
 	});
 
 	it("due 接受合法日期与 none", () => {
@@ -94,7 +133,48 @@ describe("parseTodoCommand", () => {
 			kind: "archive",
 			id: 3,
 		});
-		expect(parseTodoCommand("help")).toEqual({ kind: "help" });
+		expect(parseTodoCommand("help")).toEqual({ kind: "help", command: "" });
+		expect(parseTodoCommand("help add")).toEqual({
+			kind: "help",
+			command: "add",
+		});
+	});
+
+	it("del 支持多 id 和只移除某个词", () => {
+		expect(parseTodoCommand("del 3 5")).toEqual({
+			kind: "delete",
+			ids: [3, 5],
+		});
+		expect(parseTodoCommand("del 3 旧标题")).toEqual({
+			kind: "delete",
+			ids: [3],
+			term: "旧标题",
+		});
+	});
+
+	it("listall / listpri / listproj / listcon", () => {
+		expect(parseTodoCommand("listall 周报")).toEqual({
+			kind: "list-all",
+			query: "周报",
+		});
+		expect(parseTodoCommand("listpri A 周报")).toEqual({
+			kind: "list-pri",
+			priority: "p1",
+			query: "周报",
+		});
+		expect(parseTodoCommand("listpri")).toEqual({
+			kind: "list-pri",
+			priority: null,
+			query: "",
+		});
+		expect(parseTodoCommand("listproj +工作")).toEqual({
+			kind: "list-tag",
+			tag: "工作",
+		});
+		expect(parseTodoCommand("listcon @电话")).toEqual({
+			kind: "list-tag",
+			tag: "电话",
+		});
 	});
 
 	it("未知命令与缺参数给明确错误", () => {

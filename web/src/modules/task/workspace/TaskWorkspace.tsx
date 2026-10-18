@@ -16,20 +16,11 @@ import {
 	Layers,
 	List,
 	Plus,
-	Terminal,
 } from "@components/ui/icons";
 import { notifySuccess } from "@shared/errors";
 import { enumParam, strParam, useUrlParams } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
-import {
-	createEffect,
-	createMemo,
-	createSignal,
-	For,
-	onCleanup,
-	onMount,
-	Show,
-} from "solid-js";
+import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
 import type { TaskSortKey } from "../api.ts";
 import { getTagsE } from "../api.ts";
 import type { TagOption } from "@components/ui/molecules/TagInput.tsx";
@@ -46,7 +37,7 @@ import { EMPTY_FILTER, isFilterEmpty } from "../lib/task-filter.ts";
 import { captureToCreateRequest } from "../lib/task-payload.ts";
 import { fillPath, PATHS } from "@config/paths";
 import TaskBoard from "./TaskBoard.tsx";
-import TaskCommandConsole from "./TaskCommandConsole.tsx";
+import TaskCommandBar from "./TaskCommandBar.tsx";
 import TaskStream from "./TaskStream.tsx";
 import styles from "./TaskWorkspace.module.css";
 
@@ -94,25 +85,6 @@ function dayDiff(iso: string | null): number | null {
 	);
 }
 
-function scopeTitle(scope: Scope): string {
-	return SCOPES.find((item) => item.key === scope)?.label ?? "全部";
-}
-
-function scopeHint(scope: Scope): string {
-	switch (scope) {
-		case "today":
-			return "今天到期与需要今天推进的任务。";
-		case "upcoming":
-			return "未来 7 天内到期的任务。";
-		case "overdue":
-			return "已经过了截止时间的任务。";
-		case "completed":
-			return "已经收尾的任务。";
-		default:
-			return "所有未完成的任务，默认智能排序。";
-	}
-}
-
 function Workspace() {
 	const params = useUrlParams({
 		scope: enumParam(
@@ -141,28 +113,7 @@ function Workspace() {
 	} = useTasks();
 
 	const [filterOpen, setFilterOpen] = createSignal(false);
-	const [commandOpen, setCommandOpen] = createSignal(false);
 	const calendar = useTaskCalendar();
-
-	onMount(() => {
-		const handleKey = (event: KeyboardEvent) => {
-			const target = event.target as HTMLElement | null;
-			const editing = target?.closest(
-				"input, textarea, select, [contenteditable='true']",
-			);
-			if (editing) return;
-			if (event.key === ":") {
-				event.preventDefault();
-				setCommandOpen(true);
-				return;
-			}
-			if (event.key === "Escape" && commandOpen()) {
-				setCommandOpen(false);
-			}
-		};
-		window.addEventListener("keydown", handleKey);
-		onCleanup(() => window.removeEventListener("keydown", handleKey));
-	});
 
 	let appliedQuery = "";
 	createEffect(() => {
@@ -254,13 +205,7 @@ function Workspace() {
 	const pageTitle = () => {
 		if (view() === "board") return "看板";
 		if (view() === "graph") return "依赖关系";
-		return scopeTitle(scope());
-	};
-
-	const pageHint = () => {
-		if (view() === "board") return "拖一张卡片换状态，点开进详情。";
-		if (view() === "graph") return "谁挡着谁，一眼看清。";
-		return scopeHint(scope());
+		return "任务";
 	};
 
 	return (
@@ -268,9 +213,7 @@ function Workspace() {
 			<main class={styles.main}>
 				<header class={styles.hero}>
 					<div class={styles.heroText}>
-						<p class={styles.eyebrow}>TASK WORKSPACE</p>
 						<h1 class={styles.title}>{pageTitle()}</h1>
-						<p class={styles.subtitle}>{pageHint()}</p>
 					</div>
 					<div class={styles.heroTools}>
 						<div class={styles.viewTabs} role="group" aria-label="任务布局">
@@ -306,17 +249,6 @@ function Workspace() {
 						>
 							<Filter size={14} />
 							筛选
-						</button>
-						<button
-							type="button"
-							class={styles.commandButton}
-							onClick={() => setCommandOpen(true)}
-							title="todo.txt 命令（:）"
-							aria-haspopup="dialog"
-							aria-expanded={commandOpen()}
-						>
-							<Terminal size={14} />
-							命令
 						</button>
 					</div>
 				</header>
@@ -479,11 +411,7 @@ function Workspace() {
 				</div>
 			</main>
 
-			<TaskCommandConsole
-				isOpen={commandOpen()}
-				onClose={() => setCommandOpen(false)}
-				onSearch={(query) => params.set({ q: query })}
-			/>
+			<TaskCommandBar onSearch={(query) => params.set({ q: query })} />
 		</div>
 	);
 }

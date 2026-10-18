@@ -1,38 +1,43 @@
 // ── todo.txt 风格命令解析 ──
 //
-// 参考 todo.txt-cli 的命令面：add / list / do / undo / del / pri / depri /
-// due / tag / search / archive / report / help。这里只做**纯解析**，执行在
-// TaskCommandConsole 里通过现有 task API/provider 完成。
-//
-// todo.txt 文本约定：
-//   (A) 写周报 +工作 @电话 due:2026-10-20
-//   - 行首 (A)-(D) → p1-p4
-//   - +project / @context → 都收进标签（本项目没有 project/context 分表）
-//   - due:YYYY-MM-DD → 当天本地 23:59
-//   - 其余文字就是标题
+// 参考 todo.txt-cli 的命令面：add / addm / append / prepend / replace /
+// do / undo / del / pri / depri / due / tag / listpri / listproj / listcon /
+// listall / search / archive / report / help。这里只做**纯解析**，执行在
+// TaskCommandBar 里通过现有 task API/provider 完成。
 
 import type { TaskPriority } from "../api-types.ts";
 
+export interface TodoText {
+	title: string;
+	priority: TaskPriority | null;
+	tags: string[];
+	dueAt: string | null;
+}
+
 export type TodoCommand =
-	| {
-			kind: "add";
-			title: string;
-			priority: TaskPriority | null;
-			tags: string[];
-			dueAt: string | null;
-	  }
+	| ({ kind: "add" } & TodoText)
+	| { kind: "add-many"; items: TodoText[] }
 	| { kind: "list"; query: string }
-	| { kind: "do"; id: number }
-	| { kind: "undo"; id: number }
-	| { kind: "delete"; id: number }
+	| { kind: "list-all"; query: string }
+	| { kind: "list-pri"; priority: TaskPriority | null; query: string }
+	| { kind: "list-tag"; tag: string }
+	| { kind: "do"; ids: number[] }
+	| { kind: "undo"; ids: number[] }
+	| { kind: "delete"; ids: number[]; term?: string }
+	| {
+			kind: "edit";
+			id: number;
+			mode: "append" | "prepend" | "replace";
+			text: string;
+	  }
 	| { kind: "pri"; id: number; priority: TaskPriority }
-	| { kind: "depri"; id: number }
+	| { kind: "depri"; ids: number[] }
 	| { kind: "due"; id: number; dueAt: string | null }
 	| { kind: "tag"; id: number; tag: string; remove: boolean }
 	| { kind: "search"; query: string }
 	| { kind: "archive"; id: number | null }
 	| { kind: "report" }
-	| { kind: "help" }
+	| { kind: "help"; command: string }
 	| { kind: "clear" }
 	| { kind: "error"; message: string };
 
@@ -52,17 +57,46 @@ const PRIORITY_NAME: Record<TaskPriority, string> = {
 
 export const COMMAND_HELP = [
 	"add (A) 写周报 +工作 @电话 due:2026-10-20",
-	"list [关键词]",
-	"do <id> / undo <id>",
-	"del <id>",
-	"pri <id> <A-D> / pri <A-D> <id>",
-	"depri <id>",
+	"addm 任务一 | 任务二 | 任务三",
+	"append <id> <追加内容> / prepend <id> <前置内容>",
+	"replace <id> <新标题>",
+	"list [关键词] / listall [关键词]",
+	"listpri [A-D] / listproj [+标签] / listcon [@标签]",
+	"do <id...> / undo <id...>",
+	"del <id...> [要移除的词]",
+	"pri <id> <A-D> / depri <id...>",
 	"due <id> <YYYY-MM-DD|none>",
 	"tag <id> +标签 / untag <id> +标签",
 	"search <关键词>",
 	"archive [id]（不填 id 归档所有已完成）",
-	"report / help / clear",
+	"report / help [命令] / clear",
 ] as const;
+
+export const COMMAND_DETAILS: Record<string, string> = {
+	add: "add (A) 写周报 +工作 @电话 due:2026-10-20 — 创建任务",
+	addm: "addm 任务一 | 任务二 — 用 | 分隔一次创建多条",
+	append: "append <id> 文本 — 追加到标题末尾",
+	prepend: "prepend <id> 文本 — 插到标题开头",
+	replace: "replace <id> 新标题 — 整体替换标题",
+	list: "list [关键词] — 列出当前筛选内的任务",
+	listall: "listall [关键词] — 列出含已完成的任务",
+	listpri: "listpri [A-D] — 按优先级列出任务",
+	listproj: "listproj [+标签] — 按标签列出任务",
+	listcon: "listcon [@标签] — 同 listproj，@ 只是写法",
+	do: "do <id...> — 标记完成，支持多个 id",
+	undo: "undo <id...> — 重新打开",
+	del: "del <id...> — 删除任务；del <id> 词 — 只从任务里移除该词",
+	pri: "pri <id> <A-D> — 设置优先级",
+	depri: "depri <id...> — 清除优先级",
+	due: "due <id> <YYYY-MM-DD|none> — 设置/清除截止",
+	tag: "tag <id> +标签 — 添加标签",
+	untag: "untag <id> +标签 — 移除标签",
+	search: "search 关键词 — 搜索任务",
+	archive: "archive [id] — 归档；不填 id 归档所有已完成",
+	report: "report — 显示任务统计",
+	help: "help [命令] — 查看命令说明",
+	clear: "clear — 清空命令输出",
+};
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -88,13 +122,24 @@ function parseId(raw: string | undefined): number | null {
 	return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
+/** `3 5 8` / `3,5,8` / `#3 #5` → 去重后的 id 列表 */
+function parseIds(tokens: readonly string[]): number[] | null {
+	const parts = tokens
+		.join(" ")
+		.split(/[,\s]+/)
+		.filter(Boolean);
+	if (parts.length === 0) return null;
+	const ids: number[] = [];
+	for (const part of parts) {
+		const id = parseId(part);
+		if (id === null) return null;
+		if (!ids.includes(id)) ids.push(id);
+	}
+	return ids;
+}
+
 /** 解析 add 后面的 todo.txt 正文 */
-export function parseTodoText(input: string): {
-	title: string;
-	priority: TaskPriority | null;
-	tags: string[];
-	dueAt: string | null;
-} {
+export function parseTodoText(input: string): TodoText {
 	let text = input.trim();
 	let priority: TaskPriority | null = null;
 
@@ -168,32 +213,98 @@ export function parseTodoCommand(input: string): TodoCommand {
 			}
 			return { kind: "add", ...parsed };
 		}
+		case "addm": {
+			const items = arg
+				.split(/\s*\|\s*|\n+/)
+				.map((item) => parseTodoText(item))
+				.filter((item) => item.title.length > 0);
+			if (items.length === 0) {
+				return {
+					kind: "error",
+					message: "用法：addm 任务一 | 任务二 | 任务三",
+				};
+			}
+			return { kind: "add-many", items };
+		}
 		case "list":
 		case "ls":
 			return { kind: "list", query: arg };
+		case "listall":
+		case "lsa":
+			return { kind: "list-all", query: arg };
+		case "listpri":
+		case "lsp": {
+			const first = rest[0]?.toUpperCase();
+			const priority = first && /^[A-D]$/.test(first) ? PRIORITY[first] : null;
+			return {
+				kind: "list-pri",
+				priority,
+				query: (priority ? rest.slice(1) : rest).join(" ").trim(),
+			};
+		}
+		case "listproj":
+		case "lsprj":
+		case "listcon":
+		case "lsc":
+			return { kind: "list-tag", tag: arg.replace(/^[+@]/, "").trim() };
 		case "do":
 		case "done":
 		case "complete": {
-			const id = parseId(rest[0]);
-			return id
-				? { kind: "do", id }
-				: { kind: "error", message: "do 后面要跟任务 id" };
+			const ids = parseIds(rest);
+			return ids
+				? { kind: "do", ids }
+				: { kind: "error", message: "do 后面要跟任务 id，可写多个" };
 		}
 		case "undo":
 		case "undone":
 		case "activate": {
-			const id = parseId(rest[0]);
-			return id
-				? { kind: "undo", id }
-				: { kind: "error", message: "undo 后面要跟任务 id" };
+			const ids = parseIds(rest);
+			return ids
+				? { kind: "undo", ids }
+				: { kind: "error", message: "undo 后面要跟任务 id，可写多个" };
 		}
 		case "del":
 		case "delete":
 		case "rm": {
+			const tokens = rest
+				.join(" ")
+				.split(/[,\s]+/)
+				.filter(Boolean);
+			const allIds =
+				tokens.length > 0 && tokens.every((token) => parseId(token));
+			if (allIds) {
+				const ids = parseIds(tokens);
+				return ids
+					? { kind: "delete", ids }
+					: { kind: "error", message: "del 后面要跟任务 id" };
+			}
 			const id = parseId(rest[0]);
-			return id
-				? { kind: "delete", id }
-				: { kind: "error", message: "del 后面要跟任务 id" };
+			if (!id) return { kind: "error", message: "del 后面要跟任务 id" };
+			const term = rest.slice(1).join(" ").trim();
+			return term
+				? { kind: "delete", ids: [id], term }
+				: { kind: "delete", ids: [id] };
+		}
+		case "append":
+		case "app":
+		case "prepend":
+		case "prep":
+		case "replace": {
+			const id = parseId(rest[0]);
+			const text = rest.slice(1).join(" ").trim();
+			if (!id || !text) {
+				return {
+					kind: "error",
+					message: `${command} 用法：${command} <id> <文本>`,
+				};
+			}
+			const mode =
+				command === "replace"
+					? "replace"
+					: command.startsWith("pre")
+						? "prepend"
+						: "append";
+			return { kind: "edit", id, mode, text };
 		}
 		case "pri":
 		case "priority": {
@@ -210,10 +321,10 @@ export function parseTodoCommand(input: string): TodoCommand {
 		}
 		case "depri":
 		case "deprioritize": {
-			const id = parseId(rest[0]);
-			return id
-				? { kind: "depri", id }
-				: { kind: "error", message: "depri 后面要跟任务 id" };
+			const ids = parseIds(rest);
+			return ids
+				? { kind: "depri", ids }
+				: { kind: "error", message: "depri 后面要跟任务 id，可写多个" };
 		}
 		case "due": {
 			const id = parseId(rest[0]);
@@ -255,7 +366,7 @@ export function parseTodoCommand(input: string): TodoCommand {
 			return { kind: "report" };
 		case "help":
 		case "?":
-			return { kind: "help" };
+			return { kind: "help", command: rest[0]?.toLowerCase() ?? "" };
 		case "clear":
 			return { kind: "clear" };
 		default:

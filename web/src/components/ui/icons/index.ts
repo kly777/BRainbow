@@ -28,6 +28,7 @@ export {
 	FiImage as Image,
 	FiInfo as Info,
 	FiLayers as Layers,
+	FiTerminal as Terminal,
 	FiLink as Link,
 	FiList as List,
 	FiLoader as Loader2,

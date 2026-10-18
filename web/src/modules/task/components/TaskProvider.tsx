@@ -132,7 +132,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
 
 	const reload = () => load();
 
-	/** 搜索词来自 URL（TaskPanel 那个 effect）；改词即重取，且与 reload 共用同一条加载路径 */
+	/** 搜索词来自 URL（TaskWorkspace 那个 effect）；改词即重取，且与 reload 共用同一条加载路径 */
 	const setQuery = (next: string) => {
 		if (next === query()) {
 			return;

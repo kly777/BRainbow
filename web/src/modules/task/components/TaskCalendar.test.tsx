@@ -49,7 +49,7 @@ function mount() {
 	document.body.innerHTML = "";
 	const host = document.createElement("div");
 	document.body.appendChild(host);
-	// 日历状态由调用方持有（TaskPanel 建一份传下来），测试里用 createRoot 建一个
+	// 日历状态由调用方持有（TaskWorkspace 建一份传下来），测试里用 createRoot 建一个
 	const dispose = createRoot((disposeFn) => {
 		const calendar = useTaskCalendar();
 		render(() => <TaskCalendar calendar={calendar} />, host);

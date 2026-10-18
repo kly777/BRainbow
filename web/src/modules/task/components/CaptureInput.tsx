@@ -308,21 +308,6 @@ export default function CaptureInput(props: CaptureInputProps) {
 				</Button>
 			</div>
 
-			{/* 空框时的第一句引导：不占已开始输入后的空间 */}
-			<Show
-				when={
-					text().trim() === "" &&
-					!anyValue() &&
-					!menuOpen() &&
-					editing() === null
-				}
-			>
-				<p class={styles.guide}>
-					回车创建 · ↓ 加计划/截止/标签 · 也可直接写{" "}
-					<code class={styles.guideCode}>!p1 #工作 ~60m</code>
-				</p>
-			</Show>
-
 			{/* 已加的条件：有值才出现，点 chip 回到对应编辑器 */}
 			<Show when={anyValue()}>
 				<div class={styles.chips}>

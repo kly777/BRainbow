@@ -1,0 +1,272 @@
+import { ArrowLeft } from "@components/ui/icons";
+import { PATHS } from "@config/paths";
+// ── 添加记忆 v2：折痕卡片 ──
+// 单条模式 = 摊开一张空白目录卡（线索/答案中间是折痕）
+// 批量/文件模式 = 卡片清单审查（预览 + 勾选入库）
+// 业务逻辑复用 useMemAdd，此处只做视图层
+
+import { MarkdownEditor } from "@components";
+import {
+	MarkdownFilePicker,
+	uploadToFileService,
+} from "@modules/file/markdown-editor-support.tsx";
+import { A } from "@solidjs/router";
+import { createSignal, Show } from "solid-js";
+import {
+	FormatHint,
+	ImportActions,
+	ImportPreviewTable,
+	ImportResult,
+	ImportTagInput,
+} from "./components/ImportParts.tsx";
+import { useMemAdd } from "./view/useMemAdd.ts";
+import styles from "./MemAdd.module.css";
+
+export default function MemAdd() {
+	const m = useMemAdd();
+
+	return (
+		<div class={styles.page}>
+			{/* 头栏 */}
+			<div class={styles.topBar}>
+				<A href={PATHS.memory} class={styles.backLink}>
+					<ArrowLeft size={14} /> 记忆
+				</A>
+				<h1 class={styles.title}>添加记忆</h1>
+				<div class={styles.modeTabs}>
+					{(["single", "paste", "file"] as const).map((mode) => (
+						<button
+							type="button"
+							class={m.mode() === mode ? styles.modeActive : styles.modeBtn}
+							onClick={() => m.setMode(mode)}
+						>
+							{mode === "single"
+								? "单条创建"
+								: mode === "paste"
+									? "批量粘贴"
+									: "从文件导入"}
+						</button>
+					))}
+					<A href={PATHS.chatMem} class={styles.modeBtnLink}>
+						AI 生成 ↗
+					</A>
+				</div>
+			</div>
+
+			<div class={styles.content}>
+				<Show when={m.mode() === "single"}>
+					{/* ── 单条模式：折痕卡片 ── */}
+					<SingleCardView m={m} />
+				</Show>
+
+				<Show when={m.mode() === "paste"}>
+					<PasteView m={m} />
+				</Show>
+
+				<Show when={m.mode() === "file"}>
+					<FileView m={m} />
+				</Show>
+			</div>
+		</div>
+	);
+}
+
+// ── 单条模式：折痕卡片 ──
+
+function SingleCardView(props: { m: ReturnType<typeof useMemAdd> }) {
+	const m = props.m;
+	return (
+		<div class={styles.cardWrap}>
+			<div class={styles.card}>
+				{/* 正面：线索 */}
+				<div class={styles.face}>
+					<div class={styles.faceTab}>
+						<span class={styles.faceTabText}>线索</span>
+						<span class={styles.faceTabNo}>正面</span>
+					</div>
+					<div class={styles.faceBody}>
+						<MarkdownEditor
+							onUploadFile={uploadToFileService}
+							filePicker={MarkdownFilePicker}
+							id="add-cue"
+							class={styles.textarea}
+							placeholder="例如：质能方程 E=mc²"
+							value={m.cue()}
+							onInput={m.setCue}
+							rows={4}
+							aria-label="线索"
+						/>
+					</div>
+				</div>
+
+				{/* 折痕 */}
+				<div class={styles.fold}>
+					<span class={styles.foldMark} />
+				</div>
+
+				{/* 背面：答案 */}
+				<div class={styles.face}>
+					<div class={styles.faceTab}>
+						<span class={styles.faceTabText}>答案</span>
+						<span class={styles.faceTabNo}>背面</span>
+					</div>
+					<div class={styles.faceBody}>
+						<MarkdownEditor
+							onUploadFile={uploadToFileService}
+							filePicker={MarkdownFilePicker}
+							id="add-target"
+							class={styles.textarea}
+							placeholder="例如：能量等于质量乘以光速的平方"
+							value={m.target()}
+							onInput={m.setTarget}
+							rows={4}
+						/>
+					</div>
+				</div>
+			</div>
+
+			<ImportActions
+				onCancel={() => m.navigate(PATHS.memory)}
+				onSubmit={m.handleCreate}
+				loading={m.creating()}
+				disabled={!m.cue().trim() || !m.target().trim()}
+				submitLabel="创建"
+			/>
+		</div>
+	);
+}
+
+// ── 批量粘贴视图 ──
+
+function PasteView(props: { m: ReturnType<typeof useMemAdd> }) {
+	const m = props.m;
+	return (
+		<Show
+			when={m.importResult()}
+			fallback={
+				<div class={styles.stack}>
+					<FormatHint mode="paste" />
+					<div class={styles.inputCard}>
+						<textarea
+							class={styles.textarea}
+							value={m.pasteText()}
+							rows={8}
+							aria-label="粘贴导入内容"
+							placeholder={"质能方程 | E=mc²\n光速 | 299792458 m/s"}
+							onInput={(e) => {
+								m.setPasteText(e.currentTarget.value);
+								m.setPreviewRows(m.parsePasteText(e.currentTarget.value));
+							}}
+						/>
+					</div>
+					<Show when={m.previewRows().length > 0}>
+						<ImportPreviewTable
+							rows={m.previewRows()}
+							selectedCount={m.selectedCount()}
+							onToggle={(i) =>
+								m.setPreviewRows((prev) => {
+									const n = [...prev];
+									n[i] = { ...n[i], selected: !n[i].selected };
+									return n;
+								})
+							}
+							onToggleAll={() => {
+								const all = m.selectedCount() === m.previewRows().length;
+								m.setPreviewRows((prev) =>
+									prev.map((r) => ({ ...r, selected: !all })),
+								);
+							}}
+						/>
+						<p class={styles.previewCount}>
+							已选 {m.selectedCount()} / 共 {m.previewRows().length} 条
+						</p>
+					</Show>
+					<ImportTagInput
+						value={m.importDefaultTags()}
+						onChange={m.setImportDefaultTags}
+					/>
+					<ImportActions
+						onCancel={() => m.navigate(PATHS.memory)}
+						onSubmit={m.handlePasteImport}
+						loading={m.importing()}
+						disabled={m.selectedCount() === 0}
+						submitLabel={`导入所选 (${m.selectedCount()} 条)`}
+					/>
+				</div>
+			}
+		>
+			{(r) => <ImportResult result={r()} onContinue={m.resetImport} />}
+		</Show>
+	);
+}
+
+// ── 文件导入视图 ──
+
+function FileView(props: { m: ReturnType<typeof useMemAdd> }) {
+	const m = props.m;
+	// 本地文件名状态，仅用于展示已选文件
+	const [fileName, setFileName] = createSignal("");
+	return (
+		<Show
+			when={m.importResult()}
+			fallback={
+				<div class={styles.stack}>
+					<FormatHint mode="file" />
+					<div class={styles.inputCard}>
+						<label for="import-file" class={styles.fileBtn}>
+							📄 {fileName() || "选择文件"}
+						</label>
+						<input
+							id="import-file"
+							type="file"
+							accept=".csv,.psv,.json"
+							class={styles.fileInputHidden}
+							onChange={(e) => {
+								setFileName(e.currentTarget.files?.[0]?.name ?? "");
+								m.handleFilePicked(e.currentTarget.files?.[0] ?? null);
+							}}
+						/>
+						<Show when={m.parseError()}>
+							<p class={styles.importErrors}>{m.parseError()}</p>
+						</Show>
+					</div>
+					<Show when={m.previewRows().length > 0}>
+						<ImportPreviewTable
+							rows={m.previewRows()}
+							selectedCount={m.selectedCount()}
+							onToggle={(i) =>
+								m.setPreviewRows((prev) => {
+									const n = [...prev];
+									n[i] = { ...n[i], selected: !n[i].selected };
+									return n;
+								})
+							}
+							onToggleAll={() => {
+								const all = m.selectedCount() === m.previewRows().length;
+								m.setPreviewRows((prev) =>
+									prev.map((r) => ({ ...r, selected: !all })),
+								);
+							}}
+						/>
+						<p class={styles.previewCount}>
+							已选 {m.selectedCount()} / 共 {m.previewRows().length} 条
+						</p>
+					</Show>
+					<ImportTagInput
+						value={m.importDefaultTags()}
+						onChange={m.setImportDefaultTags}
+					/>
+					<ImportActions
+						onCancel={() => m.navigate(PATHS.memory)}
+						onSubmit={m.handleFileImport}
+						loading={m.importing()}
+						disabled={m.selectedCount() === 0}
+						submitLabel={`导入所选 (${m.selectedCount()} 条)`}
+					/>
+				</div>
+			}
+		>
+			{(r) => <ImportResult result={r()} onContinue={m.resetImport} />}
+		</Show>
+	);
+}

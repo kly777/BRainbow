@@ -21,7 +21,8 @@ export * from "./speech.ts";
 export * from "./tag-combo.ts";
 export * from "./timing.ts";
 export * from "./useCopyFlash.ts";
-export * from "./useDetailResource.ts";
-export * from "./useListResource.ts";
+// Query 基础设施已迁到 `shared/api/query`；这里保留 re-export 兼容老调用点。
+export { useDetailResource } from "@shared/api/query/useDetailResource.ts";
+export { useListResource } from "@shared/api/query/useListResource.ts";
 export * from "./useModal.ts";
 export * from "./useUrlParams.ts";

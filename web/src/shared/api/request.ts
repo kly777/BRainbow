@@ -1,5 +1,5 @@
 import { showToast } from "@shared/utils/toastStore.ts";
-import { withTimeout } from "./query.ts";
+import { withTimeout } from "./queryParams.ts";
 import { getApiKey, getToken } from "./token.ts";
 import { HttpError, NetworkError } from "./types/index.ts";
 

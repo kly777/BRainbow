@@ -1,0 +1,35 @@
+.frame {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-md);
+	width: 100%;
+	max-width: 1500px;
+	height: 100%;
+	min-height: 0;
+	margin: 0 auto;
+	padding: var(--space-lg) var(--space-xl) var(--space-xl);
+}
+
+.body {
+	display: flex;
+	flex: 1;
+	flex-direction: column;
+	min-height: 0;
+}
+
+.reserve-bottom {
+	padding-bottom: 6rem;
+}
+
+@media (width <= 980px) {
+	.frame {
+		height: auto;
+		min-height: 100%;
+	}
+}
+
+@media (width <= 900px) {
+	.frame {
+		padding: var(--space-md);
+	}
+}

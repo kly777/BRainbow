@@ -64,7 +64,7 @@ export const PAGE_PRELOADS: Partial<Record<PathValue, Preload>> = {
 		const id = numericId(params);
 		if (id === undefined) return Promise.resolve();
 		return quietly(async () => {
-			const { getCardE } = await import("@modules/card/api.ts");
+			const { getCardE } = await import("@modules/card");
 			await getCardE(id);
 		});
 	},
@@ -80,7 +80,7 @@ export const PAGE_PRELOADS: Partial<Record<PathValue, Preload>> = {
 		const id = numericId(params);
 		if (id === undefined) return Promise.resolve();
 		return quietly(async () => {
-			const { getBookmarkE } = await import("@modules/bookmark/api.ts");
+			const { getBookmarkE } = await import("@modules/bookmark");
 			await getBookmarkE(id);
 		});
 	},

@@ -3,6 +3,10 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig, loadEnv, type Plugin, lazyPlugins } from "vite-plus";
 import solid from "vite-plugin-solid";
+import {
+	MODULE_KINDS,
+	MODULE_LAYER_DIRS,
+} from "./src/config/module-registry.ts";
 import { generateAll } from "./scripts/generate-seo.ts";
 
 /** 构建完成后生成 SEO/Agent 产物（sitemap / robots / llms / md pages） */
@@ -26,6 +30,22 @@ export default defineConfig(({ command, mode }) => {
 		/\/+$/,
 		"",
 	);
+	// 模块物理分层：@modules/<name> 仍指向模块根，但文件按 domain/capability/platform/tool 分目录。
+	const moduleAliases = Object.fromEntries(
+		Object.entries(MODULE_KINDS).map(([name, kind]) => [
+			`@modules/${name}`,
+			fileURLToPath(
+				new URL(`./src/${MODULE_LAYER_DIRS[kind]}/${name}`, import.meta.url),
+			),
+		]),
+	);
+	const layerAliases = Object.fromEntries(
+		Object.entries(MODULE_LAYER_DIRS).map(([, dir]) => [
+			`@${dir}`,
+			fileURLToPath(new URL(`./src/${dir}`, import.meta.url)),
+		]),
+	);
+
 	// 开发服务器端口与后端代理目标（VITE_PORT / VITE_API_TARGET）
 	const port = Number(env.VITE_PORT ?? 3001);
 	// 配置 fail-fast：端口非法时立即报错，而不是静默回退
@@ -83,7 +103,13 @@ export default defineConfig(({ command, mode }) => {
 			},
 			overrides: [
 				{
-					files: ["src/shared/api/query.ts", "src/modules/**/api-*.test.ts"],
+					files: [
+						"src/shared/api/queryParams.ts",
+						"src/domains/**/api-*.test.ts",
+						"src/capabilities/**/api-*.test.ts",
+						"src/platform/**/api-*.test.ts",
+						"src/tools/**/api-*.test.ts",
+					],
 					rules: {
 						// 查询串与测试 helper 对 unknown 参数显式 String()，值域由调用方保证
 						"typescript/no-base-to-string": "off",
@@ -160,7 +186,8 @@ export default defineConfig(({ command, mode }) => {
 		resolve: {
 			alias: {
 				"@app": fileURLToPath(new URL("./src/app", import.meta.url)),
-				"@modules": fileURLToPath(new URL("./src/modules", import.meta.url)),
+				...moduleAliases,
+				...layerAliases,
 				"@components": fileURLToPath(
 					new URL("./src/components", import.meta.url),
 				),

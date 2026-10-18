@@ -83,7 +83,10 @@ export default defineConfig(({ command, mode }) => {
 			},
 			overrides: [
 				{
-					files: ["src/shared/api/query.ts", "src/modules/**/api-*.test.ts"],
+					files: [
+						"src/shared/api/queryParams.ts",
+						"src/modules/**/api-*.test.ts",
+					],
 					rules: {
 						// 查询串与测试 helper 对 unknown 参数显式 String()，值域由调用方保证
 						"typescript/no-base-to-string": "off",

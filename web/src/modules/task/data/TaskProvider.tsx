@@ -31,9 +31,9 @@ import {
 	applyFilter,
 	EMPTY_FILTER,
 	type TaskFilter,
-} from "../lib/task-filter.ts";
-import { toUpdatePayload } from "../lib/task-payload.ts";
-import { makeTemp, STATUS_API } from "../lib/task-provider-utils.ts";
+} from "../model/task-filter.ts";
+import { toUpdatePayload } from "../model/task-payload.ts";
+import { makeTemp, STATUS_API } from "./task-provider-utils.ts";
 
 interface TaskCtxValue {
 	tasks: () => Task[];
@@ -66,7 +66,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
 	const [loading, setLoading] = createSignal(true);
 	// 排序口径：默认 smart（系统算"先做哪件"），用户可在工具条切换
 	const [sort, setSortSignal] = createSignal<TaskSortKey>("smart");
-	// 筛选条件（客户端筛：全量已在内存里，见 lib/task-filter.ts 的说明）
+	// 筛选条件（客户端筛：全量已在内存里，见 model/task-filter.ts 的说明）
 	const [filter, setFilter] = createSignal<TaskFilter>(EMPTY_FILTER);
 	const [stats, setStats] = createSignal<TaskStats>({
 		backlog: 0,

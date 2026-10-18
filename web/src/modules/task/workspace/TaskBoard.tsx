@@ -7,7 +7,7 @@ import type { Task } from "../api.ts";
 import type { TaskStatusType } from "../api-types.ts";
 import { statusToken } from "../lib/status-colors.ts";
 import { TaskMeta } from "../components/TaskMeta.tsx";
-import { useTasks } from "../components/TaskProvider.tsx";
+import { useTasks } from "../data/TaskProvider.tsx";
 import styles from "./TaskBoard.module.css";
 
 const COLUMNS = [

@@ -27,8 +27,8 @@ import {
 	type ConditionValues,
 	formatEffort,
 	hasCondition,
-} from "../lib/conditions.ts";
-import { fromIso } from "../lib/dateInput.ts";
+} from "../model/conditions.ts";
+import { fromIso } from "../model/dateInput.ts";
 import styles from "./ConditionEditor.module.css";
 import DateField from "./DateField.tsx";
 

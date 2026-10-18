@@ -21,7 +21,7 @@ import {
 	setEffortToken,
 	setPriorityToken,
 	setTagTokens,
-} from "../lib/capture.ts";
+} from "../model/capture.ts";
 import {
 	type ConditionKey,
 	type ConditionValues,
@@ -29,8 +29,8 @@ import {
 	formatPlan,
 	missingConditions,
 	validateTimeRange,
-} from "../lib/conditions.ts";
-import { formatDue } from "../lib/due.ts";
+} from "../model/conditions.ts";
+import { formatDue } from "../model/due.ts";
 import styles from "./CaptureInput.module.css";
 import ConditionEditor from "./ConditionEditor.tsx";
 import ConditionMenu from "./ConditionMenu.tsx";

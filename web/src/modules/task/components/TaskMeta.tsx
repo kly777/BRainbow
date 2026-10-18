@@ -15,8 +15,8 @@ import {
 	type ConditionKey,
 	formatEffort,
 	formatPlan,
-} from "../lib/conditions.ts";
-import { formatDue } from "../lib/due.ts";
+} from "../model/conditions.ts";
+import { formatDue } from "../model/due.ts";
 import styles from "./TaskMeta.module.css";
 
 interface TaskMetaProps {

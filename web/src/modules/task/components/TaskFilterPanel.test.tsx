@@ -4,7 +4,7 @@
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { describe, expect, it, vi } from "vite-plus/test";
-import { EMPTY_FILTER, type TaskFilter } from "../lib/task-filter.ts";
+import { EMPTY_FILTER, type TaskFilter } from "../model/task-filter.ts";
 import TaskFilterPanel, { ActiveFilterChips } from "./TaskFilterPanel.tsx";
 
 vi.mock("@modules/task/api.ts", () => ({

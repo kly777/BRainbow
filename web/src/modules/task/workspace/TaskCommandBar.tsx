@@ -1,6 +1,6 @@
 // ── /task 底部常驻命令栏 ──
 //
-// 解析在 lib/todo-txt.ts，执行在 lib/task-command-exec.ts（纯逻辑、可注入依赖）。
+// 解析在 model/todo-txt.ts，执行在 model/task-command-exec.ts（纯逻辑、可注入依赖）。
 // 这里只负责输入/历史/输出与确认框；命令栏常驻页面底部，回车后在上方展开输出。
 
 import { ChevronDown, ChevronUp, Terminal } from "@components/ui/icons";
@@ -14,9 +14,9 @@ import {
 	onMount,
 	Show,
 } from "solid-js";
-import { useTasks } from "../components/TaskProvider.tsx";
-import { executeTaskCommand } from "../lib/task-command-exec.ts";
-import { parseTodoCommand, type TodoCommand } from "../lib/todo-txt.ts";
+import { useTasks } from "../data/TaskProvider.tsx";
+import { executeTaskCommand } from "../model/task-command-exec.ts";
+import { parseTodoCommand, type TodoCommand } from "../model/todo-txt.ts";
 import styles from "./TaskCommandBar.module.css";
 
 interface Line {

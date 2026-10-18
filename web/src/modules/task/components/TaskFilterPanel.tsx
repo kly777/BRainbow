@@ -19,7 +19,7 @@ import {
 	removeChip,
 	type TaskFilter,
 	toggleValue,
-} from "../lib/task-filter.ts";
+} from "../model/task-filter.ts";
 import styles from "./TaskFilterPanel.module.css";
 
 const STATUS_OPTIONS: readonly { value: TaskStatusType; label: string }[] = [

@@ -4,14 +4,7 @@
 // 子任务与时间块都在这一页完成。原来的详情页是只读摘要 + 删除，这一版是真正的
 // 任务编辑器，同时保留从列表/搜索直达的路径。
 
-import {
-	AsyncSection,
-	Button,
-	Input,
-	Select,
-	Textarea,
-	showConfirm,
-} from "@components/ui";
+import { AsyncSection, Button, Input, Select, Textarea } from "@components/ui";
 import TagInput from "@components/ui/molecules/TagInput.tsx";
 import {
 	ArrowLeft,
@@ -23,23 +16,16 @@ import {
 	X,
 } from "@components/ui/icons";
 import { fillPath, PATHS } from "@config/paths";
-import { notifyError, notifySuccess } from "@shared/errors";
-import { fmtLocal, isImeComposing, useDetailResource } from "@shared/utils";
-import type { TagOption } from "@components/ui/molecules/TagInput.tsx";
-import { A, useNavigate, useParams } from "@solidjs/router";
-import { createEffect, createSignal, For, Show } from "solid-js";
-import type { Tag, TaskBlock } from "./api.ts";
-import {
-	createTaskE,
-	deleteTaskE,
-	getTagsE,
-	getTaskDetailE,
-	updateTaskE,
-} from "./api.ts";
+import { notifyError } from "@shared/errors";
+import { fmtLocal, isImeComposing } from "@shared/utils";
+import { A } from "@solidjs/router";
+import { For, Show } from "solid-js";
+import type { TaskBlock } from "./api.ts";
 import type { TaskPriority, TaskStatusType } from "./api-types.ts";
 import DateField from "./components/DateField.tsx";
 import RecurrenceForm from "./components/RecurrenceForm.tsx";
 import { TaskMeta } from "./components/TaskMeta.tsx";
+import { useTaskFocusView } from "./view/useTaskFocus.ts";
 import styles from "./TaskFocusPage.module.css";
 
 const STATUS_LABEL: Record<TaskStatusType, string> = {
@@ -79,131 +65,31 @@ const formatBlock = (block: TaskBlock) => {
 };
 
 export default function TaskFocusPage() {
-	const params = useParams();
-	const navigate = useNavigate();
-	const id = () => Number(params.id);
-
-	const m = useDetailResource({
+	const {
 		id,
-		validate: (value) => Number.isInteger(value) && value >= 1,
-		invalidIdError: new Error("无效的任务 ID"),
-		fetcher: (value) => getTaskDetailE(value),
-	});
-	const detail = m.data;
-	const { refetch } = m;
-
-	const [titleDraft, setTitleDraft] = createSignal("");
-	const [descDraft, setDescDraft] = createSignal("");
-	const [childTitle, setChildTitle] = createSignal("");
-	const [childOpen, setChildOpen] = createSignal(false);
-	const [saving, setSaving] = createSignal(false);
-	const [recurring, setRecurring] = createSignal(false);
-
-	createEffect(() => {
-		const task = detail()?.task;
-		if (!task) return;
-		setTitleDraft(task.title);
-		setDescDraft(task.description ?? "");
-	});
-
-	const patch = async (updates: Parameters<typeof updateTaskE>[1]) => {
-		setSaving(true);
-		try {
-			await updateTaskE(id(), updates);
-			refetch();
-			notifySuccess("已保存", detail()?.task.title);
-			return true;
-		} catch (error) {
-			notifyError("保存失败", error);
-			return false;
-		} finally {
-			setSaving(false);
-		}
-	};
-
-	const saveTitle = async () => {
-		if (saving()) return;
-		const task = detail()?.task;
-		if (!task) return;
-		const title = titleDraft().trim();
-		if (!title) {
-			setTitleDraft(task.title);
-			notifyError("标题不能为空");
-			return;
-		}
-		if (title !== task.title) await patch({ title });
-	};
-
-	const saveDescription = async () => {
-		if (saving()) return;
-		const task = detail()?.task;
-		if (!task) return;
-		const description = descDraft().trim();
-		if (description !== (task.description ?? "")) {
-			await patch({ description: description || null });
-		}
-	};
-
-	const saveTags = (tags: Tag[]) => {
-		void patch({ tags: tags.map((tag) => tag.name) });
-	};
-
-	const addTag = (name: string) => {
-		const task = detail()?.task;
-		if (!task || task.tags.some((tag) => tag.name === name)) return;
-		saveTags([...task.tags, { id: -1, name }]);
-	};
-
-	const removeTag = (name: string) => {
-		const task = detail()?.task;
-		if (!task) return;
-		saveTags(task.tags.filter((tag) => tag.name !== name));
-	};
-
-	let tagTimer: ReturnType<typeof setTimeout> | undefined;
-	const searchTags = (query: string): Promise<TagOption[]> =>
-		new Promise((resolve) => {
-			clearTimeout(tagTimer);
-			tagTimer = setTimeout(async () => {
-				try {
-					resolve(await getTagsE(query));
-				} catch {
-					resolve([]);
-				}
-			}, 200);
-		});
-
-	const addChild = async () => {
-		const title = childTitle().trim();
-		if (!title) return;
-		try {
-			await createTaskE({ title, parent_task_id: id() });
-			setChildTitle("");
-			setChildOpen(false);
-			refetch();
-		} catch (error) {
-			notifyError("创建子任务失败", error);
-		}
-	};
-
-	const remove = async () => {
-		const task = detail()?.task;
-		if (!task) return;
-		const confirmed = await showConfirm({
-			title: "删除任务",
-			message: `确定删除「${task.title}」？子任务也会一并删除。`,
-			variant: "danger",
-			confirmLabel: "删除",
-		});
-		if (!confirmed) return;
-		try {
-			await deleteTaskE(id());
-			notifySuccess("任务已删除");
-			navigate(PATHS.task);
-		} catch (error) {
-			notifyError("删除失败", error);
-		}
-	};
+		m,
+		detail,
+		refetch,
+		titleDraft,
+		setTitleDraft,
+		descDraft,
+		setDescDraft,
+		saving,
+		patch,
+		saveTitle,
+		saveDescription,
+		addTag,
+		removeTag,
+		searchTags,
+		childTitle,
+		setChildTitle,
+		childOpen,
+		setChildOpen,
+		addChild,
+		recurring,
+		setRecurring,
+		remove,
+	} = useTaskFocusView();
 
 	return (
 		<div class={styles.page}>

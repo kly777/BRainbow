@@ -1,7 +1,7 @@
-// ── /task：左侧待办流，右侧日历 + 最近三天时间线 ──
+// ── /task：页面组合 ──
 //
-// 不再保留左侧范围栏：范围/排序收进列表头，搜索与视图切换在页面头部。
-// 右侧始终是"日历 + 时间线"，任务详情走完整页，列表保持专注。
+// 数据、URL 状态、范围/排序、日历都在 view/useTaskWorkspace；这里只负责
+// 页面骨架与组件摆放。
 
 import {
 	EmptyState,
@@ -19,135 +19,37 @@ import {
 	List,
 	Plus,
 } from "@components/ui/icons";
-import { notifySuccess } from "@shared/errors";
-import { enumParam, strParam, useUrlParams } from "@shared/utils";
-import { useNavigate } from "@solidjs/router";
-import { createEffect, createMemo, createSignal, For, Show } from "solid-js";
-import type { TaskSortKey } from "./api.ts";
-import { getTagsE } from "./api.ts";
-import type { TagOption } from "@components/ui/molecules/TagInput.tsx";
+import { For, Show } from "solid-js";
 import CaptureInput from "./components/CaptureInput.tsx";
 import TaskFilterPanel, {
 	ActiveFilterChips,
 } from "./components/TaskFilterPanel.tsx";
-import { TaskProvider, useTasks } from "./components/TaskProvider.tsx";
-import TaskDag from "./components/TaskDag.tsx";
 import TaskCalendar from "./components/TaskCalendar.tsx";
+import TaskDag from "./components/TaskDag.tsx";
 import TaskRows from "./components/TaskRows.tsx";
 import ThreeDayTimeline from "./components/ThreeDayTimeline.tsx";
-import { useTaskCalendar } from "./hooks/useTaskCalendar.ts";
-import { EMPTY_FILTER, isFilterEmpty } from "./lib/task-filter.ts";
-import { captureToCreateRequest } from "./lib/task-payload.ts";
-import {
-	TASK_SCOPES,
-	countScopes,
-	scopeTasks,
-	type TaskScope,
-} from "./lib/task-scope.ts";
-import { TASK_SORT_OPTIONS } from "./lib/task-sort.ts";
-import { fillPath, PATHS } from "@config/paths";
+import { TASK_SORT_OPTIONS } from "./model/task-sort.ts";
+import type { TaskSortKey } from "./api.ts";
+import { useTaskWorkspaceView } from "./view/useTaskWorkspace.ts";
 import TaskBoard from "./workspace/TaskBoard.tsx";
 import TaskCommandBar from "./workspace/TaskCommandBar.tsx";
 import styles from "./TaskWorkspace.module.css";
 
-type View = "stream" | "board" | "graph";
-
-const VIEWS: readonly {
-	key: View;
-	label: string;
-	icon: typeof List;
-}[] = [
+const VIEWS = [
 	{ key: "stream", label: "列表", icon: List },
 	{ key: "board", label: "看板", icon: Grid },
 	{ key: "graph", label: "依赖", icon: Layers },
-];
+] as const;
 
-function Workspace() {
-	const params = useUrlParams({
-		scope: enumParam(
-			["all", "today", "upcoming", "overdue", "completed"] as const,
-			"all",
-		),
-		view: enumParam(["stream", "board", "graph"] as const, "stream"),
-		q: strParam(""),
-	});
-	const scope = () => params.get("scope");
-	const view = () => params.get("view");
-	const searchQuery = () => params.get("q");
-	const navigate = useNavigate();
-
-	const {
-		tasks,
-		loading,
-		add,
-		removeTask,
-		updateStatus,
-		filter,
-		setFilter,
-		sort,
-		setSort,
-		setQuery,
-	} = useTasks();
-
-	const [filterOpen, setFilterOpen] = createSignal(false);
-	const calendar = useTaskCalendar();
-
-	let appliedQuery = "";
-	createEffect(() => {
-		const query = searchQuery();
-		if (query === appliedQuery) return;
-		appliedQuery = query;
-		setQuery(query);
-	});
-
-	const counts = createMemo(() => countScopes(tasks()));
-	const scoped = createMemo(() => scopeTasks(tasks(), scope()));
-
-	const chooseScope = (next: TaskScope) => {
-		params.set({ scope: next, view: "stream" });
-	};
-
-	const chooseView = (next: View) => {
-		params.set({ view: next });
-	};
-
-	const openTask = (taskId: number) =>
-		navigate(fillPath(PATHS.taskDetail, taskId));
-
-	const submit = async (
-		payload: Parameters<typeof captureToCreateRequest>[0],
-	) => {
-		const created = await add(captureToCreateRequest(payload));
-		if (!created) return false;
-		notifySuccess("已创建", created.title);
-		return true;
-	};
-
-	let tagSearchTimer: ReturnType<typeof setTimeout> | undefined;
-	const searchTags = (query: string): Promise<TagOption[]> =>
-		new Promise((resolve) => {
-			clearTimeout(tagSearchTimer);
-			tagSearchTimer = setTimeout(async () => {
-				try {
-					resolve(await getTagsE(query));
-				} catch {
-					resolve([]);
-				}
-			}, 200);
-		});
-
-	const pageTitle = () => {
-		if (view() === "board") return "看板";
-		if (view() === "graph") return "依赖关系";
-		return "任务";
-	};
+export default function TaskWorkspace() {
+	const vm = useTaskWorkspaceView();
 
 	return (
 		<div class={styles.workspace}>
 			<main class={styles.main}>
 				<header class={styles.hero}>
 					<div class={styles.heroText}>
-						<h1 class={styles.title}>{pageTitle()}</h1>
+						<h1 class={styles.title}>{vm.pageTitle()}</h1>
 					</div>
 					<div class={styles.heroTools}>
 						<div class={styles.viewTabs} role="group" aria-label="任务布局">
@@ -156,11 +58,11 @@ function Workspace() {
 									<button
 										type="button"
 										class={styles.viewTab}
-										classList={{ [styles.active]: view() === item.key }}
-										aria-pressed={view() === item.key}
+										classList={{ [styles.active]: vm.view() === item.key }}
+										aria-pressed={vm.view() === item.key}
 										aria-label={item.label}
 										title={item.label}
-										onClick={() => chooseView(item.key)}
+										onClick={() => vm.chooseView(item.key)}
 									>
 										<item.icon size={15} />
 									</button>
@@ -168,18 +70,18 @@ function Workspace() {
 							</For>
 						</div>
 						<SearchInput
-							value={searchQuery()}
-							onSearch={(query) => params.set({ q: query })}
+							value={vm.searchQuery()}
+							onSearch={vm.setSearch}
 							placeholder="搜索任务…"
 							class={styles.search}
 						/>
 						<button
 							type="button"
 							class={styles.filterButton}
-							classList={{ [styles.filterActive]: !isFilterEmpty(filter()) }}
-							aria-expanded={filterOpen()}
+							classList={{ [styles.filterActive]: vm.hasFilter() }}
+							aria-expanded={vm.filterOpen()}
 							aria-controls="workspace-filter"
-							onClick={() => setFilterOpen(!filterOpen())}
+							onClick={() => vm.setFilterOpen(!vm.filterOpen())}
 						>
 							<Filter size={14} />
 							筛选
@@ -187,19 +89,19 @@ function Workspace() {
 					</div>
 				</header>
 
-				<Show when={filterOpen()}>
+				<Show when={vm.filterOpen()}>
 					<div class={styles.filterPanel} id="workspace-filter">
 						<TaskFilterPanel
-							filter={filter()}
-							onChange={setFilter}
-							searchTags={searchTags}
+							filter={vm.filter()}
+							onChange={vm.setFilter}
+							searchTags={vm.searchTags}
 						/>
 						<div class={styles.filterFoot}>
-							<ActiveFilterChips filter={filter()} onChange={setFilter} />
+							<ActiveFilterChips filter={vm.filter()} onChange={vm.setFilter} />
 							<button
 								type="button"
 								class={styles.clearFilter}
-								onClick={() => setFilter(EMPTY_FILTER)}
+								onClick={() => vm.setFilter(vm.emptyFilter)}
 							>
 								清空
 							</button>
@@ -218,32 +120,32 @@ function Workspace() {
 							</div>
 							<CaptureInput
 								placeholder="接下来要做什么？"
-								parentCandidates={tasks()}
-								onSubmit={submit}
+								parentCandidates={vm.tasks()}
+								onSubmit={vm.submit}
 							/>
 						</section>
 
 						<Panel
 							class={styles.listPanel}
 							toolbar={
-								view() === "stream" ? (
+								vm.view() === "stream" ? (
 									<div class={styles.toolbarRow}>
 										<SegmentedControl
 											class={styles.scopeControl}
-											options={TASK_SCOPES.map((item) => ({
+											options={vm.scopes.map((item) => ({
 												value: item.key,
 												label: item.label,
-												count: counts()[item.key],
+												count: vm.counts()[item.key],
 											}))}
-											value={scope()}
-											onChange={chooseScope}
+											value={vm.scope()}
+											onChange={vm.chooseScope}
 											ariaLabel="时间范围"
 										/>
 										<Select
 											class={styles.sort}
-											value={sort()}
+											value={vm.sort()}
 											onChange={(e) =>
-												setSort(e.currentTarget.value as TaskSortKey)
+												vm.setSort(e.currentTarget.value as TaskSortKey)
 											}
 											aria-label="排序方式"
 										>
@@ -258,35 +160,35 @@ function Workspace() {
 							}
 							scroll
 						>
-							<Show when={loading()}>
+							<Show when={vm.loading()}>
 								<LoadingSkeleton />
 							</Show>
 
-							<Show when={!loading()}>
-								<Show when={view() === "stream"}>
+							<Show when={!vm.loading()}>
+								<Show when={vm.view() === "stream"}>
 									<Show
-										when={scoped().length > 0}
+										when={vm.scoped().length > 0}
 										fallback={
 											<EmptyState
 												icon={<CheckCircle2 size={22} />}
 												title={
-													searchQuery() || !isFilterEmpty(filter())
+													vm.searchQuery() || vm.hasFilter()
 														? "没有符合条件的任务"
 														: "这里还没有任务"
 												}
 												hint={
-													searchQuery() || !isFilterEmpty(filter())
+													vm.searchQuery() || vm.hasFilter()
 														? "换个词，或者清掉筛选再看看。"
 														: "在下面写一件想做的事。"
 												}
 												action={
-													searchQuery() || !isFilterEmpty(filter()) ? (
+													vm.searchQuery() || vm.hasFilter() ? (
 														<button
 															type="button"
 															class={styles.emptyAction}
 															onClick={() => {
-																params.set({ q: "" });
-																setFilter(EMPTY_FILTER);
+																vm.setSearch("");
+																vm.setFilter(vm.emptyFilter);
 															}}
 														>
 															清除筛选
@@ -297,21 +199,21 @@ function Workspace() {
 										}
 									>
 										<TaskRows
-											tasks={scoped()}
-											allTasks={tasks()}
+											tasks={vm.scoped()}
+											allTasks={vm.tasks()}
 											onStatusChange={(id, status) =>
-												void updateStatus(id, status)
+												void vm.updateStatus(id, status)
 											}
-											onDelete={(id) => void removeTask(id)}
+											onDelete={(id) => void vm.removeTask(id)}
 										/>
 									</Show>
 								</Show>
 
-								<Show when={view() === "board"}>
+								<Show when={vm.view() === "board"}>
 									<TaskBoard />
 								</Show>
 
-								<Show when={view() === "graph"}>
+								<Show when={vm.view() === "graph"}>
 									<div class={styles.graphPane}>
 										<TaskDag />
 									</div>
@@ -321,21 +223,13 @@ function Workspace() {
 					</div>
 
 					<aside class={styles.rightRail}>
-						<TaskCalendar calendar={calendar} onOpenTask={openTask} />
+						<TaskCalendar calendar={vm.calendar} onOpenTask={vm.openTask} />
 						<ThreeDayTimeline />
 					</aside>
 				</div>
 			</main>
 
-			<TaskCommandBar onSearch={(query) => params.set({ q: query })} />
+			<TaskCommandBar onSearch={vm.setSearch} />
 		</div>
-	);
-}
-
-export default function TaskWorkspace() {
-	return (
-		<TaskProvider>
-			<Workspace />
-		</TaskProvider>
 	);
 }

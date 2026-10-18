@@ -8,7 +8,7 @@
 // 也不会把焦点扔到文档另一头。
 
 import { type Component, createSignal, For, onMount, Show } from "solid-js";
-import { CONDITION_LABELS, type ConditionKey } from "../lib/conditions.ts";
+import { CONDITION_LABELS, type ConditionKey } from "../model/conditions.ts";
 import styles from "./ConditionMenu.module.css";
 
 export interface ConditionMenuExtra {

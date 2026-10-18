@@ -19,7 +19,7 @@ import {
 	formatDateInput,
 	parseDateInput,
 	toDateInputValue,
-} from "../lib/dateInput.ts";
+} from "../model/dateInput.ts";
 import styles from "./DateField.module.css";
 
 export interface DateFieldProps {

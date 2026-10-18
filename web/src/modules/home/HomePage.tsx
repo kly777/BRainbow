@@ -1,8 +1,8 @@
-// ── 首页：左侧待办，右侧最近卡片，中间任务搜索 ──
+// ── 首页：左侧待办，右侧最近卡片，中间命令面板入口 ──
 
 import { useAuth } from "@app/context/auth.tsx";
-import { AsyncView, LoadingSkeleton, SearchInput } from "@components/ui";
-import { ArrowRight } from "@components/ui/icons";
+import { AsyncView, LoadingSkeleton } from "@components/ui";
+import { ArrowRight, Search } from "@components/ui/icons";
 import { MODULE_CARDS } from "@config/module-cards.ts";
 import { fillPath, PATHS } from "@config/paths";
 import type { CardData } from "@modules/card";
@@ -11,6 +11,7 @@ import {
 	deleteCardE as apiDeleteCard,
 	getCardsE,
 } from "@modules/card";
+import { OPEN_COMMAND_PALETTE_EVENT } from "@modules/command-palette";
 import { TaskProvider, TaskRow, useTasks } from "@modules/task";
 import type { Task, TaskSortKey } from "@modules/task";
 import {
@@ -94,17 +95,21 @@ function ModuleNav() {
 	);
 }
 
-function TaskSearch() {
-	const { setQuery } = useTasks();
+function CommandTrigger() {
 	return (
-		<div class={styles.searchWrap}>
-			<SearchInput
-				value=""
-				onSearch={(query) => setQuery(query)}
-				placeholder="搜索任务…"
-				class={styles.homeSearch}
-			/>
-		</div>
+		<button
+			type="button"
+			class={styles.commandTrigger}
+			onClick={() =>
+				globalThis.dispatchEvent(new Event(OPEN_COMMAND_PALETTE_EVENT))
+			}
+			aria-label="打开命令面板"
+			aria-keyshortcuts="Control+K"
+		>
+			<Search class={styles.searchIcon} size={17} aria-hidden="true" />
+			<span class={styles.commandLabel}>搜索、跳转或执行命令…</span>
+			<kbd class={styles.commandKbd}>Ctrl K</kbd>
+		</button>
 	);
 }
 
@@ -247,7 +252,7 @@ function CardPanel() {
 			);
 		},
 	});
-	const recentCards = () => list.items().slice(0, 4);
+	const recentCards = () => list.items().slice(0, 8);
 
 	const handleDelete = async (id: number) => {
 		const confirmed = await showConfirm({
@@ -281,21 +286,23 @@ function CardPanel() {
 					</A>
 				</div>
 			</header>
-			<AsyncView
-				data={recentCards()}
-				loading={list.loading()}
-				emptyMessage="暂无知识卡片"
-			>
-				{(data) => (
-					<CardMasonry
-						cards={[...data()]}
-						onCardClick={(id) => navigate(fillPath(PATHS.cardDetail, id))}
-						onCardEdit={(id) => navigate(fillPath(PATHS.cardEdit, id))}
-						onCardDelete={handleDelete}
-						emptyMessage="暂无知识卡片"
-					/>
-				)}
-			</AsyncView>
+			<div class={styles.cardBody}>
+				<AsyncView
+					data={recentCards()}
+					loading={list.loading()}
+					emptyMessage="暂无知识卡片"
+				>
+					{(data) => (
+						<CardMasonry
+							cards={[...data()]}
+							onCardClick={(id) => navigate(fillPath(PATHS.cardDetail, id))}
+							onCardEdit={(id) => navigate(fillPath(PATHS.cardEdit, id))}
+							onCardDelete={handleDelete}
+							emptyMessage="暂无知识卡片"
+						/>
+					)}
+				</AsyncView>
+			</div>
 		</section>
 	);
 }
@@ -313,9 +320,12 @@ function HomeContent() {
 						{getGreeting()}，{userName()}
 					</h1>
 				</div>
-				<TaskSearch />
 				<ModuleNav />
 			</header>
+
+			<div class={styles.searchBand}>
+				<CommandTrigger />
+			</div>
 
 			<div class={styles.dashboard}>
 				<TodoPanel />

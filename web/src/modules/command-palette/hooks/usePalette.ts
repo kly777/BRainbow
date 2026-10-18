@@ -33,6 +33,9 @@ export const MODE_PREFIX: Record<Mode, string> = {
 	search: "?",
 	cmd: ":",
 };
+
+/** 让页面上的入口也能打开同一个命令面板（例如首页中央的触发条） */
+export const OPEN_COMMAND_PALETTE_EVENT = "brainbow:open-command-palette";
 export const MODE_PLACEHOLDER: Record<Mode, string> = {
 	// idle 现在"直接打字"就有用（本地跳页面 + 可转站内搜索），前缀是进阶开关
 	idle: "搜索、跳转或执行命令（/ ? : 换模式）",
@@ -317,11 +320,17 @@ export function usePalette() {
 	};
 
 	onMount(() => {
+		const openFromOutside = () => openPalette();
 		globalThis.addEventListener("keydown", globalKey);
+		globalThis.addEventListener(OPEN_COMMAND_PALETTE_EVENT, openFromOutside);
+		onCleanup(() => {
+			globalThis.removeEventListener("keydown", globalKey);
+			globalThis.removeEventListener(
+				OPEN_COMMAND_PALETTE_EVENT,
+				openFromOutside,
+			);
+		});
 		probeDuck();
-	});
-	onCleanup(() => {
-		globalThis.removeEventListener("keydown", globalKey);
 	});
 
 	return {

@@ -3,4 +3,5 @@
 //（文档 P2-4 记录过这处跨模块边界泄漏）
 export { type SearchHit, searchE } from "./api.ts";
 export { default as CommandPalette } from "./CommandPalette.tsx";
+export { OPEN_COMMAND_PALETTE_EVENT } from "./hooks/usePalette.ts";
 export { KIND_LABEL, resolveTargetUrl } from "./hooks/suggestions.ts";

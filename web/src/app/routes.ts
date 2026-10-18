@@ -22,7 +22,7 @@ type PageLoader = () => Promise<{ default: Component }>;
  * Record<PathValue, PageLoader> 让 TS 穷尽检查：PATHS 新增路径但漏加 loader 会编译失败。
  */
 const PAGE_LOADERS: Record<PathValue, PageLoader> = {
-	[PATHS.home]: () => import("@app/routes/HomeGuard.tsx"),
+	[PATHS.home]: () => import("@modules/home/HomePage.tsx"),
 	[PATHS.search]: () => import("@modules/search/SearchPage.tsx"),
 	[PATHS.task]: () => import("@modules/task/workspace/TaskWorkspace.tsx"),
 	[PATHS.taskDetail]: () => import("@modules/task/workspace/TaskFocusPage.tsx"),

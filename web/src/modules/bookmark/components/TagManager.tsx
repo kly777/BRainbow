@@ -11,8 +11,8 @@ import {
 	tryAsync,
 } from "@shared/utils";
 import { createResource, createSignal, For, Show } from "solid-js";
-import type { BookmarkTagWithCount } from "../api.ts";
-import { deleteBookmarkTagE, searchBookmarkTagsE } from "../api.ts";
+import type { BookmarkTagWithCount } from "../data/api.ts";
+import { deleteBookmarkTagE, searchBookmarkTagsE } from "../data/api.ts";
 import styles from "./TagManager.module.css";
 
 interface Props {

@@ -15,7 +15,7 @@
 import { getErrorMessage } from "@shared/api";
 import { tryAsync } from "@shared/utils";
 import { createResource, createSignal } from "solid-js";
-import { type Bookmark, searchBookmarksE } from "../api.ts";
+import { type Bookmark, searchBookmarksE } from "../data/api.ts";
 
 /** 一次取够：分组视图的搜索没有分页入口 */
 const SEARCH_PAGE_SIZE = 200;

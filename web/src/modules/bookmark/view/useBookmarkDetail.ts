@@ -13,7 +13,7 @@ import {
 	setBookmarkTagsE,
 	suggestBookmarkTagsE,
 	updateBookmarkE,
-} from "../api.ts";
+} from "../data/api.ts";
 
 export type BookmarkItem = Awaited<ReturnType<typeof getBookmarkE>>;
 

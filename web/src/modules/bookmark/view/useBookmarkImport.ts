@@ -3,7 +3,7 @@
 
 import { notifyError, notifySuccess, tryAsync } from "@shared/utils";
 import { createSignal } from "solid-js";
-import { importBookmarksE } from "../api.ts";
+import { importBookmarksE } from "../data/api.ts";
 
 export interface UseBookmarkImportOpts {
 	/** 导入成功后的回调（刷新列表） */

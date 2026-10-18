@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useBookmarkImport } from "./useBookmarkImport.ts";
 
 // 模拟依赖
-vi.mock("@modules/bookmark/api.ts", () => ({
+vi.mock("@modules/bookmark/data/api.ts", () => ({
 	importBookmarksE: vi.fn(),
 }));
 
@@ -39,7 +39,7 @@ describe("useBookmarkImport", () => {
 
 	it("处理文件导入", async () => {
 		// 测试处理文件导入
-		const { importBookmarksE } = await import("@modules/bookmark/api.ts");
+		const { importBookmarksE } = await import("@modules/bookmark/data/api.ts");
 		const mockImportBookmarksE = vi.mocked(importBookmarksE);
 		const { tryAsync } = await import("@shared/utils");
 		const mockTryAsync = vi.mocked(tryAsync);

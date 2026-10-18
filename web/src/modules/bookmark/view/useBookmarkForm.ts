@@ -1,16 +1,17 @@
 // ── 书签表单状态 + CRUD ──
 // 从 useBookmarkPage 拆分：创建/编辑弹窗、表单验证、保存。
 
+import { useMutation } from "@shared/api";
 import { notifySuccess, tryAsync } from "@shared/utils";
 import { createStore } from "solid-js/store";
-import type { Bookmark } from "../api.ts";
+import type { Bookmark } from "../data/api.ts";
 import {
 	checkBookmarkUrlE,
 	createBookmarkE,
 	fetchUrlTitleE,
 	setBookmarkTagsE,
 	updateBookmarkE,
-} from "../api.ts";
+} from "../data/api.ts";
 
 export interface UseBookmarkFormOpts {
 	/** 保存成功后的回调（刷新列表） */
@@ -118,6 +119,21 @@ export function useBookmarkForm(opts: UseBookmarkFormOpts) {
 		setForm("fetchingTitle", false);
 	}
 
+	const saveMutation = useMutation({
+		run: async (input: {
+			editing: Bookmark | null;
+			body: { title: string; url: string; description: string };
+			tags: string[];
+		}) => {
+			if (input.editing) {
+				const updated = await updateBookmarkE(input.editing.id, input.body);
+				await setBookmarkTagsE(updated.id, input.tags);
+				return { ...updated, tags: input.tags };
+			}
+			return createBookmarkE({ ...input.body, tags: input.tags });
+		},
+	});
+
 	async function handleSave() {
 		const title = form.title.trim();
 		const url = form.url.trim();
@@ -139,13 +155,10 @@ export function useBookmarkForm(opts: UseBookmarkFormOpts) {
 		setForm("error", null);
 		const tags = form.tags;
 		const body = { title, url, description: form.desc.trim() };
-		const result = await tryAsync(async () => {
-			if (form.editing) {
-				const updated = await updateBookmarkE(form.editing.id, body);
-				await setBookmarkTagsE(updated.id, tags);
-				return { ...updated, tags };
-			}
-			return createBookmarkE({ ...body, tags });
+		const result = await saveMutation.run({
+			editing: form.editing,
+			body,
+			tags,
 		});
 		if (result.ok) {
 			setForm("open", false);

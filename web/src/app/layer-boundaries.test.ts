@@ -258,4 +258,101 @@ describe("分层依赖方向契约", () => {
 
 		expect(violations).toEqual([]);
 	});
+
+	it("domain→domain 只允许登记契约，模块图无环", () => {
+		// 同层隔离：domain 之间不应再有直接依赖；跨域组合走 capability/platform。
+		const allowedDomainEdges = new Set<string>();
+		const moduleRoot = join(SRC_ROOT, "modules");
+		const files = walk(moduleRoot).filter(
+			(f) => /\.tsx?$/.test(f) && !f.endsWith(".d.ts") && !f.includes(".test."),
+		);
+		const edges = new Map<string, Set<string>>();
+		const domainViolations: string[] = [];
+
+		for (const file of files) {
+			const rel = relative(moduleRoot, file).split("\\").join("/");
+			const source = rel.split("/")[0];
+			if (!MODULE_KINDS[source]) continue;
+			for (const spec of specifiersOf(readFileSync(file, "utf8"))) {
+				const match = spec.match(/^@modules\/([^/]+)/);
+				if (!match || match[1] === source || !MODULE_KINDS[match[1]]) continue;
+				const target = match[1];
+				if (!edges.has(source)) edges.set(source, new Set());
+				edges.get(source)!.add(target);
+				if (
+					MODULE_KINDS[source] === "domain" &&
+					MODULE_KINDS[target] === "domain" &&
+					!allowedDomainEdges.has(`${source}->${target}`)
+				) {
+					domainViolations.push(`${source} -> ${target}（${rel}）`);
+				}
+			}
+		}
+
+		const cycles: string[] = [];
+		const visiting = new Set<string>();
+		const visited = new Set<string>();
+		const walkGraph = (node: string, path: string[]) => {
+			if (visiting.has(node)) {
+				cycles.push([...path, node].join(" → "));
+				return;
+			}
+			if (visited.has(node)) return;
+			visiting.add(node);
+			for (const next of edges.get(node) ?? []) {
+				walkGraph(next, [...path, node]);
+			}
+			visiting.delete(node);
+			visited.add(node);
+		};
+		for (const node of edges.keys()) walkGraph(node, []);
+
+		expect(domainViolations).toEqual([]);
+		expect(cycles).toEqual([]);
+	});
+
+	it("模块公共入口不转出内部 UI/view 实现", () => {
+		const moduleRoot = join(SRC_ROOT, "modules");
+		const dirs = readdirSync(moduleRoot, { withFileTypes: true })
+			.filter((entry) => entry.isDirectory())
+			.map((entry) => entry.name);
+		const violations: string[] = [];
+		for (const dir of dirs) {
+			const index = join(moduleRoot, dir, "index.ts");
+			if (!existsSync(index)) continue;
+			for (const line of readFileSync(index, "utf8").split("\n")) {
+				if (/export \* from "\.\/(components|view)\//.test(line)) {
+					violations.push(`${dir}/index.ts: ${line.trim()}`);
+				}
+			}
+		}
+		expect(violations).toEqual([]);
+	});
+
+	it("view/components 不直接碰 transport，只能经 api.ts 或 data/", () => {
+		const moduleRoot = join(SRC_ROOT, "modules");
+		const files = walk(moduleRoot).filter(
+			(f) =>
+				/\.tsx?$/.test(f) &&
+				!f.endsWith(".d.ts") &&
+				!f.includes(".test.") &&
+				/[\\/](view|components)[\\/]/.test(f),
+		);
+		const violations: string[] = [];
+		for (const file of files) {
+			const source = readFileSync(file, "utf8");
+			for (const spec of specifiersOf(source)) {
+				if (
+					spec === "@shared/api/request.ts" ||
+					spec === "@shared/api/cache.ts" ||
+					spec === "@shared/api/streaming.ts"
+				) {
+					violations.push(
+						`${relative(SRC_ROOT, file)}: view 不应直接 import ${spec}`,
+					);
+				}
+			}
+		}
+		expect(violations).toEqual([]);
+	});
 });

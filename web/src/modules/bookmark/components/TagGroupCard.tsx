@@ -1,8 +1,8 @@
 // 分组视图里的书签条目与标签分组卡（从 BookmarkPage.tsx 下钻）
 
 import { For, Show } from "solid-js";
-import type { Bookmark } from "../api.ts";
-import { incrementBookmarkVisitE } from "../api.ts";
+import type { Bookmark } from "../data/api.ts";
+import { incrementBookmarkVisitE } from "../data/api.ts";
 import styles from "../BookmarkPage.module.css";
 import { extractDomain } from "../model/url.ts";
 import Favicon from "./Favicon.tsx";

@@ -5,15 +5,15 @@
 // 一处已知的可见变化：加载态从 `LoadingSkeleton` 换成 AsyncView 自带的骨架
 // —— 这是刻意的，为与其他 5 个列表页一致。
 
-import { getBookmarksE, searchBookmarksE } from "@modules/bookmark";
+import { getBookmarksE, searchBookmarksE } from "@modules/bookmark/data/api.ts";
 import { render } from "solid-js/web";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import BookmarkPage from "./BookmarkManagePage.tsx";
 
 // mock barrel（hook 与各组件都从这里导入）；用 importOriginal 保留非 API 导出
-vi.mock("@modules/bookmark/api.ts", async (importOriginal) => {
+vi.mock("@modules/bookmark/data/api.ts", async (importOriginal) => {
 	const actual =
-		await importOriginal<typeof import("@modules/bookmark/api.ts")>();
+		await importOriginal<typeof import("@modules/bookmark/data/api.ts")>();
 	const fn = () => vi.fn();
 	return {
 		...actual,

@@ -2,7 +2,7 @@ import { fillPath, PATHS } from "@config/paths";
 import { confirmAndDelete, useDetailResource } from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
 import type { Accessor } from "solid-js";
-import { deleteCardE, getCardE } from "../api.ts";
+import { deleteCardE, getCardE } from "../data/api.ts";
 import type { Card } from "../model.ts";
 
 export interface CardDetailApi {

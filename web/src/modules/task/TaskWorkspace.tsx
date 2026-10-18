@@ -32,6 +32,7 @@ import TaskDag from "./components/TaskDag.tsx";
 import TaskRows from "./components/TaskRows.tsx";
 import ThreeDayTimeline from "./components/ThreeDayTimeline.tsx";
 import { TASK_SORT_OPTIONS } from "./model/task-sort.ts";
+import { TaskProvider } from "./data/TaskProvider.tsx";
 import { useTaskWorkspaceView } from "./view/useTaskWorkspace.ts";
 import TaskBoard from "./workspace/TaskBoard.tsx";
 import TaskCommandBar from "./workspace/TaskCommandBar.tsx";
@@ -44,6 +45,14 @@ const VIEWS = [
 ] as const;
 
 export default function TaskWorkspace() {
+	return (
+		<TaskProvider>
+			<TaskWorkspaceContent />
+		</TaskProvider>
+	);
+}
+
+function TaskWorkspaceContent() {
 	const vm = useTaskWorkspaceView();
 
 	const left = (

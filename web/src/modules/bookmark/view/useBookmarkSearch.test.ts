@@ -6,11 +6,11 @@
 
 import { render } from "solid-js/web";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { searchBookmarksE } from "../api.ts";
+import { searchBookmarksE } from "../data/api.ts";
 import { useBookmarkSearch } from "./useBookmarkSearch.ts";
 
-vi.mock("../api.ts", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("../api.ts")>();
+vi.mock("../data/api.ts", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("../data/api.ts")>();
 	return { ...actual, searchBookmarksE: vi.fn() };
 });
 

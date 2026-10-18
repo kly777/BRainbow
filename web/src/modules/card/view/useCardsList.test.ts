@@ -12,7 +12,7 @@ import { createRoot } from "solid-js";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useCardsList } from "./useCardsList.ts";
 
-vi.mock("@modules/card/api.ts", () => ({
+vi.mock("@modules/card/data/api.ts", () => ({
 	createCardE: vi.fn(),
 	deleteCardE: vi.fn(),
 	getCardsE: vi.fn(),

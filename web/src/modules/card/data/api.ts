@@ -7,7 +7,7 @@ import {
 	request,
 } from "@shared/api";
 
-import type { Card, CreateCardRequest, UpdateCardRequest } from "./model.ts";
+import type { Card, CreateCardRequest, UpdateCardRequest } from "../model.ts";
 
 // ==================== Card API Functions ====================
 

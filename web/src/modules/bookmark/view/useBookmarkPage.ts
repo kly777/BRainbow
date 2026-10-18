@@ -12,8 +12,8 @@ import {
 	useUrlParams,
 } from "@shared/utils";
 import { createSignal } from "solid-js";
-import type { Bookmark } from "../api.ts";
-import { getBookmarksE, searchBookmarksE } from "../api.ts";
+import type { Bookmark } from "../data/api.ts";
+import { getBookmarksE, searchBookmarksE } from "../data/api.ts";
 import { useBookmarkRowActions } from "./bookmark-page/useBookmarkRowActions.ts";
 import { useBookmarkSelection } from "./bookmark-page/useBookmarkSelection.ts";
 import { useBookmarkForm } from "./useBookmarkForm.ts";

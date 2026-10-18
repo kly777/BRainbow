@@ -13,8 +13,8 @@ import {
 } from "@components/ui/icons";
 import { notifyError, notifySuccess } from "@shared/utils";
 import { createSignal, For, Show } from "solid-js";
-import type { Bookmark } from "../api.ts";
-import { setBookmarkTagsE, suggestBookmarkTagsE } from "../api.ts";
+import type { Bookmark } from "../data/api.ts";
+import { setBookmarkTagsE, suggestBookmarkTagsE } from "../data/api.ts";
 import styles from "../BookmarkPage.module.css";
 import { extractDomain } from "../model/url.ts";
 import Favicon from "./Favicon.tsx";

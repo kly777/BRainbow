@@ -8,5 +8,5 @@ export type {
 	ImportResult,
 	SuggestTagsResponse,
 	TagGroup,
-} from "./api.ts";
-export * from "./api.ts";
+} from "./data/api.ts";
+export * from "./data/api.ts";

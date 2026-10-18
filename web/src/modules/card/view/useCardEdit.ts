@@ -3,7 +3,7 @@ import { getErrorMessage } from "@shared/api";
 import { confirmAndDelete, tryAsync, useDetailResource } from "@shared/utils";
 import { useNavigate, useParams } from "@solidjs/router";
 import { type Accessor, createEffect, createSignal } from "solid-js";
-import { deleteCardE, getCardE, updateCardE } from "../api.ts";
+import { deleteCardE, getCardE, updateCardE } from "../data/api.ts";
 import type { Card, UpdateCardRequest } from "../model.ts";
 
 export interface CardEditApi {

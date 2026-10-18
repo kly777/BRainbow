@@ -10,8 +10,12 @@ import {
 	tryAsync,
 } from "@shared/utils";
 import type { ListResource } from "@shared/api";
-import type { Bookmark } from "../../api.ts";
-import { deleteBookmarkE, fetchUrlTitleE, updateBookmarkE } from "../../api.ts";
+import type { Bookmark } from "../../data/api.ts";
+import {
+	deleteBookmarkE,
+	fetchUrlTitleE,
+	updateBookmarkE,
+} from "../../data/api.ts";
 
 export function useBookmarkRowActions(deps: {
 	list: ListResource<Bookmark>;

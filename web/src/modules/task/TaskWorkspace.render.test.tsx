@@ -13,6 +13,10 @@ vi.mock("@solidjs/router", () => ({
 	useNavigate: () => vi.fn(),
 }));
 
+vi.mock("./data/TaskProvider.tsx", () => ({
+	TaskProvider: (props: { children: unknown }) => props.children,
+}));
+
 vi.mock("./view/useTaskWorkspace.ts", () => {
 	const tasks = [
 		{

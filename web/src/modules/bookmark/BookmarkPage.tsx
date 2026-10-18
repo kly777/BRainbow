@@ -11,7 +11,7 @@ import { Settings, X } from "@components/ui/icons";
 import { PATHS } from "@config/paths";
 import { useNavigate } from "@solidjs/router";
 import { createResource, For, Show } from "solid-js";
-import { getGroupedBookmarksE } from "./api.ts";
+import { getGroupedBookmarksE } from "./data/api.ts";
 import styles from "./BookmarkPage.module.css";
 import TagGroupCard, { BookmarkLink } from "./components/TagGroupCard.tsx";
 import { useBookmarkSearch } from "./view/useBookmarkSearch.ts";

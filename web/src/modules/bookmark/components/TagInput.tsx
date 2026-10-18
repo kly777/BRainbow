@@ -13,7 +13,7 @@ import {
 	showConfirm,
 	tryAsync,
 } from "@shared/utils";
-import { deleteBookmarkTagE, searchBookmarkTagsE } from "../api.ts";
+import { deleteBookmarkTagE, searchBookmarkTagsE } from "../data/api.ts";
 
 interface Props {
 	tags: string[];

@@ -10,12 +10,12 @@ import {
 	tryAsync,
 } from "@shared/utils";
 import { createSignal } from "solid-js";
-import type { Bookmark } from "../../api.ts";
+import type { Bookmark } from "../../data/api.ts";
 import {
 	batchDeleteBookmarksE,
 	setBookmarkTagsE,
 	suggestBookmarkTagsE,
-} from "../../api.ts";
+} from "../../data/api.ts";
 
 export function useBookmarkSelection(deps: {
 	items: () => Bookmark[];

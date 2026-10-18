@@ -10,9 +10,7 @@ export const MODULE_KINDS: Readonly<Record<string, ModuleKind>> = {
 	// 业务域：只拥有自己的领域规则与数据
 	bookmark: "domain",
 	card: "domain",
-	chat: "domain",
 	conv: "domain",
-	file: "domain",
 	mem: "domain",
 	ontology: "domain",
 	reading: "domain",
@@ -20,16 +18,18 @@ export const MODULE_KINDS: Readonly<Record<string, ModuleKind>> = {
 	text: "domain",
 
 	// 跨域能力：可以编排多个业务域，但不复制领域规则
-	"command-palette": "capability",
+	chat: "capability", // 对话树是能力，组合 AI 与 mem；不再被看作独立业务域
 	home: "capability",
 	"quick-capture": "capability",
 	search: "capability",
 
-	// 平台能力：认证、设置、管理等应用级能力
+	// 平台能力：认证、设置、管理、通用文件服务等应用级能力
 	admin: "platform",
 	"ai-setting": "platform",
 	auth: "platform",
+	"command-palette": "platform", // 命令面板是应用级入口，search 复用它
 	db: "platform",
+	file: "platform", // 通用文件服务没有下游业务依赖，作为平台被各域消费
 	key: "platform",
 
 	// 独立小工具：不参与业务编排

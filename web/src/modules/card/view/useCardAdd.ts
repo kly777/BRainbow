@@ -3,7 +3,7 @@ import { getErrorMessage } from "@shared/api";
 import { tryAsync } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
 import { createSignal } from "solid-js";
-import { createCardE } from "../api.ts";
+import { createCardE } from "../data/api.ts";
 import type { CreateCardRequest } from "../model.ts";
 
 export interface CardAddApi {

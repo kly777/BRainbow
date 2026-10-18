@@ -11,16 +11,16 @@ import { ROUTES, toRouteDefs } from "@app/routes.ts";
 import { PATHS } from "@config/paths";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
-vi.mock("@modules/card/api.ts", () => ({ getCardE: vi.fn() }));
+vi.mock("@modules/card", () => ({ getCardE: vi.fn() }));
 vi.mock("@modules/ontology/api.ts", () => ({ getOntoE: vi.fn() }));
-vi.mock("@modules/bookmark/api.ts", () => ({ getBookmarkE: vi.fn() }));
+vi.mock("@modules/bookmark", () => ({ getBookmarkE: vi.fn() }));
 vi.mock("@modules/task/api.ts", () => ({ getTaskDetailE: vi.fn() }));
 vi.mock("@modules/conv/api.ts", () => ({ getConvDetailE: vi.fn() }));
 vi.mock("@modules/file/api.ts", () => ({ getFile: vi.fn() }));
 
-const { getCardE } = await import("@modules/card/api.ts");
+const { getCardE } = await import("@modules/card");
 const { getOntoE } = await import("@modules/ontology/api.ts");
-const { getBookmarkE } = await import("@modules/bookmark/api.ts");
+const { getBookmarkE } = await import("@modules/bookmark");
 const { getTaskDetailE } = await import("@modules/task/api.ts");
 const { getConvDetailE } = await import("@modules/conv/api.ts");
 const { getFile } = await import("@modules/file/api.ts");

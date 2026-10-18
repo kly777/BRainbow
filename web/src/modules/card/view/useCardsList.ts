@@ -17,7 +17,12 @@ import {
 	useUrlParams,
 } from "@shared/utils";
 import { createMemo, createSignal } from "solid-js";
-import { createCardE, deleteCardE, getCardsE, searchCardsE } from "../api.ts";
+import {
+	createCardE,
+	deleteCardE,
+	getCardsE,
+	searchCardsE,
+} from "../data/api.ts";
 import type { Card, CreateCardRequest } from "../model.ts";
 
 export function useCardsList() {

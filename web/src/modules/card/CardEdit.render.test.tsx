@@ -9,7 +9,7 @@ import { render } from "solid-js/web";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import CardEditPage from "./CardEdit.tsx";
 
-vi.mock("@modules/card/api.ts", () => ({
+vi.mock("@modules/card/data/api.ts", () => ({
 	getCardE: vi.fn(),
 	deleteCardE: vi.fn(),
 	updateCardE: vi.fn(),

@@ -6,7 +6,7 @@ import { createRoot } from "solid-js";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useCardAdd } from "./useCardAdd.ts";
 
-vi.mock("@modules/card/api.ts", () => ({ createCardE: vi.fn() }));
+vi.mock("@modules/card/data/api.ts", () => ({ createCardE: vi.fn() }));
 const navigateMock = vi.fn();
 vi.mock("@solidjs/router", () => ({
 	useNavigate: () => navigateMock,

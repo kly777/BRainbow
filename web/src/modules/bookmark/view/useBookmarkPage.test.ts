@@ -15,7 +15,7 @@ import { createRoot } from "solid-js";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import { useBookmarkPage } from "./useBookmarkPage.ts";
 
-vi.mock("@modules/bookmark/api.ts", () => ({
+vi.mock("@modules/bookmark/data/api.ts", () => ({
 	batchDeleteBookmarksE: vi.fn(),
 	deleteBookmarkE: vi.fn(),
 	fetchUrlTitleE: vi.fn(),

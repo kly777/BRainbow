@@ -8,8 +8,8 @@ import { render } from "solid-js/web";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
 import BookmarkPage from "./BookmarkPage.tsx";
 
-vi.mock("./api.ts", async (importOriginal) => {
-	const actual = await importOriginal<typeof import("./api.ts")>();
+vi.mock("./data/api.ts", async (importOriginal) => {
+	const actual = await importOriginal<typeof import("./data/api.ts")>();
 	return {
 		...actual,
 		getGroupedBookmarksE: vi.fn(),
@@ -26,7 +26,8 @@ vi.mock("@solidjs/router", () => ({
 	useParams: () => ({}),
 }));
 
-const { getGroupedBookmarksE, searchBookmarksE } = await import("./api.ts");
+const { getGroupedBookmarksE, searchBookmarksE } =
+	await import("./data/api.ts");
 const mockedGrouped = vi.mocked(getGroupedBookmarksE);
 const mockedSearch = vi.mocked(searchBookmarksE);
 

@@ -1,10 +1,9 @@
-// ── TaskMeta / TaskItem / TaskEmpty 渲染测试 ──
+// ── TaskMeta / TaskItem 渲染测试 ──
 //
-// 这三个组件是"列表 / 看板 / 抽屉三处一致"与"两种空态"的落点（见各自文件顶部）。
+// 这两个组件是"列表 / 看板 / 抽屉三处一致"的落点（见各自文件顶部）。
 // 这组断言锁住它们的对外契约：
 // - TaskMeta：四种属性的有无与**顺序**（截止 → 优先级 → 时长 → 标签）、逾期双通道
 // - TaskItem：行解剖（状态圆点在行首、创建时间不再出现）、行内按钮**全部有可访问名**
-// - TaskEmpty：筛空给"清除筛选"、真空不给按钮
 //
 // 风格与 file/components/FileCard.test.tsx 一致：solid-js/web render 手写 DOM。
 // 查询一律走语义属性（aria-label / data-status / 文本），不依赖 CSS Modules 的
@@ -13,7 +12,6 @@
 import { render } from "solid-js/web";
 import { describe, expect, it, vi } from "vite-plus/test";
 import type { Task } from "../api.ts";
-import { TaskEmpty } from "./TaskEmpty.tsx";
 import TaskItem from "./TaskItem.tsx";
 import { TaskMeta } from "./TaskMeta.tsx";
 
@@ -177,24 +175,5 @@ describe("TaskItem：行解剖", () => {
 		) as HTMLButtonElement;
 		del.click();
 		expect(onDelete).toHaveBeenCalledWith(1);
-	});
-});
-
-// ── TaskEmpty ──
-
-describe("TaskEmpty：两种空态", () => {
-	it("有筛选或搜索：给清除按钮并回调 onClear", () => {
-		const onClear = vi.fn();
-		const host = mount(() => <TaskEmpty filtered onClear={onClear} />);
-		expect(host.textContent).toContain("没有符合条件的任务");
-		const btn = host.querySelector("button") as HTMLButtonElement;
-		btn.click();
-		expect(onClear).toHaveBeenCalledTimes(1);
-	});
-
-	it("什么都没设：说收件箱是空的，不给按钮", () => {
-		const host = mount(() => <TaskEmpty filtered={false} onClear={vi.fn()} />);
-		expect(host.textContent).toContain("还没有任务");
-		expect(host.querySelector("button")).toBeNull();
 	});
 });

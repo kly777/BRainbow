@@ -7,7 +7,7 @@
 // Google 日历就是把这两件事做成了用户设置，我们照做；默认仍跟随 locale。
 //
 // 注意这里**不自己调 useTaskCalendar**：hook 持有 currentDate/密度/焦点等状态，
-// 每个实例各一份、各自发一次请求。状态由 TaskPanel 建好后当 prop 传下来。
+// 每个实例各一份、各自发一次请求。状态由 TaskWorkspace 建好后当 prop 传下来。
 
 import { Select } from "@components/ui";
 import { For } from "solid-js";

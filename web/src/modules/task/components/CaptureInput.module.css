@@ -33,23 +33,6 @@ input.title-input {
 	font-variant-numeric: tabular-nums;
 }
 
-/* 空框时的快捷键提示：只在还没输入、也没加条件时出现 */
-.guide {
-	margin: 0;
-	padding-left: var(--space-2xs);
-	font-size: var(--text-xs);
-	color: var(--t-color-ink-faint);
-}
-
-.guide-code {
-	padding: 0.0625rem var(--space-2xs);
-	border-radius: var(--radius-2xs);
-	background: var(--t-color-surface-raised);
-	color: var(--t-color-ink-muted);
-	font-family: var(--t-font-mono);
-	font-size: 0.6875rem;
-}
-
 /* ── 已加条件：一排可点的 chip ── */
 
 .chips {

@@ -225,7 +225,7 @@ const WEEKDAY_NAMES = ["周日", "周一", "周二", "周三", "周四", "周五
 
 export interface TaskCalendarProps {
 	/**
-	 * 日历状态由调用方建好后传进来（TaskPanel 持有唯一一份）。
+	 * 日历状态由调用方建好后传进来（TaskWorkspace 持有唯一一份）。
 	 * 不在这里自己 `useTaskCalendar()`：每个实例各持一份状态、各发一次请求，
 	 * 设置条与网格就会各改各的。
 	 */

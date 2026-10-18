@@ -4,8 +4,10 @@ import { useAuth } from "@app/context/auth.tsx";
 import {
 	AsyncView,
 	LoadingSkeleton,
+	PageFrame,
 	Panel,
 	SegmentedControl,
+	SplitWorkspace,
 } from "@components/ui";
 import { ArrowRight, Search } from "@components/ui/icons";
 import { MODULE_CARDS } from "@config/module-cards.ts";
@@ -234,28 +236,26 @@ function HomeContent() {
 	const userName = () => auth().user?.name ?? "";
 
 	return (
-		<div class={styles.homePage}>
-			<header class={styles.homeHeader}>
-				<div class={styles.greeting}>
-					<p class={styles.eyebrow}>{dateLabel.format(new Date())}</p>
-					<h1 class={styles.welcomeTitle}>
-						{getGreeting()}，{userName()}
-					</h1>
+		<PageFrame
+			header={
+				<header class={styles.homeHeader}>
+					<div class={styles.greeting}>
+						<p class={styles.eyebrow}>{dateLabel.format(new Date())}</p>
+						<h1 class={styles.welcomeTitle}>
+							{getGreeting()}，{userName()}
+						</h1>
+					</div>
+					<ModuleNav />
+				</header>
+			}
+			toolbar={
+				<div class={styles.searchBand}>
+					<CommandTrigger />
 				</div>
-				<ModuleNav />
-			</header>
-
-			<div class={styles.searchBand}>
-				<CommandTrigger />
-			</div>
-
-			<div class={styles.dashboard}>
-				<TodoPanel />
-				<aside class={styles.rightRail}>
-					<CardPanel />
-				</aside>
-			</div>
-		</div>
+			}
+		>
+			<SplitWorkspace main={<TodoPanel />} side={<CardPanel />} />
+		</PageFrame>
 	);
 }
 

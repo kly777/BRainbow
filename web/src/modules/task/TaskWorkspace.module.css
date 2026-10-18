@@ -1,15 +1,3 @@
-.workspace {
-	width: 100%;
-	max-width: 1560px;
-	min-height: 100%;
-	margin: 0 auto;
-	padding: var(--space-lg) var(--space-xl) 6rem;
-}
-
-.main {
-	min-width: 0;
-}
-
 /* ── 顶部 ── */
 
 .hero {
@@ -152,14 +140,6 @@
 
 /* ── 两栏主体 ── */
 
-.task-grid {
-	display: grid;
-	grid-template-columns: minmax(0, 1fr) 24rem;
-	gap: var(--space-lg);
-	align-items: start;
-	margin-top: var(--space-md);
-}
-
 .left-column {
 	display: flex;
 	flex-direction: column;
@@ -259,30 +239,11 @@
 	flex-direction: column;
 	gap: var(--space-md);
 	min-width: 0;
-	position: sticky;
-	top: var(--space-md);
 }
 
 /* ── 响应式 ── */
 
-@media (width <= 1200px) {
-	.task-grid {
-		grid-template-columns: 1fr;
-	}
-
-	.right-rail {
-		position: static;
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-		align-items: start;
-	}
-}
-
 @media (width <= 900px) {
-	.workspace {
-		padding: var(--space-md);
-	}
-
 	.hero {
 		align-items: flex-start;
 		flex-direction: column;
@@ -300,10 +261,6 @@
 }
 
 @media (width <= 720px) {
-	.right-rail {
-		grid-template-columns: 1fr;
-	}
-
 	.toolbar-row {
 		align-items: flex-start;
 		flex-direction: column;

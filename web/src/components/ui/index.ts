@@ -51,4 +51,6 @@ export {
 	type ListPageProps,
 } from "./organisms/ListPage.tsx";
 export { default as Modal } from "./organisms/Modal.tsx";
+export { default as PageFrame } from "./organisms/PageFrame.tsx";
+export { default as SplitWorkspace } from "./organisms/SplitWorkspace.tsx";
 export { default as ToastContainer } from "./organisms/Toast.tsx";

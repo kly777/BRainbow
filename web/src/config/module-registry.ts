@@ -6,6 +6,14 @@
 
 export type ModuleKind = "domain" | "capability" | "platform" | "tool";
 
+/** 物理层目录：分类不是标签，文件真的住在对应目录里 */
+export const MODULE_LAYER_DIRS: Readonly<Record<ModuleKind, string>> = {
+	domain: "domains",
+	capability: "capabilities",
+	platform: "platform",
+	tool: "tools",
+};
+
 export const MODULE_KINDS: Readonly<Record<string, ModuleKind>> = {
 	// 业务域：只拥有自己的领域规则与数据
 	bookmark: "domain",

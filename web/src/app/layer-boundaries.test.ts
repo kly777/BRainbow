@@ -27,8 +27,12 @@
 // 白名单条目一旦不再被用到（越界已修）本测试会失败，逼着人删掉——不会烂在那里。
 
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join, relative } from "node:path";
-import { MODULE_KINDS, type ModuleKind } from "@config/module-registry.ts";
+import { dirname, join, relative } from "node:path";
+import {
+	MODULE_KINDS,
+	MODULE_LAYER_DIRS,
+	type ModuleKind,
+} from "@config/module-registry.ts";
 import { describe, expect, it } from "vite-plus/test";
 
 // vitest 从 web/ 启动（pnpm run test），与 css-modules-contract.test.ts 的假设一致
@@ -43,7 +47,31 @@ function walk(dir: string, out: string[] = []): string[] {
 	return out;
 }
 
-/** 该文件属于哪一层（以及 modules 的哪个域） */
+const MODULE_LAYER_ROOTS = Object.values(MODULE_LAYER_DIRS);
+const MODULE_ROOTS = MODULE_LAYER_ROOTS.map((dir) => join(SRC_ROOT, dir));
+
+/** 所有模块文件；层级目录是物理的，模块名 = 层目录下一级 */
+function moduleFiles(): string[] {
+	return MODULE_ROOTS.flatMap((root) => walk(root));
+}
+
+/** 物理路径 → 模块名（`domains/task/...` → `task`） */
+function moduleNameOf(file: string): string | null {
+	const rel = relative(SRC_ROOT, file).split("\\").join("/");
+	const [layer, name] = rel.split("/");
+	return MODULE_LAYER_ROOTS.includes(layer) && name ? name : null;
+}
+
+/** 所有模块目录（名字 + 物理根） */
+function moduleDirs(): { name: string; root: string }[] {
+	return MODULE_ROOTS.flatMap((root) =>
+		readdirSync(root, { withFileTypes: true })
+			.filter((entry) => entry.isDirectory())
+			.map((entry) => ({ name: entry.name, root: join(root, entry.name) })),
+	);
+}
+
+/** 该文件属于哪一层（以及模块名） */
 type Layer =
 	| { kind: "app" }
 	| { kind: "components" }
@@ -63,7 +91,10 @@ function layerOf(relPath: string): Layer {
 			return { kind: "shared" };
 		case "config":
 			return { kind: "config" };
-		case "modules":
+		case "domains":
+		case "capabilities":
+		case "platform":
+		case "tools":
 			return parts[1]
 				? { kind: "modules", domain: parts[1] }
 				: { kind: "other" };
@@ -93,6 +124,28 @@ function specifiersOf(source: string): string[] {
 	return out;
 }
 
+const MODULE_ALIAS_PREFIXES = [
+	"@modules",
+	...MODULE_LAYER_ROOTS.map((d) => `@${d}`),
+];
+
+/** 解析 `@modules/x/...` 或 `@domains/x/...` 形式的模块引用 */
+function moduleRefOf(spec: string): { name: string; rest: string } | null {
+	for (const prefix of MODULE_ALIAS_PREFIXES) {
+		if (spec === prefix) return null;
+		if (!spec.startsWith(`${prefix}/`)) continue;
+		const [name, ...rest] = spec.slice(prefix.length + 1).split("/");
+		return { name, rest: rest.join("/") };
+	}
+	return null;
+}
+
+function isModuleRef(spec: string): boolean {
+	return MODULE_ALIAS_PREFIXES.some(
+		(prefix) => spec === prefix || spec.startsWith(`${prefix}/`),
+	);
+}
+
 /** 判这条引用是否越界；返回 null 表示合法 */
 function violationOf(
 	layer: Layer,
@@ -101,7 +154,7 @@ function violationOf(
 	if (!spec.startsWith("@")) return null; // 相对路径：同目录内引用，不跨层
 
 	if (layer.kind === "components") {
-		if (spec === "@modules" || spec.startsWith("@modules/")) {
+		if (isModuleRef(spec)) {
 			return { rule: "1", why: "共享层不得引业务模块" };
 		}
 		if (spec === "@app" || spec.startsWith("@app/")) {
@@ -110,6 +163,9 @@ function violationOf(
 	}
 
 	if (layer.kind === "shared") {
+		if (isModuleRef(spec)) {
+			return { rule: "2", why: "shared 层不得引模块层" };
+		}
 		if (spec === "@components" || spec.startsWith("@components/")) {
 			return { rule: "2", why: "shared 层不得引 UI 层" };
 		}
@@ -119,19 +175,23 @@ function violationOf(
 	}
 
 	if (layer.kind === "config") {
-		if (/^@(app|modules|components|shared)(\/|$)/.test(spec)) {
+		if (
+			/^@(app|modules|components|shared|domains|capabilities|platform|tools)(\/|$)/.test(
+				spec,
+			)
+		) {
 			return { rule: "4", why: "config 是零依赖旁路" };
 		}
 	}
 
 	if (layer.kind === "modules") {
-		const m = spec.match(/^@modules\/([^/]+)\/(.+)$/);
-		// 目标路径里还有 "/" → 落在子目录（components/ hooks/ lib/ viewers/ …）= 内部实现；
+		const ref = moduleRefOf(spec);
+		// 目标路径里还有 "/" → 落在子目录（components/ view/ model/ data/ …）= 内部实现；
 		// 根级文件（`FileList.tsx` / `api.ts` / `markdown-editor-support.tsx`）属公开入口
-		if (m && m[1] !== layer.domain && m[2].includes("/")) {
+		if (ref && ref.name !== layer.domain && ref.rest.includes("/")) {
 			return {
 				rule: "3",
-				why: `跨模块深引内部实现，应改从 @modules/${m[1]} 导入或使用它的根级入口`,
+				why: `跨模块深引内部实现，应改从 @modules/${ref.name} 导入或使用它的根级入口`,
 			};
 		}
 	}
@@ -204,23 +264,21 @@ describe("分层依赖方向契约", () => {
 	});
 
 	it("所有模块都有类型，且有公共入口", () => {
-		const moduleRoot = join(SRC_ROOT, "modules");
-		const dirs = readdirSync(moduleRoot, { withFileTypes: true })
-			.filter((entry) => entry.isDirectory())
-			.map((entry) => entry.name)
-			.sort();
+		const dirs = moduleDirs();
 		const registered = Object.keys(MODULE_KINDS).sort();
 
-		expect(registered).toEqual(dirs);
-		for (const dir of dirs) {
-			const root = join(moduleRoot, dir);
+		expect(registered).toEqual(dirs.map((entry) => entry.name).sort());
+		for (const { name, root } of dirs) {
+			expect(relative(SRC_ROOT, dirname(root)).split("\\").join("/")).toBe(
+				MODULE_LAYER_DIRS[MODULE_KINDS[name]],
+			);
 			expect(existsSync(join(root, "index.ts"))).toBe(true);
 			// 分层统一：纯规则进 model/，页面状态进 view/；不再有 hooks/ 与 lib/ 两个大杂烩
 			expect(
 				existsSync(join(root, "hooks")),
-				`${dir}/hooks 应迁移到 view/`,
+				`${name}/hooks 应迁移到 view/`,
 			).toBe(false);
-			expect(existsSync(join(root, "lib")), `${dir}/lib 应迁移到 model/`).toBe(
+			expect(existsSync(join(root, "lib")), `${name}/lib 应迁移到 model/`).toBe(
 				false,
 			);
 		}
@@ -232,21 +290,23 @@ describe("分层依赖方向契约", () => {
 			platform: ["domain", "capability"],
 			tool: ["domain", "capability", "platform"],
 		};
-		const moduleRoot = join(SRC_ROOT, "modules");
-		const files = walk(moduleRoot).filter(
+		const files = moduleFiles().filter(
 			(f) => /\.tsx?$/.test(f) && !f.endsWith(".d.ts") && !f.includes(".test."),
 		);
 
 		const violations: string[] = [];
 		for (const file of files) {
-			const rel = relative(moduleRoot, file).split("\\").join("/");
-			const sourceName = rel.split("/")[0];
+			const sourceName = moduleNameOf(file);
+			if (!sourceName) continue;
+			const rel = relative(SRC_ROOT, file).split("\\").join("/");
 			const sourceKind = MODULE_KINDS[sourceName];
 			if (!sourceKind) continue;
 			const denied = forbidden[sourceKind] ?? [];
 			const source = readFileSync(file, "utf8");
 			for (const spec of specifiersOf(source)) {
-				const match = spec.match(/^@modules\/([^/]+)/);
+				const match = spec.match(
+					/^@(?:modules|domains|capabilities|platform|tools)\/([^/]+)/,
+				);
 				if (!match || match[1] === sourceName) continue;
 				const targetKind = MODULE_KINDS[match[1]];
 				if (!targetKind || !denied.includes(targetKind)) continue;
@@ -262,19 +322,20 @@ describe("分层依赖方向契约", () => {
 	it("domain→domain 只允许登记契约，模块图无环", () => {
 		// 同层隔离：domain 之间不应再有直接依赖；跨域组合走 capability/platform。
 		const allowedDomainEdges = new Set<string>();
-		const moduleRoot = join(SRC_ROOT, "modules");
-		const files = walk(moduleRoot).filter(
+		const files = moduleFiles().filter(
 			(f) => /\.tsx?$/.test(f) && !f.endsWith(".d.ts") && !f.includes(".test."),
 		);
 		const edges = new Map<string, Set<string>>();
 		const domainViolations: string[] = [];
 
 		for (const file of files) {
-			const rel = relative(moduleRoot, file).split("\\").join("/");
-			const source = rel.split("/")[0];
-			if (!MODULE_KINDS[source]) continue;
+			const source = moduleNameOf(file);
+			if (!source) continue;
+			const rel = relative(SRC_ROOT, file).split("\\").join("/");
 			for (const spec of specifiersOf(readFileSync(file, "utf8"))) {
-				const match = spec.match(/^@modules\/([^/]+)/);
+				const match = spec.match(
+					/^@(?:modules|domains|capabilities|platform|tools)\/([^/]+)/,
+				);
 				if (!match || match[1] === source || !MODULE_KINDS[match[1]]) continue;
 				const target = match[1];
 				if (!edges.has(source)) edges.set(source, new Set());
@@ -312,17 +373,13 @@ describe("分层依赖方向契约", () => {
 	});
 
 	it("模块公共入口不转出内部 UI/view 实现", () => {
-		const moduleRoot = join(SRC_ROOT, "modules");
-		const dirs = readdirSync(moduleRoot, { withFileTypes: true })
-			.filter((entry) => entry.isDirectory())
-			.map((entry) => entry.name);
 		const violations: string[] = [];
-		for (const dir of dirs) {
-			const index = join(moduleRoot, dir, "index.ts");
+		for (const { name, root } of moduleDirs()) {
+			const index = join(root, "index.ts");
 			if (!existsSync(index)) continue;
 			for (const line of readFileSync(index, "utf8").split("\n")) {
 				if (/export \* from "\.\/(components|view)\//.test(line)) {
-					violations.push(`${dir}/index.ts: ${line.trim()}`);
+					violations.push(`${name}/index.ts: ${line.trim()}`);
 				}
 			}
 		}
@@ -330,8 +387,7 @@ describe("分层依赖方向契约", () => {
 	});
 
 	it("view/components 不直接碰 transport，只能经 api.ts 或 data/", () => {
-		const moduleRoot = join(SRC_ROOT, "modules");
-		const files = walk(moduleRoot).filter(
+		const files = moduleFiles().filter(
 			(f) =>
 				/\.tsx?$/.test(f) &&
 				!f.endsWith(".d.ts") &&

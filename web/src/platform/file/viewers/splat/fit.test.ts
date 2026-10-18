@@ -355,7 +355,7 @@ describe("与渲染器共用同一个视场角", () => {
 	it("FOV 只有一个来源：renderer 从 fit 取，不自己再写一份", () => {
 		// 两边各写一个 55 的话，取景按一个值算、投影按另一个值画，画面就永远差一截
 		const source = readFileSync(
-			resolve(process.cwd(), "src/modules/file/viewers/splat/renderer.ts"),
+			resolve(process.cwd(), "src/platform/file/viewers/splat/renderer.ts"),
 			"utf8",
 		);
 		expect(source).toContain("SPLAT_FOV_DEG");

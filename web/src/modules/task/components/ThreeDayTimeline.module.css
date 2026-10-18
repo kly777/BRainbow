@@ -1,0 +1,146 @@
+.card {
+	padding: var(--space-md);
+	border: 1px solid var(--t-color-border);
+	border-radius: var(--radius-lg);
+	background: var(--t-color-surface);
+	box-shadow: var(--shadow-sm);
+}
+
+.head {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--space-sm);
+	margin-bottom: var(--space-sm);
+}
+
+.title {
+	margin: 0;
+	color: var(--t-color-ink);
+	font-family: var(--t-font-display);
+	font-size: var(--text-base);
+	font-weight: 620;
+}
+
+.subtitle {
+	margin: 0.1rem 0 0;
+	color: var(--t-color-ink-faint);
+	font-size: var(--text-2xs);
+}
+
+.refresh {
+	display: grid;
+	place-items: center;
+	width: 1.75rem;
+	height: 1.75rem;
+	padding: 0;
+	border: none;
+	border-radius: var(--radius-sm);
+	background: none;
+	color: var(--t-color-ink-faint);
+	cursor: pointer;
+}
+
+.refresh:hover {
+	background: var(--t-color-surface-raised);
+	color: var(--t-color-ink);
+}
+
+.days {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-sm);
+}
+
+.day {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2xs);
+}
+
+.day-head {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--space-sm);
+	padding-bottom: var(--space-2xs);
+	border-bottom: 1px solid var(--t-color-surface-raised);
+}
+
+.day-head strong {
+	color: var(--t-color-ink);
+	font-size: var(--text-xs);
+	font-weight: 600;
+}
+
+.day-head span {
+	color: var(--t-color-ink-faint);
+	font-size: var(--text-2xs);
+	font-variant-numeric: tabular-nums;
+}
+
+.items {
+	display: flex;
+	flex-direction: column;
+	gap: 0.15rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.item {
+	display: grid;
+	grid-template-columns: 5.25rem minmax(0, 1fr);
+	align-items: baseline;
+	gap: var(--space-xs);
+	padding: var(--space-2xs) var(--space-xs);
+	border-radius: var(--radius-sm);
+}
+
+.item:hover {
+	background: var(--t-color-surface-raised);
+}
+
+.time {
+	color: var(--t-color-ink-faint);
+	font-family: var(--t-font-mono);
+	font-size: var(--text-2xs);
+	font-variant-numeric: tabular-nums;
+}
+
+.item-title {
+	overflow: hidden;
+	color: var(--t-color-ink);
+	font-size: var(--text-xs);
+	text-decoration: none;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+a.item-title:hover {
+	color: var(--t-color-accent-strong);
+	text-decoration: underline;
+	text-underline-offset: 0.18em;
+}
+
+.item.completed .item-title {
+	color: var(--t-color-ink-faint);
+	text-decoration: line-through;
+}
+
+.item.feasible {
+	border: 1px dashed var(--t-color-border);
+}
+
+.muted {
+	margin: 0;
+	padding: var(--space-xs) 0;
+	color: var(--t-color-ink-faint);
+	font-size: var(--text-xs);
+}
+
+.error {
+	margin: var(--space-xs) 0 0;
+	color: var(--t-color-danger);
+	font-size: var(--text-xs);
+}

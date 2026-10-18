@@ -27,7 +27,9 @@ export interface TaskStreamProps {
 	tasks: readonly Task[];
 	/** 全量任务：只用来给子任务找父任务标题，参与分组的仍是 `tasks` */
 	allTasks?: readonly Task[];
-	scope: "today" | "inbox" | "upcoming" | "all" | "completed";
+	scope: "today" | "inbox" | "upcoming" | "all" | "completed" | "overdue";
+	/** 不分组，直接按传入顺序铺开（首页/任务页的智能排序列表用） */
+	flat?: boolean;
 	onStatusChange: (taskId: number, status: TaskStatusType) => void;
 	onDelete: (taskId: number) => void;
 	onSelect?: (taskId: number) => void;
@@ -56,6 +58,14 @@ export default function TaskStream(props: TaskStreamProps) {
 			onSelect={props.onSelect}
 		/>
 	);
+
+	if (props.flat) {
+		return (
+			<div class={styles.rows}>
+				<For each={props.tasks}>{(task) => renderTask(task)}</For>
+			</div>
+		);
+	}
 
 	return (
 		<div class={styles.stream}>

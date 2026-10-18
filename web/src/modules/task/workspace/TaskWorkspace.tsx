@@ -1,8 +1,7 @@
-// ── /task：任务工作台 ──
+// ── /task：左侧待办流，右侧日历 + 最近三天时间线 ──
 //
-// 左栏是范围（今天/收件箱/即将到期/全部/已完成）与布局；中栏是录入 + 任务流；
-// 右栏是今天的账、未来 7 天与进行中的任务。看板/日历/依赖图复用现有渲染层，
-// 但外壳、侧栏、详情入口与视觉都换成了这一套。
+// 不再保留左侧范围栏：范围/排序收进列表头，搜索与视图切换在页面头部。
+// 右侧始终是"日历 + 时间线"，任务详情走完整页，列表保持专注。
 
 import {
 	EmptyState,
@@ -11,7 +10,6 @@ import {
 	Select,
 } from "@components/ui";
 import {
-	Calendar,
 	CheckCircle2,
 	Filter,
 	Grid,
@@ -22,7 +20,7 @@ import {
 } from "@components/ui/icons";
 import { notifySuccess } from "@shared/errors";
 import { enumParam, strParam, useUrlParams } from "@shared/utils";
-import { A, useNavigate } from "@solidjs/router";
+import { useNavigate } from "@solidjs/router";
 import {
 	createEffect,
 	createMemo,
@@ -41,28 +39,26 @@ import TaskFilterPanel, {
 } from "../components/TaskFilterPanel.tsx";
 import { TaskProvider, useTasks } from "../components/TaskProvider.tsx";
 import TaskDag from "../components/TaskDag.tsx";
+import TaskCalendar from "../components/TaskCalendar.tsx";
+import ThreeDayTimeline from "../components/ThreeDayTimeline.tsx";
 import { useTaskCalendar } from "../hooks/useTaskCalendar.ts";
 import { EMPTY_FILTER, isFilterEmpty } from "../lib/task-filter.ts";
-import { bucketOfDue } from "../lib/task-group.ts";
 import { captureToCreateRequest } from "../lib/task-payload.ts";
 import { fillPath, PATHS } from "@config/paths";
-import TaskAgenda from "./TaskAgenda.tsx";
 import TaskBoard from "./TaskBoard.tsx";
-import TaskCalendarPane from "./TaskCalendarPane.tsx";
 import TaskCommandConsole from "./TaskCommandConsole.tsx";
-import TaskInspector from "./TaskInspector.tsx";
 import TaskStream from "./TaskStream.tsx";
 import styles from "./TaskWorkspace.module.css";
 
-type Scope = "today" | "inbox" | "upcoming" | "all" | "completed";
-type View = "stream" | "board" | "calendar" | "graph";
+type Scope = "all" | "today" | "upcoming" | "overdue" | "completed";
+type View = "stream" | "board" | "graph";
 
-const SCOPES: readonly { key: Scope; label: string; hint: string }[] = [
-	{ key: "inbox", label: "待办", hint: "所有还没指定时间的任务" },
-	{ key: "today", label: "今天", hint: "今天该处理的" },
-	{ key: "upcoming", label: "即将到期", hint: "未来一周" },
-	{ key: "all", label: "全部", hint: "所有未归档" },
-	{ key: "completed", label: "已完成", hint: "已经收尾的" },
+const SCOPES: readonly { key: Scope; label: string }[] = [
+	{ key: "all", label: "全部" },
+	{ key: "today", label: "今天" },
+	{ key: "upcoming", label: "未来 7 天" },
+	{ key: "overdue", label: "逾期" },
+	{ key: "completed", label: "已完成" },
 ];
 
 const VIEWS: readonly {
@@ -72,7 +68,6 @@ const VIEWS: readonly {
 }[] = [
 	{ key: "stream", label: "列表", icon: List },
 	{ key: "board", label: "看板", icon: Grid },
-	{ key: "calendar", label: "日历", icon: Calendar },
 	{ key: "graph", label: "依赖", icon: Layers },
 ];
 
@@ -84,24 +79,47 @@ const SORT_OPTIONS: readonly { value: TaskSortKey; label: string }[] = [
 	{ value: "created", label: "按创建" },
 ];
 
-function scopeTitle(scope: Scope) {
-	return SCOPES.find((item) => item.key === scope)?.label ?? "任务";
+function startOfDay(value: Date): Date {
+	const date = new Date(value);
+	date.setHours(0, 0, 0, 0);
+	return date;
 }
 
-function scopeHint(scope: Scope) {
-	return SCOPES.find((item) => item.key === scope)?.hint ?? "";
+function dayDiff(iso: string | null): number | null {
+	if (!iso) return null;
+	const due = new Date(iso);
+	if (Number.isNaN(due.getTime())) return null;
+	return Math.round(
+		(startOfDay(due).getTime() - startOfDay(new Date()).getTime()) / 86_400_000,
+	);
+}
+
+function scopeTitle(scope: Scope): string {
+	return SCOPES.find((item) => item.key === scope)?.label ?? "全部";
+}
+
+function scopeHint(scope: Scope): string {
+	switch (scope) {
+		case "today":
+			return "今天到期与需要今天推进的任务。";
+		case "upcoming":
+			return "未来 7 天内到期的任务。";
+		case "overdue":
+			return "已经过了截止时间的任务。";
+		case "completed":
+			return "已经收尾的任务。";
+		default:
+			return "所有未完成的任务，默认智能排序。";
+	}
 }
 
 function Workspace() {
 	const params = useUrlParams({
 		scope: enumParam(
-			["today", "inbox", "upcoming", "all", "completed"] as const,
-			"inbox",
+			["all", "today", "upcoming", "overdue", "completed"] as const,
+			"all",
 		),
-		view: enumParam(
-			["stream", "board", "calendar", "graph"] as const,
-			"stream",
-		),
+		view: enumParam(["stream", "board", "graph"] as const, "stream"),
 		q: strParam(""),
 	});
 	const scope = () => params.get("scope");
@@ -123,7 +141,6 @@ function Workspace() {
 	} = useTasks();
 
 	const [filterOpen, setFilterOpen] = createSignal(false);
-	const [selectedTaskId, setSelectedTaskId] = createSignal<number | null>(null);
 	const [commandOpen, setCommandOpen] = createSignal(false);
 	const calendar = useTaskCalendar();
 
@@ -147,7 +164,6 @@ function Workspace() {
 		onCleanup(() => window.removeEventListener("keydown", handleKey));
 	});
 
-	// 搜索词落进 provider 的唯一入口（URL 是唯一真相）
 	let appliedQuery = "";
 	createEffect(() => {
 		const query = searchQuery();
@@ -156,62 +172,62 @@ function Workspace() {
 		setQuery(query);
 	});
 
-	const scoped = createMemo(() => {
-		const list = tasks();
-		switch (scope()) {
-			case "today":
-				return list.filter(
-					(task) =>
-						task.status !== "completed" &&
-						task.status !== "archived" &&
-						bucketOfDue(task.due_at) === "today",
-				);
-			case "inbox":
-				return list.filter(
-					(task) =>
-						task.status !== "completed" &&
-						task.status !== "archived" &&
-						bucketOfDue(task.due_at) === "inbox",
-				);
-			case "upcoming":
-				return list.filter(
-					(task) =>
-						task.status !== "completed" &&
-						task.status !== "archived" &&
-						["soon", "later"].includes(bucketOfDue(task.due_at)),
-				);
-			case "completed":
-				return list.filter((task) => task.status === "completed");
-			default:
-				return list.filter((task) => task.status !== "archived");
-		}
-	});
+	const openTasks = createMemo(() =>
+		tasks().filter(
+			(task) => task.status !== "completed" && task.status !== "archived",
+		),
+	);
 
 	const counts = createMemo(() => {
-		const list = tasks();
-		const open = list.filter(
-			(task) => task.status !== "completed" && task.status !== "archived",
-		);
+		const list = openTasks();
+		const diff = (iso: string | null) => dayDiff(iso);
 		return {
-			today: open.filter((task) => bucketOfDue(task.due_at) === "today").length,
-			inbox: open.filter((task) => bucketOfDue(task.due_at) === "inbox").length,
-			upcoming: open.filter((task) =>
-				["soon", "later"].includes(bucketOfDue(task.due_at)),
-			).length,
-			all: open.length,
-			completed: list.filter((task) => task.status === "completed").length,
+			all: list.length,
+			today: list.filter((task) => diff(task.due_at) === 0).length,
+			upcoming: list.filter((task) => {
+				const d = diff(task.due_at);
+				return d !== null && d > 0 && d <= 7;
+			}).length,
+			overdue: list.filter((task) => {
+				const d = diff(task.due_at);
+				return d !== null && d < 0;
+			}).length,
+			completed: tasks().filter((task) => task.status === "completed").length,
 		} satisfies Record<Scope, number>;
 	});
 
+	const scoped = createMemo(() => {
+		const list = openTasks();
+		switch (scope()) {
+			case "today":
+				return list.filter((task) => dayDiff(task.due_at) === 0);
+			case "upcoming":
+				return list.filter((task) => {
+					const d = dayDiff(task.due_at);
+					return d !== null && d > 0 && d <= 7;
+				});
+			case "overdue":
+				return list.filter((task) => {
+					const d = dayDiff(task.due_at);
+					return d !== null && d < 0;
+				});
+			case "completed":
+				return tasks().filter((task) => task.status === "completed");
+			default:
+				return list;
+		}
+	});
+
 	const chooseScope = (next: Scope) => {
-		setSelectedTaskId(null);
 		params.set({ scope: next, view: "stream" });
 	};
 
 	const chooseView = (next: View) => {
-		setSelectedTaskId(null);
 		params.set({ view: next });
 	};
+
+	const openTask = (taskId: number) =>
+		navigate(fillPath(PATHS.taskDetail, taskId));
 
 	const submit = async (
 		payload: Parameters<typeof captureToCreateRequest>[0],
@@ -222,7 +238,6 @@ function Workspace() {
 		return true;
 	};
 
-	// 筛选面板的标签补全
 	let tagSearchTimer: ReturnType<typeof setTimeout> | undefined;
 	const searchTags = (query: string): Promise<TagOption[]> =>
 		new Promise((resolve) => {
@@ -236,75 +251,20 @@ function Workspace() {
 			}, 200);
 		});
 
-	const openTask = (taskId: number) => {
-		// 窄屏没有右栏：直接进完整页；宽屏在右栏原地看，不离开列表
-		if (window.matchMedia("(max-width: 1240px)").matches) {
-			navigate(fillPath(PATHS.taskDetail, taskId));
-			return;
-		}
-		setSelectedTaskId(taskId);
-	};
-
 	const pageTitle = () => {
 		if (view() === "board") return "看板";
-		if (view() === "calendar") return "日历";
 		if (view() === "graph") return "依赖关系";
 		return scopeTitle(scope());
 	};
 
 	const pageHint = () => {
 		if (view() === "board") return "拖一张卡片换状态，点开进详情。";
-		if (view() === "calendar") return "把任务拖进时间里，或者只是看看这一周。";
 		if (view() === "graph") return "谁挡着谁，一眼看清。";
 		return scopeHint(scope());
 	};
 
 	return (
 		<div class={styles.workspace}>
-			<aside class={styles.rail}>
-				<div class={styles.brand}>
-					<span class={styles.brandMark}>B</span>
-					<div>
-						<strong>Tasks</strong>
-						<span>工作台</span>
-					</div>
-				</div>
-
-				<nav class={styles.nav} aria-label="任务范围">
-					<p class={styles.navLabel}>范围</p>
-					<For each={SCOPES}>
-						{(item) => (
-							<button
-								type="button"
-								class={styles.navItem}
-								classList={{
-									[styles.active]: scope() === item.key && view() === "stream",
-								}}
-								aria-pressed={scope() === item.key && view() === "stream"}
-								onClick={() => chooseScope(item.key)}
-							>
-								<span class={styles.navText}>{item.label}</span>
-								<span class={styles.navCount}>{counts()[item.key]}</span>
-							</button>
-						)}
-					</For>
-				</nav>
-
-				<div class={styles.railFoot}>
-					<div class={styles.railStat}>
-						<span>待办</span>
-						<strong>{counts().inbox}</strong>
-					</div>
-					<div class={styles.railStat}>
-						<span>已完成</span>
-						<strong>{counts().completed}</strong>
-					</div>
-					<A class={styles.homeLink} href={PATHS.home}>
-						返回首页
-					</A>
-				</div>
-			</aside>
-
 			<main class={styles.main}>
 				<header class={styles.hero}>
 					<div class={styles.heroText}>
@@ -358,32 +318,8 @@ function Workspace() {
 							<Terminal size={14} />
 							命令
 						</button>
-						<Select
-							class={styles.sort}
-							value={sort()}
-							onChange={(e) => setSort(e.currentTarget.value as TaskSortKey)}
-							aria-label="排序方式"
-						>
-							<For each={SORT_OPTIONS}>
-								{(item) => <option value={item.value}>{item.label}</option>}
-							</For>
-						</Select>
 					</div>
 				</header>
-
-				<section class={styles.composer} aria-label="快速添加任务">
-					<div class={styles.composerHead}>
-						<span class={styles.composerPlus}>
-							<Plus size={16} />
-						</span>
-						<strong>记一件事</strong>
-					</div>
-					<CaptureInput
-						placeholder="接下来要做什么？"
-						parentCandidates={tasks()}
-						onSubmit={submit}
-					/>
-				</section>
 
 				<Show when={filterOpen()}>
 					<div class={styles.filterPanel} id="workspace-filter">
@@ -405,102 +341,143 @@ function Workspace() {
 					</div>
 				</Show>
 
-				<Show when={loading()}>
-					<LoadingSkeleton />
-				</Show>
-
-				<Show when={!loading()}>
-					<Show when={view() === "stream"}>
-						<div class={styles.streamHead}>
-							<span class={styles.streamCount}>
-								{scoped().length} 件
-								{searchQuery() ? ` · 搜索「${searchQuery()}」` : ""}
-							</span>
-							<Show when={!isFilterEmpty(filter())}>
-								<span class={styles.streamHint}>已应用筛选</span>
-							</Show>
-						</div>
-						<Show
-							when={scoped().length > 0}
-							fallback={
-								<EmptyState
-									icon={<CheckCircle2 size={22} />}
-									title={
-										searchQuery() || !isFilterEmpty(filter())
-											? "没有符合条件的任务"
-											: scope() === "inbox"
-												? "没有未排期的待办"
-												: scope() === "today"
-													? "今天没有硬性安排"
-													: "这里还是空的"
-									}
-									hint={
-										searchQuery() || !isFilterEmpty(filter())
-											? "换个词，或者清掉筛选再看看。"
-											: scope() === "inbox"
-												? "所有任务都指定了时间，去「今天」或「全部」看看。"
-												: "先在下面写一件想做的事，或者去「全部」看看。"
-									}
-									action={
-										searchQuery() || !isFilterEmpty(filter()) ? (
-											<button
-												type="button"
-												class={styles.emptyAction}
-												onClick={() => {
-													params.set({ q: "" });
-													setFilter(EMPTY_FILTER);
-												}}
-											>
-												清除筛选
-											</button>
-										) : scope() !== "all" ? (
-											<button
-												type="button"
-												class={styles.emptyAction}
-												onClick={() => chooseScope("all")}
-											>
-												查看全部任务
-											</button>
-										) : undefined
-									}
-								/>
-							}
-						>
-							<TaskStream
-								tasks={scoped()}
-								allTasks={tasks()}
-								scope={scope()}
-								onStatusChange={(id, status) => void updateStatus(id, status)}
-								onDelete={(id) => void removeTask(id)}
-								onSelect={openTask}
+				<div class={styles.taskGrid}>
+					<div class={styles.leftColumn}>
+						<section class={styles.composer} aria-label="快速添加任务">
+							<div class={styles.composerHead}>
+								<span class={styles.composerPlus}>
+									<Plus size={16} />
+								</span>
+								<strong>记一件事</strong>
+							</div>
+							<CaptureInput
+								placeholder="接下来要做什么？"
+								parentCandidates={tasks()}
+								onSubmit={submit}
 							/>
-						</Show>
-					</Show>
+						</section>
 
-					<Show when={view() === "board"}>
-						<TaskBoard onSelect={openTask} />
-					</Show>
+						<section class={styles.listPanel}>
+							<header class={styles.listHead}>
+								<Show
+									when={view() === "stream"}
+									fallback={
+										<h2 class={styles.listTitle}>
+											{view() === "board" ? "看板" : "依赖关系"}
+										</h2>
+									}
+								>
+									<div
+										class={styles.scopeTabs}
+										role="group"
+										aria-label="时间范围"
+									>
+										<For each={SCOPES}>
+											{(item) => (
+												<button
+													type="button"
+													class={styles.scopeTab}
+													classList={{
+														[styles.scopeActive]: scope() === item.key,
+													}}
+													aria-pressed={scope() === item.key}
+													onClick={() => chooseScope(item.key)}
+												>
+													{item.label}
+													<span>{counts()[item.key]}</span>
+												</button>
+											)}
+										</For>
+									</div>
+								</Show>
+								<Show when={view() === "stream"}>
+									<Select
+										class={styles.sort}
+										value={sort()}
+										onChange={(e) =>
+											setSort(e.currentTarget.value as TaskSortKey)
+										}
+										aria-label="排序方式"
+									>
+										<For each={SORT_OPTIONS}>
+											{(item) => (
+												<option value={item.value}>{item.label}</option>
+											)}
+										</For>
+									</Select>
+								</Show>
+							</header>
 
-					<Show when={view() === "calendar"}>
-						<TaskCalendarPane calendar={calendar} onOpenTask={openTask} />
-					</Show>
+							<Show when={loading()}>
+								<LoadingSkeleton />
+							</Show>
 
-					<Show when={view() === "graph"}>
-						<div class={styles.graphPane}>
-							<TaskDag />
-						</div>
-					</Show>
-				</Show>
+							<Show when={!loading()}>
+								<Show when={view() === "stream"}>
+									<Show
+										when={scoped().length > 0}
+										fallback={
+											<EmptyState
+												icon={<CheckCircle2 size={22} />}
+												title={
+													searchQuery() || !isFilterEmpty(filter())
+														? "没有符合条件的任务"
+														: "这里还没有任务"
+												}
+												hint={
+													searchQuery() || !isFilterEmpty(filter())
+														? "换个词，或者清掉筛选再看看。"
+														: "在下面写一件想做的事。"
+												}
+												action={
+													searchQuery() || !isFilterEmpty(filter()) ? (
+														<button
+															type="button"
+															class={styles.emptyAction}
+															onClick={() => {
+																params.set({ q: "" });
+																setFilter(EMPTY_FILTER);
+															}}
+														>
+															清除筛选
+														</button>
+													) : undefined
+												}
+											/>
+										}
+									>
+										<TaskStream
+											flat
+											tasks={scoped()}
+											allTasks={tasks()}
+											scope={scope()}
+											onStatusChange={(id, status) =>
+												void updateStatus(id, status)
+											}
+											onDelete={(id) => void removeTask(id)}
+										/>
+									</Show>
+								</Show>
+
+								<Show when={view() === "board"}>
+									<TaskBoard />
+								</Show>
+
+								<Show when={view() === "graph"}>
+									<div class={styles.graphPane}>
+										<TaskDag />
+									</div>
+								</Show>
+							</Show>
+						</section>
+					</div>
+
+					<aside class={styles.rightRail}>
+						<TaskCalendar calendar={calendar} onOpenTask={openTask} />
+						<ThreeDayTimeline />
+					</aside>
+				</div>
 			</main>
-
-			<aside class={styles.agenda}>
-				<Show when={selectedTaskId() !== null} fallback={<TaskAgenda />}>
-					<TaskInspector
-						taskId={selectedTaskId()}
-						onClose={() => setSelectedTaskId(null)}
-					/>
-				</Show>
-			</aside>
 
 			<TaskCommandConsole
 				isOpen={commandOpen()}

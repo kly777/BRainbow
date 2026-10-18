@@ -5,7 +5,7 @@
 // 所以这组断言就是防它回潮。
 // 其次是乐观更新的两条路径：成功保留、失败回滚到操作前快照。
 
-import { useListResource } from "@shared/utils/useListResource.ts";
+import { useListResource } from "./useListResource.ts";
 import { createSignal } from "solid-js";
 import { render } from "solid-js/web";
 import { describe, expect, it, vi } from "vite-plus/test";

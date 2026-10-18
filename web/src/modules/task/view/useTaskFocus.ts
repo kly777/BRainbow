@@ -8,13 +8,7 @@ import type { TagOption } from "@components/ui/molecules/TagInput.tsx";
 import { useNavigate, useParams } from "@solidjs/router";
 import { createEffect, createSignal } from "solid-js";
 import type { Tag } from "../api.ts";
-import {
-	createTaskE,
-	deleteTaskE,
-	getTagsE,
-	getTaskDetailE,
-	updateTaskE,
-} from "../api.ts";
+import { taskRepository } from "../data/taskRepository.ts";
 import { PATHS } from "@config/paths";
 import { showConfirm } from "@components/ui";
 
@@ -27,7 +21,7 @@ export function useTaskFocusView() {
 		id,
 		validate: (value) => Number.isInteger(value) && value >= 1,
 		invalidIdError: new Error("无效的任务 ID"),
-		fetcher: (value) => getTaskDetailE(value),
+		fetcher: (value) => taskRepository.detail(value),
 	});
 	const detail = m.data;
 	const { refetch } = m;
@@ -46,10 +40,12 @@ export function useTaskFocusView() {
 		setDescDraft(task.description ?? "");
 	});
 
-	const patch = async (updates: Parameters<typeof updateTaskE>[1]) => {
+	const patch = async (
+		updates: Parameters<typeof taskRepository.update>[1],
+	) => {
 		setSaving(true);
 		try {
-			await updateTaskE(id(), updates);
+			await taskRepository.update(id(), updates);
 			refetch();
 			notifySuccess("已保存", detail()?.task.title);
 			return true;
@@ -106,7 +102,7 @@ export function useTaskFocusView() {
 			clearTimeout(tagTimer);
 			tagTimer = setTimeout(async () => {
 				try {
-					resolve(await getTagsE(query));
+					resolve(await taskRepository.tags(query));
 				} catch {
 					resolve([]);
 				}
@@ -117,7 +113,7 @@ export function useTaskFocusView() {
 		const title = childTitle().trim();
 		if (!title) return;
 		try {
-			await createTaskE({ title, parent_task_id: id() });
+			await taskRepository.createChild(id(), title);
 			setChildTitle("");
 			setChildOpen(false);
 			refetch();
@@ -137,7 +133,7 @@ export function useTaskFocusView() {
 		});
 		if (!confirmed) return;
 		try {
-			await deleteTaskE(id());
+			await taskRepository.remove(id());
 			notifySuccess("任务已删除");
 			navigate(PATHS.task);
 		} catch (error) {

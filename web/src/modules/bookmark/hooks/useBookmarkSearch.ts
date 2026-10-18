@@ -2,7 +2,7 @@
 //
 // 从 BookmarkPage 的页面体里抽出来的一段：页面此前自持 4 个信号（query /
 // results / searching / error）并手写了一个 `searchSeq` 序号守卫来防竞态。
-// 竞态守卫是 createResource 已经负责的事（见 shared/utils/useListResource.ts
+// 竞态守卫是 createResource 已经负责的事（见 shared/api/query/useListResource.ts
 // 文件头的"无需手写 loadSeq"），所以这里换成资源驱动，信号只留输入文本。
 //
 // 两条既有契约必须保持：

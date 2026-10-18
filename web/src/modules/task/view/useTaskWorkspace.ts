@@ -6,9 +6,9 @@ import { notifySuccess } from "@shared/errors";
 import { enumParam, strParam, useUrlParams } from "@shared/utils";
 import { useNavigate } from "@solidjs/router";
 import { createEffect, createMemo, createSignal } from "solid-js";
-import { getTagsE } from "../api.ts";
 import type { TagOption } from "@components/ui/molecules/TagInput.tsx";
 import { useTasks } from "../data/TaskProvider.tsx";
+import { taskRepository } from "../data/taskRepository.ts";
 import { useTaskCalendar } from "../hooks/useTaskCalendar.ts";
 import { EMPTY_FILTER, isFilterEmpty } from "../model/task-filter.ts";
 import { captureToCreateRequest } from "../model/task-payload.ts";
@@ -90,7 +90,7 @@ export function useTaskWorkspaceView() {
 			clearTimeout(tagSearchTimer);
 			tagSearchTimer = setTimeout(async () => {
 				try {
-					resolve(await getTagsE(query));
+					resolve(await taskRepository.tags(query));
 				} catch {
 					resolve([]);
 				}

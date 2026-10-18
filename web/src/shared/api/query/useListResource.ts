@@ -16,7 +16,7 @@
 //   2. 乐观更新失败时回滚到操作前的快照，而不是无条件 refetch：AsyncView 在
 //      loading 时渲染骨架，整表重取会让列表闪一下。
 
-import { getErrorMessage } from "@shared/api";
+import { getErrorMessage } from "@shared/errors";
 import { tryAsync } from "@shared/utils/result.ts";
 import {
 	type Accessor,

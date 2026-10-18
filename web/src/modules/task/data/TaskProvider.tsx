@@ -4,6 +4,7 @@ import {
 	notifyWarning,
 	tryAsync,
 } from "@shared/utils";
+import { useMutation } from "@shared/api";
 import {
 	createContext,
 	createSignal,
@@ -189,22 +190,26 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		}
 	};
 
+	const deleteMutation = useMutation({
+		run: (ids: number[]) => Promise.all(ids.map(apiDeleteTask)),
+		onSuccess: async (_deleted, ids) => {
+			setTasks((prev) => prev.filter((task) => !ids.includes(task.id)));
+			await reloadStats();
+		},
+	});
+
 	const deleteTasks = async (ids: number[]) => {
-		const result = await tryAsync(() => Promise.all(ids.map(apiDeleteTask)));
+		const result = await deleteMutation.run(ids);
 		if (!result.ok) throw result.error;
-		setTasks((prev) => prev.filter((task) => !ids.includes(task.id)));
-		await reloadStats();
 	};
 
 	const removeTasks = async (ids: number[]) => {
-		try {
-			await deleteTasks(ids);
-			return true;
-		} catch (error) {
-			notifyError("删除任务失败", error);
+		const result = await deleteMutation.run(ids);
+		if (!result.ok) {
+			notifyError("删除任务失败", result.error);
 			await reload();
-			return false;
 		}
+		return result.ok;
 	};
 
 	const removeTask = async (id: number) => {

@@ -9,7 +9,7 @@ import {
 	showConfirm,
 	tryAsync,
 } from "@shared/utils";
-import type { ListResource } from "@shared/utils/useListResource.ts";
+import type { ListResource } from "@shared/api";
 import type { Bookmark } from "../../api.ts";
 import { deleteBookmarkE, fetchUrlTitleE, updateBookmarkE } from "../../api.ts";
 

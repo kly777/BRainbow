@@ -15,6 +15,7 @@ import type {
 	CreateTaskRequest,
 	Task,
 	TaskSortKey,
+	TaskStats,
 	TaskStatusType,
 } from "../api.ts";
 import {
@@ -34,17 +35,10 @@ import {
 import { toUpdatePayload } from "../lib/task-payload.ts";
 import { makeTemp, STATUS_API } from "../lib/task-provider-utils.ts";
 
-interface Stats {
-	backlog: number;
-	active: number;
-	completed: number;
-	archived: number;
-}
-
 interface TaskCtxValue {
 	tasks: () => Task[];
 	loading: () => boolean;
-	stats: () => Stats;
+	stats: () => TaskStats;
 	/** 排序口径（默认 smart）：列表视图的分组方式也跟着它走 */
 	sort: () => TaskSortKey;
 	setSort: (sort: TaskSortKey) => void;
@@ -56,8 +50,9 @@ interface TaskCtxValue {
 	reloadStats(): Promise<void>;
 	updateStatus(id: number, status: TaskStatusType): Promise<void>;
 	removeTask(id: number): Promise<void>;
+	/** 已确认后的批量删除；返回是否成功（命令栏用） */
+	removeTasks(ids: number[]): Promise<boolean>;
 	updateTaskE(id: number, updates: Partial<Task>): Promise<void>;
-	addSubTask(parentId: number, title: string): Promise<void>;
 	/** 应用搜索词（来自 URL）：改词即重取，与 `reload` 走同一条加载路径 */
 	setQuery(query: string): void;
 }
@@ -73,7 +68,7 @@ export function TaskProvider(props: { children: JSX.Element }) {
 	const [sort, setSortSignal] = createSignal<TaskSortKey>("smart");
 	// 筛选条件（客户端筛：全量已在内存里，见 lib/task-filter.ts 的说明）
 	const [filter, setFilter] = createSignal<TaskFilter>(EMPTY_FILTER);
-	const [stats, setStats] = createSignal<Stats>({
+	const [stats, setStats] = createSignal<TaskStats>({
 		backlog: 0,
 		active: 0,
 		completed: 0,
@@ -194,13 +189,29 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		}
 	};
 
+	const deleteTasks = async (ids: number[]) => {
+		const result = await tryAsync(() => Promise.all(ids.map(apiDeleteTask)));
+		if (!result.ok) throw result.error;
+		setTasks((prev) => prev.filter((task) => !ids.includes(task.id)));
+		await reloadStats();
+	};
+
+	const removeTasks = async (ids: number[]) => {
+		try {
+			await deleteTasks(ids);
+			return true;
+		} catch (error) {
+			notifyError("删除任务失败", error);
+			await reload();
+			return false;
+		}
+	};
+
 	const removeTask = async (id: number) => {
-		const prev = tasks();
-		setTasks(prev.filter((t) => t.id !== id));
 		await confirmAndDelete({
 			title: "删除任务",
 			message: "确定要删除这个任务吗？子任务也会被一并删除。",
-			deleteFn: () => apiDeleteTask(id),
+			deleteFn: () => deleteTasks([id]),
 			onError: () => void reload(),
 		});
 	};
@@ -228,15 +239,6 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		}
 	};
 
-	const addSubTask = async (parentId: number, title: string) => {
-		const result = await tryAsync(() =>
-			apiCreateTask({ title, parent_task_id: parentId }),
-		);
-		if (result.ok) {
-			setTasks((p) => [...p, result.value]);
-		}
-	};
-
 	const ctx: TaskCtxValue = {
 		tasks,
 		loading,
@@ -250,8 +252,8 @@ export function TaskProvider(props: { children: JSX.Element }) {
 		reloadStats,
 		updateStatus,
 		removeTask,
+		removeTasks,
 		updateTaskE,
-		addSubTask,
 		setQuery,
 	};
 
@@ -277,8 +279,8 @@ export function useTasks() {
 			reloadStats: async () => {},
 			updateStatus: async () => {},
 			removeTask: async () => {},
+			removeTasks: async () => false,
 			updateTaskE: async () => {},
-			addSubTask: async () => {},
 			setQuery: () => {},
 		};
 	}

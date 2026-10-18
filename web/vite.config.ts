@@ -61,7 +61,6 @@ export default defineConfig(({ command, mode }) => {
 			sortPackageJson: false,
 			ignorePatterns: [
 				"dist/**",
-				"src/components/kumo/**",
 				"**/*.css",
 				"e2e/.auth/**",
 				"test-results/**",
@@ -69,7 +68,7 @@ export default defineConfig(({ command, mode }) => {
 			],
 		},
 		lint: {
-			ignorePatterns: ["dist/**", "src/components/kumo/**"],
+			ignorePatterns: ["dist/**"],
 			jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
 			rules: {
 				"vite-plus/prefer-vite-plus-imports": "error",

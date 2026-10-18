@@ -168,51 +168,6 @@
 	align-items: stretch;
 }
 
-.todo-panel,
-.card-panel {
-	display: flex;
-	flex-direction: column;
-	min-width: 0;
-	min-height: 0;
-	height: 100%;
-	padding: var(--space-lg);
-	overflow: hidden;
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-lg);
-	background: var(--t-color-surface);
-	box-shadow: var(--shadow-sm);
-}
-
-.panel-head {
-	display: flex;
-	align-items: flex-start;
-	justify-content: space-between;
-	gap: var(--space-sm);
-	margin-bottom: var(--space-md);
-	flex-shrink: 0;
-}
-
-.panel-title {
-	margin: 0;
-	color: var(--t-color-ink);
-	font-family: var(--t-font-display);
-	font-size: var(--text-lg);
-	font-weight: 620;
-	line-height: var(--leading-tight);
-}
-
-.panel-hint {
-	margin: var(--space-2xs) 0 0;
-	color: var(--t-color-ink-faint);
-	font-size: var(--text-xs);
-}
-
-.panel-actions {
-	display: flex;
-	align-items: center;
-	gap: var(--space-2xs);
-}
-
 .view-all {
 	display: inline-flex;
 	align-items: center;
@@ -248,54 +203,7 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: var(--space-sm);
-	margin-bottom: var(--space-sm);
 	flex-wrap: wrap;
-	flex-shrink: 0;
-}
-
-.scope-tabs {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.15rem;
-	padding: 0.1875rem;
-	border: 1px solid var(--t-color-border);
-	border-radius: var(--radius-md);
-	background: var(--t-color-surface-raised);
-}
-
-.scope-tab {
-	display: inline-flex;
-	align-items: center;
-	gap: var(--space-2xs);
-	padding: var(--space-2xs) var(--space-xs);
-	border: none;
-	border-radius: var(--radius-sm);
-	background: none;
-	color: var(--t-color-ink-muted);
-	font: inherit;
-	font-size: var(--text-xs);
-	cursor: pointer;
-}
-
-.scope-tab:hover {
-	color: var(--t-color-ink);
-}
-
-.scope-tab.active {
-	background: var(--t-color-surface);
-	color: var(--t-color-ink);
-	box-shadow: var(--shadow-sm);
-	font-weight: 600;
-}
-
-.scope-tab span {
-	color: var(--t-color-ink-faint);
-	font-size: var(--text-2xs);
-	font-variant-numeric: tabular-nums;
-}
-
-.scope-tab.active span {
-	color: var(--t-color-accent-strong);
 }
 
 .sort {
@@ -310,24 +218,9 @@
 }
 
 .sort:focus-visible,
-.scope-tab:focus-visible,
 .module-card:focus-visible {
 	outline: 2px solid var(--t-color-accent);
 	outline-offset: 2px;
-}
-
-.task-list {
-	flex: 1;
-	min-height: 0;
-	overflow-y: auto;
-	padding-right: var(--space-2xs);
-}
-
-.card-body {
-	flex: 1;
-	min-height: 0;
-	overflow-y: auto;
-	padding-right: var(--space-2xs);
 }
 
 .empty {
@@ -356,6 +249,15 @@
 	min-height: 0;
 }
 
+.panel {
+	min-width: 0;
+}
+
+.scope-control {
+	max-width: 100%;
+	overflow-x: auto;
+}
+
 /* ── 响应式 ── */
 
 @media (width <= 980px) {
@@ -369,15 +271,9 @@
 		height: auto;
 	}
 
-	.todo-panel,
-	.card-panel {
+	.panel {
 		height: auto;
 		min-height: 18rem;
-	}
-
-	.task-list,
-	.card-body {
-		overflow: visible;
 	}
 }
 
@@ -406,19 +302,9 @@
 		font-size: var(--text-sm);
 	}
 
-	.todo-panel,
-	.card-panel {
-		padding: var(--space-md);
-	}
-
 	.controls {
 		align-items: flex-start;
 		flex-direction: column;
-	}
-
-	.scope-tabs {
-		max-width: 100%;
-		overflow-x: auto;
 	}
 
 	.sort {

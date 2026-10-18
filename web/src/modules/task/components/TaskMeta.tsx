@@ -16,7 +16,7 @@ import {
 	formatEffort,
 	formatPlan,
 } from "../lib/conditions.ts";
-import { formatDue } from "../lib/task-group.ts";
+import { formatDue } from "../lib/due.ts";
 import styles from "./TaskMeta.module.css";
 
 interface TaskMetaProps {

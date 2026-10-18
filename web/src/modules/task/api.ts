@@ -17,6 +17,7 @@ import type {
 	Tag,
 	Task,
 	TaskDetail,
+	TaskStats,
 	TaskStatusType,
 	UpdateTaskRequest,
 } from "./api-types.ts";
@@ -124,12 +125,8 @@ export const getSuggestionsE = (
 	request<SuggestionsResponse>(`/tasks/suggestions${buildQuery({ from, to })}`);
 
 // 任务统计缓存 15 秒
-export const getTaskStatsE = (): Promise<{
-	backlog: number;
-	active: number;
-	completed: number;
-	archived: number;
-}> => cachedRequest("/tasks/stats");
+export const getTaskStatsE = (): Promise<TaskStats> =>
+	cachedRequest("/tasks/stats");
 
 // 任务状态操作
 export const completeTaskE = (id: number): Promise<Task> =>

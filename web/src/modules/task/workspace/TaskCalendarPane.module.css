@@ -1,6 +1,0 @@
-.pane {
-	display: flex;
-	flex-direction: column;
-	gap: var(--space-xs);
-	min-height: 0;
-}

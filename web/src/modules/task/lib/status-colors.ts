@@ -12,7 +12,7 @@
 //
 // 取值沿用看板那一份：它是四处里唯一一直正常显示、用户一直在看的值；
 // 依赖图那份从未成功渲染过，因此取看板值不构成可见变化。
-// 另有两处 CSS 徽章（TaskList / EditTaskModal 的 .status-*）对小圆点用了
+// 另有两处 CSS 徽章（TaskRow 的状态圆点）对小圆点用了
 // `--t-color-border` 表达"未激活"，属另一套视觉，未纳入本表。
 
 import type { TokenName } from "@shared/styles";

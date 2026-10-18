@@ -30,7 +30,7 @@ import {
 	missingConditions,
 	validateTimeRange,
 } from "../lib/conditions.ts";
-import { formatDue } from "../lib/task-group.ts";
+import { formatDue } from "../lib/due.ts";
 import styles from "./CaptureInput.module.css";
 import ConditionEditor from "./ConditionEditor.tsx";
 import ConditionMenu from "./ConditionMenu.tsx";

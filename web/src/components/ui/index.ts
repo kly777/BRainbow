@@ -32,6 +32,8 @@ export { default as ErrorRetry } from "./molecules/ErrorRetry.tsx";
 export { default as Field, type FieldProps } from "./molecules/Field.tsx";
 export { default as FilterGroup } from "./molecules/FilterGroup.tsx";
 export { default as PageHead } from "./molecules/PageHead.tsx";
+export { default as Panel } from "./molecules/Panel.tsx";
+export { default as SegmentedControl } from "./molecules/SegmentedControl.tsx";
 export { default as SimplePagination } from "./molecules/SimplePagination.tsx";
 export { default as Toolbar } from "./molecules/Toolbar.tsx";
 // 注意：`molecules/TagInput.tsx` 与 `molecules/TagFilter.tsx` **刻意不在这里导出**。

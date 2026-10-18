@@ -63,6 +63,14 @@ export interface CreateTaskRequest {
 	planned_window?: { start: string; end: string };
 }
 
+/** 任务统计（/tasks/stats） */
+export interface TaskStats {
+	backlog: number;
+	active: number;
+	completed: number;
+	archived: number;
+}
+
 /**
  * 部分更新。可空字段是**双层语义**：字段缺席 = 不改，显式 `null` = 清空
  * （后端用 `double_option` 反序列化，两种写法含义不同）。

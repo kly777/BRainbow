@@ -5,7 +5,7 @@ import { PATHS } from "@config/paths";
 // 批量/文件模式 = 卡片清单审查（预览 + 勾选入库）
 // 业务逻辑复用 useMemAdd，此处只做视图层
 
-import { MarkdownEditor } from "@components";
+import MarkdownEditor from "@components/MarkdownEditor.tsx";
 import {
 	MarkdownFilePicker,
 	uploadToFileService,

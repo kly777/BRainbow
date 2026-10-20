@@ -1,4 +1,4 @@
-import { MarkdownEditor } from "@components";
+import MarkdownEditor from "@components/MarkdownEditor.tsx";
 import {
 	AsyncSection,
 	Button,

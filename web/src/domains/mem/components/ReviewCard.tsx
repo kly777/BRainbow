@@ -1,7 +1,7 @@
 // ── v2 复习卡片：目录卡 + 3D 翻面 + 卡牌层叠 ──
 // 线索与答案分居卡片两面，点"显示答案"实体翻转。
 
-import { MarkdownEditor } from "@components";
+import MarkdownEditor from "@components/MarkdownEditor.tsx";
 import { Button, Markdown as MarkdownRenderer } from "@components/ui";
 import {
 	Clock,

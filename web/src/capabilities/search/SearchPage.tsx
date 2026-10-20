@@ -8,7 +8,7 @@ import {
 	resolveTargetUrl,
 	type SearchHit,
 	searchE,
-} from "./api.ts";
+} from "@modules/command-palette";
 
 const MODULES = [
 	{ key: "all", label: "全部" },

@@ -1,4 +1,4 @@
-import { MarkdownEditor } from "@components";
+import MarkdownEditor from "@components/MarkdownEditor.tsx";
 import { Button, DetailPage } from "@components/ui";
 import {
 	MarkdownFilePicker,

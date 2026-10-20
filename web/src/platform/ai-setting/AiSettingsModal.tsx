@@ -6,9 +6,9 @@ import { getErrorMessage } from "@shared/api";
 import { notifyError, notifySuccess, tryAsync } from "@shared/utils";
 import { createEffect, createSignal, Show } from "solid-js";
 import styles from "./AiSettingsModal.module.css";
-import { callAi } from "./ai.ts";
+import { callAi } from "@shared/ai/client.ts";
 import { aiSettingsOpen, closeAiSettings } from "./aiSettingsStore.ts";
-import { getAiSettingsE, updateAiSettingsE } from "./api.ts";
+import { getAiSettingsE, updateAiSettingsE } from "@shared/ai/settings.ts";
 
 export default function AiSettingsModal() {
 	const [endpoint, setEndpoint] = createSignal("");

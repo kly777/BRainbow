@@ -84,7 +84,7 @@ mod tests {
         let pool = SqlitePool::connect_with(connect_options("sqlite::memory:").unwrap())
             .await
             .unwrap();
-        crate::db::migrate(&pool).await.unwrap();
+        crate::migrate(&pool).await.unwrap();
 
         sqlx::query("INSERT INTO user (id, name, password_hash) VALUES (1, 'u', 'x')")
             .execute(&pool)

@@ -189,7 +189,7 @@ pub(crate) async fn columns_exist(
     table: &str,
     columns: &[&str],
 ) -> Result<bool, sqlx::Error> {
-    let safe_table = crate::shared::db_query::sanitize_table_name(table)?;
+    let safe_table = crate::sanitize_table_name(table)?;
     let existing: Vec<String> = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
         "SELECT name FROM pragma_table_xinfo('{safe_table}')"
     )))

@@ -8,9 +8,10 @@ use serde::Deserialize;
 /// 数据契约（查询结果与读取选项）在 `dto.rs`：repository/service 不该反向依赖本文件
 use super::dto::{FilterOp, TableData, TableFilter, TableReadOptions};
 use super::service::DbViewerQueryService;
-use crate::shared::db_query::{SortDir, sanitize_table_name};
+use crate::shared::db_query::SortDir;
 use crate::shared::error_types::{self as error, ServiceError};
 use crate::shared::pagination::Pagination;
+use brainbow_db::sanitize_table_name;
 
 #[derive(Debug, Deserialize)]
 pub struct TableDataQuery {

@@ -318,6 +318,7 @@ dependencies = [
  "async-trait",
  "axum",
  "bcrypt",
+ "brainbow-db",
  "calamine",
  "chrono",
  "csv",
@@ -350,6 +351,15 @@ dependencies = [
  "tracing-subscriber",
  "uuid",
  "zip",
+]
+
+[[package]]
+name = "brainbow-db"
+version = "0.1.0"
+dependencies = [
+ "sqlx",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

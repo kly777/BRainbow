@@ -130,59 +130,11 @@ pub fn push_owner_scope(qb: &mut QueryBuilder<sqlx::Sqlite>, actor: &Actor, colu
     qb.push(")");
 }
 
-// ── 表名家化 ──
-
-/// 校验表名只含合法字符（字母、数字、下划线）。
-///
-/// SQLite 不支持参数化表名，动态表名必须校验后再拼接。
-/// 返回 [`Err`] 如果表名包含非法字符或为空。
-pub fn sanitize_table_name(name: &str) -> Result<String, sqlx::Error> {
-    if name.is_empty() || !name.chars().all(|c| c.is_alphanumeric() || c == '_') {
-        return Err(sqlx::Error::Protocol(format!(
-            "invalid table name: '{name}'"
-        )));
-    }
-    Ok(name.to_string())
-}
-
+// ── escape_like / like_contains ──
 #[cfg(test)]
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
-
-    #[test]
-    fn sanitize_valid_names() {
-        assert_eq!(sanitize_table_name("cards").unwrap(), "cards");
-        assert_eq!(sanitize_table_name("user_data").unwrap(), "user_data");
-        assert_eq!(sanitize_table_name("my_table_1").unwrap(), "my_table_1");
-    }
-
-    #[test]
-    fn sanitize_empty_rejected() {
-        assert!(sanitize_table_name("").is_err());
-    }
-
-    #[test]
-    fn sanitize_special_chars_rejected() {
-        assert!(sanitize_table_name("users; DROP TABLE").is_err());
-        assert!(sanitize_table_name("table-name").is_err());
-        assert!(sanitize_table_name("table name").is_err());
-        assert!(sanitize_table_name("DROP TABLE users").is_err());
-    }
-
-    #[test]
-    fn sanitize_symbols_rejected() {
-        // `is_alphanumeric` returns true for Unicode letters, so use symbols
-        assert!(sanitize_table_name("table-name").is_err());
-        assert!(sanitize_table_name("table/name").is_err());
-        assert!(sanitize_table_name("table;drop").is_err());
-    }
-
-    #[test]
-    fn sanitize_underscore_allowed() {
-        assert_eq!(sanitize_table_name("_").unwrap(), "_");
-        assert_eq!(sanitize_table_name("a_b_c").unwrap(), "a_b_c");
-    }
 
     // ── escape_like / like_contains ──
 

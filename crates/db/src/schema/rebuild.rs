@@ -33,7 +33,7 @@ use sqlx::{Connection, SqliteConnection, SqlitePool};
 use tracing::info;
 
 use super::{Decl, DeclKind, schema_error, tables};
-use crate::shared::db_query::sanitize_table_name;
+use crate::sanitize_table_name;
 
 /// 需要按声明重建的表：(引入版本, 表名)。只对 `版本 > 库版本` 的库跑。
 ///
@@ -162,7 +162,7 @@ async fn exec(conn: &mut SqliteConnection, sql: &str) -> Result<(), sqlx::Error>
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
-    use crate::db;
+    use crate as db;
 
     /// 老形状的 task（v23：没有三个新列，也没有两条新 CHECK）—— 重建的输入
     async fn task_without_v24_constraints(pool: &SqlitePool) {

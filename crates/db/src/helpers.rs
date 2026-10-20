@@ -2,7 +2,7 @@
 
 use sqlx::{Row, SqliteConnection};
 
-use crate::shared::db_query::sanitize_table_name;
+use crate::sanitize_table_name;
 
 /// 检查表中是否存在某列（连接级）。
 ///

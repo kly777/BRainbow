@@ -4,7 +4,8 @@ use std::sync::Arc;
 
 use super::dto::{BackRefRow, ColumnInfo, FilterOp, RefPreview};
 use super::model::TableName;
-use crate::shared::db_query::{like_contains, like_prefix, sanitize_table_name};
+use crate::shared::db_query::{like_contains, like_prefix};
+use brainbow_db::sanitize_table_name;
 
 /// 按运行时值类型解码单元格。
 ///

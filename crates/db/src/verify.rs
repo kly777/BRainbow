@@ -304,14 +304,14 @@ pub async fn quick_check(pool: &SqlitePool) -> Result<String, sqlx::Error> {
 mod tests {
     #![allow(clippy::unwrap_used)]
     use super::*;
-    use crate::db::connect::connect_options;
+    use crate::connect::connect_options;
     use sqlx::SqlitePool;
 
     async fn setup() -> SqlitePool {
         let pool = SqlitePool::connect_with(connect_options("sqlite::memory:").unwrap())
             .await
             .unwrap();
-        crate::db::migrate(&pool).await.unwrap();
+        crate::migrate(&pool).await.unwrap();
         pool
     }
 
@@ -409,7 +409,7 @@ mod tests {
             .connect_with(connect_options("sqlite::memory:").unwrap())
             .await
             .unwrap();
-        crate::db::migrate(&pool).await.unwrap();
+        crate::migrate(&pool).await.unwrap();
 
         sqlx::query("PRAGMA foreign_keys = OFF")
             .execute(&pool)

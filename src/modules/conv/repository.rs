@@ -21,6 +21,8 @@ struct ConvTitleRow {
     title: String,
     conv_type: String,
     created_at: String,
+    /// 同名文章存在时，搜索点击可以直达该文章，而不是落到会话详情的第一条标题
+    article_title: Option<String>,
 }
 
 #[derive(FromRow)]
@@ -97,9 +99,14 @@ impl ConvRepo {
                 let pattern = like_contains(kw);
                 let rows: Vec<ConvTitleRow> = sqlx::query_as!(
                     ConvTitleRow,
-                    r#"SELECT conv_id, title, conv_type,
-                              COALESCE(created_at, CURRENT_TIMESTAMP) AS "created_at!: String"
-                       FROM conv_titles WHERE (?1 IS NULL OR user_id = ?1) AND title LIKE ?2 ESCAPE '\' LIMIT 200"#,
+                    r#"SELECT c.conv_id, c.title, c.conv_type,
+                              COALESCE(c.created_at, CURRENT_TIMESTAMP) AS "created_at!: String",
+                              a.title AS "article_title?: String"
+                       FROM conv_titles c
+                       LEFT JOIN articles a
+                              ON a.conv_id = c.conv_id AND a.title = c.title
+                             AND (?1 IS NULL OR a.user_id = ?1)
+                       WHERE (?1 IS NULL OR c.user_id = ?1) AND c.title LIKE ?2 ESCAPE '\' LIMIT 200"#,
                     actor.owner_scope(),
                     pattern
                 )
@@ -118,7 +125,7 @@ impl ConvRepo {
                         source_len: len,
                         keyword_index: ki,
                         ocurrences: occ,
-                        article_title: None,
+                        article_title: r.article_title,
                     });
                 }
             }

@@ -55,8 +55,12 @@
 
 /* 响应式 */
 @media (width <= 768px) {
+	/* 搜索框先占一行；排序标签、下拉、升降序按钮留在同一行，
+	   不要用 width:100% 把下拉挤成单独一行（会让「排序」孤零零挂在上面）。 */
 	.filter-select {
-		width: 100%;
+		flex: 1;
+		width: auto;
+		min-width: 0;
 	}
 }
 

@@ -84,10 +84,12 @@
 
 .preview-btn {
 	font-size: var(--text-xs);
-	padding: var(--space-xs) var(--space-md);
+	padding: var(--space-xs) var(--space-sm);
 	border-radius: var(--radius-sm);
 	border: none;
 	cursor: default;
+	white-space: nowrap;
+	flex-shrink: 0;
 }
 
 .preview-accent {

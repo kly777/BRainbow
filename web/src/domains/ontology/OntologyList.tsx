@@ -14,7 +14,7 @@ const OntologyListPage: Component = () => {
 		<>
 			<ListPage
 				class={styles.container}
-				title="知识管理"
+				title="本体"
 				actions={
 					<Button variant="primary" onClick={m.openCreateModal}>
 						新建本体

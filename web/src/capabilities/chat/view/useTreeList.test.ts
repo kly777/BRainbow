@@ -1,6 +1,10 @@
 import { createRoot } from "solid-js";
 import { beforeEach, describe, expect, it, vi } from "vite-plus/test";
-import { useTreeList } from "./useTreeList.ts";
+import { chatKindRedirect, useTreeList } from "./useTreeList.ts";
+
+vi.mock("@solidjs/router", () => ({
+	useNavigate: vi.fn(() => vi.fn()),
+}));
 
 // 模拟依赖
 vi.mock("@shared/utils", () => ({
@@ -286,5 +290,22 @@ describe("useTreeList", () => {
 				dispose();
 			}
 		});
+	});
+});
+
+describe("chatKindRedirect", () => {
+	it("在 /chat 打开 mem 树 → /chat/mem，并保留 tree/node", () => {
+		expect(chatKindRedirect("chat", "mem", 7, 9)).toBe(
+			"/chat/mem?tree=7&node=9",
+		);
+	});
+
+	it("在 /chat/mem 打开普通树 → /chat", () => {
+		expect(chatKindRedirect("mem", "chat", 7, null)).toBe("/chat?tree=7");
+	});
+
+	it("类型匹配时不跳转", () => {
+		expect(chatKindRedirect("chat", "chat", 7, 9)).toBeNull();
+		expect(chatKindRedirect(undefined, "mem", 7, 9)).toBeNull();
 	});
 });

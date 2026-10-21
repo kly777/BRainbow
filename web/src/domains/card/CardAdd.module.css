@@ -21,4 +21,12 @@
 	flex: 1;
 	display: flex;
 	min-height: 0;
+	overflow-y: auto;
+}
+
+/* MarkdownEditor 根节点：flex 子项默认按内容收缩，必须显式吃掉整行宽度，
+   否则 textarea 会缩到浏览器默认 cols（约 214px），右侧留一整片空白。 */
+.editor {
+	flex: 1;
+	min-width: 0;
 }

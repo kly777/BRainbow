@@ -180,6 +180,8 @@
 .sort-text {
 	font-size: var(--text-xs);
 	color: var(--t-color-ink-muted);
+	white-space: nowrap;
+	flex-shrink: 0;
 }
 
 .sort-select {

@@ -9,7 +9,7 @@ import { fillPath, PATHS } from "@config/paths";
 
 // ── 阅读详情页面（薄壳视图层）──
 
-import { Check, X } from "@components/ui/icons";
+import { Check, Circle } from "@components/ui/icons";
 import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
 import ArticleContent from "./components/ArticleContent";
@@ -101,6 +101,9 @@ export default function ReadingDetail() {
 						<div class={styles.sidebar}>
 							<div class={styles.wordListArea}>
 								<h3>文章词表</h3>
+								<p class={styles.wordListHint}>
+									点左侧圆圈切换「认识 / 不认识」；「忽略」不参与统计。
+								</p>
 								<Button
 									variant="secondary"
 									size="sm"
@@ -155,7 +158,7 @@ export default function ReadingDetail() {
 															) : st === "ignored" ? (
 																"–"
 															) : (
-																<X size={14} />
+																<Circle size={14} />
 															)}
 														</button>
 													</Tooltip>

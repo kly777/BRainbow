@@ -181,6 +181,29 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn title_hit_carries_article_title_for_concept_link() {
+        let pool = setup_test_db().await;
+        // conv 5 已有一条同名标题；补一篇同名文章，标题命中应带上 article_title
+        sqlx::query(
+            "INSERT INTO articles (conv_id, article_type, title, content, user_id) \
+             VALUES (5, 'solution', 'Go实现SSH部署', '用 Go 实现 SSH 部署', 1)",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        let res = search_conv(&pool, 1, "SSH", 20, 0, SearchScope::Conv)
+            .await
+            .unwrap();
+        let hit = res
+            .hits
+            .iter()
+            .find(|h| h.conv_id == 5 && h.title.contains("SSH"))
+            .expect("应命中 conv 5 的 SSH 标题");
+        assert_eq!(hit.article_title.as_deref(), Some("Go实现SSH部署"));
+    }
+
+    #[tokio::test]
     async fn search_truncate_utf8() {
         let pool = setup_test_db().await;
         // 填一篇很长的文章

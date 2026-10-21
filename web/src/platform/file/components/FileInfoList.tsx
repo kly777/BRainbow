@@ -19,6 +19,12 @@ export default function FileInfoList(props: { item: FileItem }) {
 				</div>
 			</Show>
 			<div class={styles.infoList}>
+				{/* 详情页 H1 是 sr-only（标题即内容）；文件名必须在页面上可见，
+				    否则内容缺失时用户只能看到一个没有名字的「文件列表」返回页。 */}
+				<div class={styles.infoItem}>
+					<span class={styles.infoLabel}>文件名</span>
+					<span class={styles.infoValue}>{props.item.original_name}</span>
+				</div>
 				<div class={styles.infoItem}>
 					<span class={styles.infoLabel}>可见性</span>
 					<span class={styles.infoValue}>

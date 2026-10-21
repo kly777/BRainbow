@@ -1069,14 +1069,23 @@ mod tests {
         use sqlx::sqlite::SqliteConnectOptions;
         use std::str::FromStr;
 
-        let path = "target/sqlx-prepare.db";
+        // `cargo test` 的测试二进制以**包根**（crates/db）为 cwd，写相对
+        // `target/` 会落到 `crates/db/target/`；而 xtask 在仓库根找
+        // `target/sqlx-prepare.db`。这里按 crate 位置显式推导仓库根。
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("crates/db 有上级目录")
+            .parent()
+            .expect("crates 有上级目录")
+            .join("target/sqlx-prepare.db");
+        let path_str = path.display().to_string();
         // **连 `-wal`/`-shm` 一起删**：只删主库的话，SQLite 会把上一次留下的 WAL
         // 拼进新库 —— 表现是 fixture 里冒出别的库才有的表（实测见过 `test_fts*`），
         // 而 `-wal` 里的 commit 页与 `cp` 出来的库 salt 相同，校验拦不住
         for suffix in ["", "-wal", "-shm"] {
-            let _ = std::fs::remove_file(format!("{path}{suffix}"));
+            let _ = std::fs::remove_file(format!("{path_str}{suffix}"));
         }
-        let options = SqliteConnectOptions::from_str(&format!("sqlite:{path}"))
+        let options = SqliteConnectOptions::from_str(&format!("sqlite:{path_str}"))
             .unwrap()
             .create_if_missing(true);
         let pool = SqlitePool::connect_with(options).await.unwrap();

@@ -30,6 +30,21 @@ export function makeTemp(req: CreateTaskRequest): Task {
 	};
 }
 
+/**
+ * 合并「未完成任务」与「已完成任务」两份列表。
+ *
+ * smart 排序的 `/tasks` 只返回 backlog/active；「已完成」范围要另取
+ * `/tasks/status/completed`。按 id 去重，避免非 smart 排序下两边都含完成项时
+ * 同一张卡片出现两次。
+ */
+export function mergeTaskLists(
+	openTasks: readonly Task[],
+	completedTasks: readonly Task[],
+): Task[] {
+	const seen = new Set(openTasks.map((task) => task.id));
+	return [...openTasks, ...completedTasks.filter((task) => !seen.has(task.id))];
+}
+
 /** 状态 → API 调用映射 */
 export const STATUS_API: Record<TaskStatusType, (id: number) => Promise<Task>> =
 	{

@@ -46,6 +46,7 @@ export function useCardDetail(): CardDetailApi {
 			title: "删除卡片",
 			message: "确定要删除这个卡片吗？此操作不可撤销。",
 			deleteFn: () => deleteCardE(cardId()),
+			successMessage: "卡片已删除",
 			onSuccess: () => navigate(PATHS.card),
 		});
 	};

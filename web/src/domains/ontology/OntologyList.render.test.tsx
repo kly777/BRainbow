@@ -75,7 +75,7 @@ describe("OntologyList：外壳迁移后的回归", () => {
 		await flush();
 		const h1 = host.querySelectorAll("h1");
 		expect(h1.length).toBe(1);
-		expect(h1[0].textContent).toBe("知识管理");
+		expect(h1[0].textContent).toBe("本体");
 	});
 
 	it("加载完成后渲染出本体条目与统计", async () => {

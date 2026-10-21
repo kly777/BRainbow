@@ -49,6 +49,14 @@ describe("优先级", () => {
 		expect(parseCapture("!P1").priority).toBe("p1");
 	});
 
+	it("接受省略 p 的简写：`!2` = `!p2`", () => {
+		const r = parseCapture("验证优先级 !2 #标签");
+		expect(r.priority).toBe("p2");
+		expect(r.cleanTitle).toBe("验证优先级");
+		expect(r.tags).toEqual(["标签"]);
+		expect(r.unparsed).toEqual([]);
+	});
+
 	it("`!p5` 不是合法优先级 → 留在标题里，且记进 unparsed", () => {
 		const r = parseCapture("写周报 !p5");
 		expect(r.priority).toBeNull();

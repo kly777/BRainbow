@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import type { TaskStatusType } from "../api-types.ts";
-import { makeTemp, STATUS_API } from "./task-provider-utils.ts";
+import { makeTemp, mergeTaskLists, STATUS_API } from "./task-provider-utils.ts";
 
 describe("makeTemp", () => {
 	it("creates a task with basic title", () => {
@@ -35,6 +35,32 @@ describe("makeTemp", () => {
 		const t = makeTemp({ title: "Time" });
 		expect(t.created_at).toEqual(t.updated_at);
 		expect(new Date(t.created_at).getTime()).not.toBeNaN();
+	});
+});
+
+describe("mergeTaskLists", () => {
+	it("appends completed tasks after open ones", () => {
+		const open = [makeTemp({ title: "open" })];
+		const done = [
+			{ ...makeTemp({ title: "done" }), id: 999, status: "completed" as const },
+		];
+		const merged = mergeTaskLists(open, done);
+		expect(merged.map((task) => task.title)).toEqual(["open", "done"]);
+	});
+
+	it("drops completed duplicates already present in the open list", () => {
+		const task = makeTemp({ title: "same" });
+		const merged = mergeTaskLists(
+			[task],
+			[{ ...task, status: "completed" as const }],
+		);
+		expect(merged).toHaveLength(1);
+		expect(merged[0]).toBe(task);
+	});
+
+	it("keeps open tasks untouched when there are no completed tasks", () => {
+		const open = [makeTemp({ title: "a" }), makeTemp({ title: "b" })];
+		expect(mergeTaskLists(open, [])).toEqual(open);
 	});
 });
 

@@ -15,7 +15,6 @@ const CardAddPage: Component = () => {
 		<div class={styles.container} onKeyDown={m.handleKeyDown} role="none">
 			<DetailPage
 				title="新建卡片"
-				titleHidden
 				backLabel="卡片列表"
 				onBack={m.handleBack}
 				actions={
@@ -35,6 +34,7 @@ const CardAddPage: Component = () => {
 
 				<div class={styles.editorArea}>
 					<MarkdownEditor
+						editorClass={styles.editor}
 						onUploadFile={uploadToFileService}
 						filePicker={MarkdownFilePicker}
 						value={m.content()}

@@ -7,7 +7,7 @@
 //
 // | 符号 | 含义 | 语法 | 落库字段 |
 // |---|---|---|---|
-// | `!` | 优先级 | `!p1`…`!p4`（大小写不敏感） | `task.priority` |
+// | `!` | 优先级 | `!p1`…`!p4` 或 `!1`…`!4`（大小写不敏感） | `task.priority` |
 // | `#` | 标签 | `#工作` `#urgent` | `task_tag_rel` |
 // | `@` | 提及 | `@bob` | 本期只解析不落库（进 description） |
 // | `~` | 时长 | `~60m` `~1.5h` `~2h` `~90`（裸数字按分钟） | `effort_estimate_minutes` |
@@ -52,7 +52,8 @@ export interface CaptureResult {
 /** 标签/提及名允许的字符：Unicode 字母、数字、下划线、连字符（中文标签免转义） */
 const NAME_RUN = /^[\p{L}\p{N}_-]+/u;
 
-const PRIORITY_TOKEN = /^![pP]([1-4])$/;
+/** `!p1` 是正式写法；`!1` 是用户更常敲的简写，两种都收。 */
+const PRIORITY_TOKEN = /^![pP]?([1-4])$/;
 
 /** `~(数字)(单位)?`；单位缺省按分钟。整 token 匹配 —— `~abc`、`~1d` 都不算 */
 const EFFORT_TOKEN = /^~(\d+(?:\.\d+)?)(m|min|h|hr|小时|分钟)?$/iu;

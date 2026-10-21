@@ -24,6 +24,7 @@ import {
 	deleteTaskE as apiDeleteTask,
 	updateTaskE as apiUpdateTask,
 	fetchAllTasks,
+	getCompletedTasksE,
 	getTaskStatsE,
 	getTasksE,
 	searchTasksE,
@@ -34,7 +35,7 @@ import {
 	type TaskFilter,
 } from "../model/task-filter.ts";
 import { toUpdatePayload } from "../model/task-payload.ts";
-import { makeTemp, STATUS_API } from "./task-provider-utils.ts";
+import { makeTemp, mergeTaskLists, STATUS_API } from "./task-provider-utils.ts";
 
 interface TaskCtxValue {
 	tasks: () => Task[];
@@ -96,28 +97,47 @@ export function TaskProvider(props: { children: JSX.Element }) {
 	 * 收成一处之后只有 `load()` 一个写入者。
 	 */
 	const [query, setQuerySignal] = createSignal("");
-	/** 最近一次发出的请求口径；响应回来时对不上就丢弃（overlapping 请求的老结果不许落地） */
+	/** 最近一次发出的请求口径（搜索词 + 排序）；响应回来时对不上就丢弃 */
 	let requested: string | null = null;
 
 	const load = async () => {
 		const q = query();
-		requested = q;
+		const sortKey = sort();
+		const requestKey = `${q}\u0000${sortKey}`;
+		requested = requestKey;
 		setLoading(true);
-		// 拉全量（后端分页缺省 20 条，只取第一页会让第 21 条起在界面上消失）
-		const result = await tryAsync(() =>
-			fetchAllTasks((page, size) =>
-				q ? searchTasksE(q, page, size) : getTasksE(page, size, sort()),
+		// 拉全量（后端分页缺省 20 条，只取第一页会让第 21 条起在界面上消失）。
+		// smart 排序的候选集只有 backlog/active（`find_open_candidates`），
+		// 而任务页的「已完成」范围要显示完成项 —— 这一份得单独取，否则
+		// 「已完成」计数和看板列永远是 0。
+		const [result, completedResult] = await Promise.all([
+			tryAsync(() =>
+				fetchAllTasks((page, size) =>
+					q ? searchTasksE(q, page, size) : getTasksE(page, size, sortKey),
+				),
 			),
-		);
+			q === "" && sortKey === "smart"
+				? tryAsync(() => fetchAllTasks(getCompletedTasksE))
+				: Promise.resolve(null),
+		]);
 		// 期间又发了新请求（输入框还在打字、或换了排序）→ 这次的结果已经过期
-		if (requested !== q) {
+		if (requested !== requestKey) {
 			return;
 		}
 		if (result.ok) {
-			setTasks(result.value.items);
-			if (result.value.truncated) {
+			const completed = completedResult?.ok ? completedResult.value : null;
+			const items = completed
+				? mergeTaskLists(result.value.items, completed.items)
+				: result.value.items;
+			setTasks(items);
+			if (completedResult && !completedResult.ok) {
+				notifyError("加载已完成任务失败", completedResult.error);
+			}
+			const truncated = result.value.truncated || completed?.truncated;
+			if (truncated) {
+				const total = result.value.total + (completed?.total ?? 0);
 				notifyWarning(
-					`${q ? "匹配" : "任务"}过多：只载入前 ${result.value.items.length} 条（共 ${result.value.total} 条）`,
+					`${q ? "匹配" : "任务"}过多：只载入前 ${items.length} 条（共 ${total} 条）`,
 				);
 			}
 		} else {
@@ -215,7 +235,10 @@ export function TaskProvider(props: { children: JSX.Element }) {
 	const removeTask = async (id: number) => {
 		await confirmAndDelete({
 			title: "删除任务",
-			message: "确定要删除这个任务吗？子任务也会被一并删除。",
+			// 后端的删除语义：未完成任务转 archived（保留可追溯），已完成任务才物理删除
+			message:
+				"确定要删除这个任务吗？未完成的任务会移入归档，已完成的任务会永久删除。",
+			successMessage: "任务已删除",
 			deleteFn: () => deleteTasks([id]),
 			onError: () => void reload(),
 		});

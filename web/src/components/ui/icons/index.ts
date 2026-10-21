@@ -18,6 +18,7 @@ export {
 	FiChevronLeft as ChevronLeft,
 	FiChevronRight as ChevronRight,
 	FiChevronUp as ChevronUp,
+	FiCircle as Circle,
 	FiClock as Clock,
 	FiCopy as Copy,
 	FiDownload as Download,

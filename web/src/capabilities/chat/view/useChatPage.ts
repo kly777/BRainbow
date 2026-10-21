@@ -8,12 +8,21 @@ import {
 } from "@shared/utils";
 import { createSignal, onCleanup } from "solid-js";
 import type { ChatNode, PromptPreset, SearchHit } from "../api.ts";
-import { listPresetsE, reviseNodeE, searchChatE } from "../api.ts";
+import {
+	listPresetsE,
+	listTreesByKindE,
+	reviseNodeE,
+	searchChatE,
+} from "../api.ts";
 import { useChatSession } from "./useChatSession.ts";
 
 export function useChatPage() {
 	const s = useChatSession({
+		// 只列普通对话。mem 树的回复是卡片 JSON，必须走 /chat/mem 的
+		// ChatMemMessageRow 渲染；混进本页会显示成一屏原始 JSON。
+		listTreesFn: () => listTreesByKindE("chat"),
 		createTitle: "新对话",
+		createKind: "chat",
 		createLabel: "创建对话",
 	});
 	const navigate = s.navigate;

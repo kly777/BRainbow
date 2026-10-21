@@ -1,4 +1,4 @@
-import { Input } from "@components/ui";
+import { Button, Input } from "@components/ui";
 import styles from "@modules/search/SearchPage.module.css";
 import { highlightKeywords } from "@shared/utils";
 import { useNavigate, useSearchParams } from "@solidjs/router";
@@ -55,28 +55,48 @@ export default function SearchPage() {
 		return f === "all" ? all : all.filter((h) => h.kind === f);
 	};
 
+	const submitQuery = (value: string) => {
+		const q = value.trim();
+		if (q) setParams({ q });
+	};
+
 	const handleSearch = (e: SubmitEvent) => {
 		e.preventDefault();
 		const form = e.target as HTMLFormElement;
 		const input = form.elements.namedItem("q") as HTMLInputElement;
-		if (input.value.trim()) {
-			setParams({ q: input.value.trim() });
-		}
+		submitQuery(input.value);
 	};
 
 	return (
 		<div class={styles.page}>
-			<h1 class="sr-only">全局搜索</h1>
+			<h1 class={styles.title}>全局搜索</h1>
 			<form onSubmit={handleSearch} class={styles.form}>
 				<Input
 					name="q"
 					type="search"
-					placeholder="搜索…"
+					placeholder="搜索任务、卡片、记忆、文件…"
 					value={query()}
 					class={styles.input}
 					aria-label="搜索"
+					onKeyDown={(e) => {
+						// 有些环境（含 IAB）对单输入框表单不触发隐式提交；
+						// 显式接管 Enter，并跳过 IME 组字中的确认键。
+						if (e.key === "Enter" && !e.isComposing) {
+							e.preventDefault();
+							submitQuery(e.currentTarget.value);
+						}
+					}}
 				/>
+				<Button type="submit" variant="primary">
+					搜索
+				</Button>
 			</form>
+
+			<Show when={!query()}>
+				<div class={styles.status}>
+					输入关键词，搜索任务、卡片、记忆、文件等全部内容
+				</div>
+			</Show>
 
 			<Show when={query()}>
 				<div class={styles.filters}>

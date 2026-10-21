@@ -139,6 +139,27 @@ describe("itemHref 链接构造", () => {
 		});
 	});
 
+	it("标题命中但同时有同名文章 → 也走 convConcept，避免落到会话第一条标题", () => {
+		return withHook((h) => {
+			paramStore.q = "记忆";
+			delete paramStore.t;
+			const href = h.itemHref({
+				conv_id: 777,
+				title: "如何制作公钥证书的Anki记忆卡",
+				conv_type: "solution",
+				snippet: "如何制作公钥证书的Anki记忆卡",
+				match_field: "title",
+				created_at: "",
+				score: 1,
+				article_title: "如何制作公钥证书的Anki记忆卡",
+			});
+			expect(href).toContain("/conversation/concept/777?");
+			expect(href).toContain(
+				`article=${encodeURIComponent("如何制作公钥证书的Anki记忆卡")}`,
+			);
+		});
+	});
+
 	it("无查询词时不带 q 参数", () => {
 		return withHook((h) => {
 			const href = h.itemHref({

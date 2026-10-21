@@ -70,7 +70,9 @@ export function useConvSearch(): ConvSearchApi {
 		if (t !== "all") params.set("t", t);
 		const qs = params.toString();
 		const suffix = qs ? `?${qs}` : "";
-		if (hit.match_field === "article" && hit.article_title) {
+		// 标题命中若同时对应一篇文章，直达文章页；否则会话详情的第一条标题
+		// 可能和搜索卡片上的标题不同（conv_titles 一个会话有多条标题）。
+		if (hit.article_title) {
 			params.set("article", hit.article_title);
 			return `${PATHS.convConcept.replace(":id", String(hit.conv_id))}?${params.toString()}`;
 		}

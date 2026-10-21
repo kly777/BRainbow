@@ -89,7 +89,16 @@ export default function ConvSearch() {
 											</span>
 										</div>
 										<div class={styles.itemTitle}>{hit.title}</div>
-										<div class={styles.itemSnippet}>{hit.snippet}</div>
+										{/* 标题命中时后端 snippet 就是标题本身：再显示一遍会变成
+										    同一条结果里重复两行标题。 */}
+										<Show
+											when={
+												hit.snippet.trim() &&
+												hit.snippet.trim() !== hit.title.trim()
+											}
+										>
+											<div class={styles.itemSnippet}>{hit.snippet}</div>
+										</Show>
 										<div class={styles.itemMeta}>
 											{fmtLocal(hit.created_at)}
 										</div>

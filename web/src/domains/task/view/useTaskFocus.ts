@@ -127,7 +127,7 @@ export function useTaskFocusView() {
 		if (!task) return;
 		const confirmed = await showConfirm({
 			title: "删除任务",
-			message: `确定删除「${task.title}」？子任务也会一并删除。`,
+			message: `确定删除「${task.title}」？未完成的任务会移入归档，已完成的任务会永久删除。`,
 			variant: "danger",
 			confirmLabel: "删除",
 		});

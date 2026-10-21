@@ -96,6 +96,13 @@
 	font-weight: 600;
 }
 
+.word-list-hint {
+	margin: 0 0 var(--space-sm);
+	font-size: var(--text-xs);
+	line-height: var(--leading-normal);
+	color: var(--t-color-ink-muted);
+}
+
 .word-list-area {
 	flex: 1;
 	overflow-y: auto;

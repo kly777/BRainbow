@@ -104,6 +104,20 @@ export const getArchivedTasksE = (): Promise<PaginatedResponse<Task>> =>
 	cachedRequest("/tasks/status/archived");
 
 /**
+ * 已完成任务分页。
+ *
+ * 默认的 smart 排序只把 backlog/active 作为候选（`find_open_candidates`），
+ * 所以任务页的「已完成」范围需要单独取这一份，不能指望 `/tasks?sort=smart`。
+ */
+export const getCompletedTasksE = (
+	page: number,
+	pageSize: number,
+): Promise<PaginatedResponse<Task>> =>
+	cachedRequest(
+		`/tasks/status/completed${buildQuery({ page, page_size: pageSize })}`,
+	);
+
+/**
  * 标签补全（录入框用）：`prefix` 为空即"取前几条"。
  *
  * 缓存 30s 够用 —— 标签只在写任务时变，而写任务会连坐失效 tasks 域（含本端点，见

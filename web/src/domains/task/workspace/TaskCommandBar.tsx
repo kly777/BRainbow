@@ -100,8 +100,8 @@ export default function TaskCommandBar(props: TaskCommandBarProps) {
 			title: "删除任务",
 			message:
 				found.length === 1
-					? `确定删除「${found[0]?.title ?? ""}」？子任务也会一并删除。`
-					: `确定删除这 ${found.length} 条任务？子任务也会一并删除。`,
+					? `确定删除「${found[0]?.title ?? ""}」？未完成的任务会移入归档，已完成的任务会永久删除。`
+					: `确定删除这 ${found.length} 条任务？未完成的任务会移入归档，已完成的任务会永久删除。`,
 			variant: "danger",
 			confirmLabel: "删除",
 		});

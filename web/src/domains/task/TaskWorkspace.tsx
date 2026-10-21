@@ -65,7 +65,7 @@ function TaskWorkspaceContent() {
 					<strong>记一件事</strong>
 				</div>
 				<CaptureInput
-					placeholder="接下来要做什么？"
+					placeholder="接下来要做什么？例如：写周报 !p1 #工作 ~60m"
 					parentCandidates={vm.tasks()}
 					onSubmit={vm.submit}
 				/>
@@ -123,7 +123,7 @@ function TaskWorkspaceContent() {
 									hint={
 										vm.searchQuery() || vm.hasFilter()
 											? "换个词，或者清掉筛选再看看。"
-											: "在下面写一件想做的事。"
+											: "在上面写一件想做的事。"
 									}
 									action={
 										vm.searchQuery() || vm.hasFilter() ? (

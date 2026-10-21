@@ -287,7 +287,7 @@ export default function CaptureInput(props: CaptureInputProps) {
 					class={styles.titleInput}
 					value={text()}
 					placeholder={props.placeholder ?? "写周报 !p1 #工作 ~60m"}
-					aria-label="任务标题（可用 ! 优先级 # 标签 @ 提及 ~ 时长）"
+					aria-label="任务标题（!p1 优先级、#标签、@提及、~60m 时长）"
 					onInput={(e) => setText(e.currentTarget.value)}
 					onKeyDown={onKeyDown}
 				/>

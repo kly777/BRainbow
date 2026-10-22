@@ -7,8 +7,8 @@
 //!    而 ssh 用户对 `/opt` 没有写权限 —— 于是 `mkdir` 失败、回滚**必然失败**
 //!    （AGENTS.md 记的就是这一条，实际只剩"重启现有产物"那层）。
 //! 2. **不再 `rm -rf $SERVICE_DIR`**。老写法重建整个服务目录，会连带删掉不在
-//!    备份里的东西（`bin/ffmpeg`、`mem_config.json`）。这里只替换 `brainbow`
-//!    与 `dist`，其余原样保留 —— 顺带也就不会丢 `bin/ffmpeg` 了。
+//!    备份里的东西（`bin/ffmpeg`、`mem_config.json`）。这里只替换 `brainbow`、
+//!    `dist` 与 `config/`，其余原样保留 —— 顺带也就不会丢 `bin/ffmpeg` 了。
 //! 3. **代码备份与数据库备份按同一个时间戳配对**。老写法从数据库名反推代码名
 //!    （`db_deploy_<ts>` → `code_deploy_<ts>`），可实际的代码备份叫
 //!    `code_<ts>.tar.gz` —— 对不上，于是"回滚代码"这一步被静默跳过。
@@ -136,7 +136,7 @@ pub fn start_service(cfg: &Config, remote: &Remote) -> Result<()> {
     ))
 }
 
-/// 恢复代码：从 `$BACKUP_DIR/<stem>.tar.gz` 还原 `brainbow`（有 `dist/` 就一起）。
+/// 恢复代码：从 `$BACKUP_DIR/<stem>.tar.gz` 还原 `brainbow` + `dist/` + `config/`。
 ///
 /// 只做文件操作，不碰服务状态（见 `apply`）。
 pub fn restore_code(cfg: &Config, remote: &Remote, stem: &str) -> Result<()> {

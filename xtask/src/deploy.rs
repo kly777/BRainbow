@@ -898,17 +898,18 @@ impl Deploy<'_> {
     /// 跑已部署二进制的只读自检。
     ///
     /// 环境要对齐 systemd 的 unit：`cd` 到它的 `WorkingDirectory`，并把
-    /// **影响路径的环境变量**显式传进去 —— `DATABASE_URL` 与 `UPLOAD_DIR`。
-    /// 少传一个是真实的坑：不传 `UPLOAD_DIR` 时自检会退回默认的相对路径
-    /// `uploads`（相对 cwd = service/），于是去检查一个跟服务实际使用的目录
-    /// 无关的地方，报出假的"上传目录不可用 / 缺失 32 个文件"。
+    /// **影响配置/路径的环境变量**显式传进去。少传 `BRAINBOW_ROOT` 时自检会
+    /// 退回默认的相对路径 `uploads`（相对 cwd = service/），于是去检查一个跟
+    /// 服务实际使用的目录无关的地方，报出假的"上传目录不可用 / 缺失 N 个文件"。
     fn self_check(&self) {
         ui::info("后端自检（只读，含全库 quick_check，约数秒）…");
+        let config_dir = self.cfg.config_dir();
         let cmd = format!(
-            "cd {} && RUST_LOG=info DATABASE_URL={} UPLOAD_DIR={} ./brainbow --check 2>&1",
+            "cd {} && RUST_LOG=info BRAINBOW_CONFIG={}/app.toml BRAINBOW_SECRETS={}/secret.toml BRAINBOW_ROOT={} ./brainbow --check 2>&1",
             sh_quote(&self.cfg.service_dir),
-            sh_quote(&self.cfg.database_url),
-            sh_quote(&self.cfg.upload_dir)
+            sh_quote(&config_dir),
+            sh_quote(&config_dir),
+            sh_quote(&self.cfg.remote_dir)
         );
         match self.remote.capture_any(&cmd) {
             Ok(None) => ui::info("后端自检（dry-run 未执行）"),
@@ -928,10 +929,12 @@ impl Deploy<'_> {
                 ui::warn("后端自检未通过（服务已在运行，部署不回滚）：");
                 ui::raw(&out);
                 ui::info(&format!(
-                    "可复跑：ssh {} \"cd {} && DATABASE_URL={} ./brainbow --check\"",
+                    "可复跑：ssh {} \"cd {} && BRAINBOW_CONFIG={}/app.toml BRAINBOW_SECRETS={}/secret.toml BRAINBOW_ROOT={} ./brainbow --check\"",
                     self.cfg.target(),
                     self.cfg.service_dir,
-                    self.cfg.database_url
+                    config_dir,
+                    config_dir,
+                    self.cfg.remote_dir
                 ));
             }
             Err(e) => ui::warn(&format!("后端自检跑不起来：{e}")),

@@ -149,10 +149,19 @@ fn config_section(cfg: &Config, remote: &Remote) {
         return;
     }
 
-    if tokens.iter().any(|t| t.starts_with("JWT_SECRET=")) {
-        ui::done("JWT_SECRET 已注入 systemd");
+    if tokens.iter().any(|t| t.starts_with("BRAINBOW_CONFIG=")) {
+        ui::done("应用配置路径已注入 systemd");
     } else {
-        ui::warn("JWT_SECRET 未注入（重启后会话失效）");
+        ui::warn("unit 未注入 BRAINBOW_CONFIG（可能还是旧版 unit）");
+    }
+
+    let secret = cfg.secret_config_path();
+    if remote.is_dry_run() {
+        ui::info(&format!("（dry-run：跳过检查 {secret}）"));
+    } else if remote.exists(&secret) {
+        ui::done("secret.toml 已就位");
+    } else {
+        ui::warn("secret.toml 不在远端 config/ 下（重启后会话可能失效）");
     }
     ui::field(
         "环境",

@@ -61,8 +61,8 @@ fn read_template(project_dir: &Path, name: &str) -> Result<String> {
     })
 }
 
-/// 渲染 systemd unit。占位符与 deploy.sh 时代的同名同义。
-pub fn systemd_unit(cfg: &Config, jwt_secret: &str) -> Result<String> {
+/// 渲染 systemd unit：只注入配置路径与运行根，业务字段由 app.toml 提供。
+pub fn systemd_unit(cfg: &Config) -> Result<String> {
     let template = read_template(&cfg.project_dir, "brainbow.service")?;
     render(
         &template,
@@ -70,17 +70,8 @@ pub fn systemd_unit(cfg: &Config, jwt_secret: &str) -> Result<String> {
         &[
             ("REMOTE_USER", cfg.remote_user.clone()),
             ("SERVICE_DIR", cfg.service_dir.clone()),
-            ("SERVICE_PORT", cfg.service_port.to_string()),
-            ("BIND_HOST", cfg.bind_host.clone()),
-            ("DATABASE_URL", cfg.database_url.clone()),
-            ("UPLOAD_DIR", cfg.upload_dir.clone()),
-            // 应用侧的 /admin 服务器信息要报"备份多少份、占多大"，所以把备份目录
-            // 一并注入 —— 部署工具知道它在哪，应用只读
-            ("BACKUP_DIR", cfg.backup_dir.clone()),
-            ("CORS_ALLOW_ORIGIN", cfg.cors_allow_origin.clone()),
-            ("JWT_SECRET", jwt_secret.to_string()),
-            ("ALLOW_REGISTER", cfg.allow_register.clone()),
-            ("JWT_TTL_SECS", cfg.jwt_ttl_secs.clone()),
+            ("CONFIG_DIR", cfg.config_dir()),
+            ("REMOTE_DIR", cfg.remote_dir.clone()),
         ],
     )
 }
@@ -175,7 +166,7 @@ mod tests {
     #[test]
     fn real_systemd_template_renders() {
         let cfg = Config::for_test();
-        let unit = systemd_unit(&cfg, "secret-value").expect("真实 unit 模板应当能渲染");
+        let unit = systemd_unit(&cfg).expect("真实 unit 模板应当能渲染");
         assert!(!unit.contains("@@"), "不应有占位符残留：\n{unit}");
         assert!(unit.contains("User=kly"), "{unit}");
         assert!(unit.contains("WorkingDirectory=/opt/brb/service"), "{unit}");
@@ -184,33 +175,18 @@ mod tests {
             "{unit}"
         );
         assert!(
-            unit.contains("Environment=\"JWT_SECRET=secret-value\""),
+            unit.contains("Environment=\"BRAINBOW_CONFIG=/opt/brb/config/app.toml\""),
             "{unit}"
         );
         assert!(
-            unit.contains("Environment=\"BIND_HOST=127.0.0.1\""),
-            "{unit}"
-        );
-        // 上传根必须注入，且默认值走**部署约定**（data 下）—— 缺了它、或让它退回
-        // 后端那个相对的开发默认 `uploads`，用户数据就会落进 service/ 里
-        assert!(
-            unit.contains("Environment=\"UPLOAD_DIR=/opt/brb/data/uploads\""),
-            "上传根应当按约定派生到 data 下: {unit}"
-        );
-        // 备份目录同理：应用靠它报"备份多少份、占多大"
-        assert!(
-            unit.contains("Environment=\"BACKUP_DIR=/opt/brb/backup\""),
-            "备份目录应当注入: {unit}"
-        );
-        // 默认值（.env.prod 里没写这两项时）
-        assert!(
-            unit.contains("Environment=\"ALLOW_REGISTER=false\""),
+            unit.contains("Environment=\"BRAINBOW_SECRETS=/opt/brb/config/secret.toml\""),
             "{unit}"
         );
         assert!(
-            unit.contains("Environment=\"JWT_TTL_SECS=864000\""),
+            unit.contains("Environment=\"BRAINBOW_ROOT=/opt/brb\""),
             "{unit}"
         );
+        assert!(!unit.contains("JWT_SECRET="), "密钥不应进 unit: {unit}");
     }
 
     #[test]

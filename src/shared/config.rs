@@ -1,10 +1,10 @@
 //! 集中配置管理。
 //!
-//! 从环境变量加载应用配置，提供类型安全的访问方式。
+//! 从 TOML（或测试注入的键值）加载应用配置，提供类型安全的访问方式。
 //! 消除 `main.rs` 和各模块中散落的 `std::env::var()` 调用。
 
 use std::net::{IpAddr, Ipv4Addr};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// 应用配置
 #[derive(Debug, Clone)]
@@ -53,6 +53,54 @@ impl Config {
     /// `JWT_SECRET` 若未设置则自动生成随机值（启动时会打日志说明）。
     pub fn from_env() -> Self {
         Self::from_vars(|key| std::env::var(key))
+    }
+
+    /// 从 TOML 加载配置。
+    ///
+    /// 路径：`BRAINBOW_CONFIG` > debug 的 `config/app.dev.toml` >
+    /// `BRAINBOW_ROOT/config/app.toml`。密钥默认读同目录的 `secret.toml`，
+    /// 也可用 `BRAINBOW_SECRETS` 指定。除 `BRAINBOW_ROOT` 外不再回落进程环境。
+    pub fn load() -> Result<Self, Box<dyn std::error::Error>> {
+        let config_path = if let Some(path) = std::env::var_os("BRAINBOW_CONFIG") {
+            PathBuf::from(path)
+        } else if cfg!(debug_assertions) {
+            PathBuf::from("config/app.dev.toml")
+        } else {
+            let root = std::env::var_os("BRAINBOW_ROOT").ok_or_else(|| {
+                "缺少 BRAINBOW_CONFIG 或 BRAINBOW_ROOT，无法定位应用配置".to_string()
+            })?;
+            PathBuf::from(root).join("config/app.toml")
+        };
+
+        let app = crate::shared::config_file::read_app(&config_path)?;
+        let mut vars = crate::shared::config_file::to_map(app);
+
+        let secret_path = std::env::var_os("BRAINBOW_SECRETS")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| {
+                let name = if config_path.file_name().is_some_and(|n| n == "app.dev.toml") {
+                    "secret.dev.toml"
+                } else {
+                    "secret.toml"
+                };
+                config_path
+                    .parent()
+                    .unwrap_or_else(|| Path::new("."))
+                    .join(name)
+            });
+        if let Some(secret) = crate::shared::config_file::read_secret(&secret_path)? {
+            vars.insert("JWT_SECRET".into(), secret);
+        }
+
+        Ok(Self::from_vars(|key| {
+            if let Some(value) = vars.get(key) {
+                Ok(value.clone())
+            } else if key == "BRAINBOW_ROOT" {
+                std::env::var(key)
+            } else {
+                Err(std::env::VarError::NotPresent)
+            }
+        }))
     }
 
     /// 文件服务的上传目录（上传根目录下的 `file` 子目录）。

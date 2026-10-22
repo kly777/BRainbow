@@ -1,12 +1,9 @@
-//! `.env.prod` 解析与派生路径。
+//! TOML 配置的派生与校验。
 //!
-//! 取代 deploy.sh 的 `set -o allexport; source "$env_file"`：文件不再被 shell 求值，
-//! 所以值里出现空格 / `&` / `|` / 引号都不会破坏任何东西。
-//! （`source` 那条路上值必须写成 shell 安全的形式，而同一批值又要过
-//! `sed -e "s|@@X@@|$X|g"` 渲染模板 —— 值里带 `|` 或 `&` 会静默改坏 unit/Caddyfile。）
-//!
-//! 取值优先级与 `source` 保持一致：**文件里定义了的键，文件说了算**；
-//! 文件没定义的键回落到进程环境（对应 `WITH_FFPROBE=1 make deploy` 那种用法）。
+//! 原始值由 `config_file` 从 `config/*.toml` 展开成扁平键表；这里负责
+//! 必填项、数字/端口、路径派生与默认值。**不读进程环境**：`cargo xtask` 是
+//! `cargo run`，`.cargo/config.toml` 的 `[env]` 会把 `DATABASE_URL` 注进来，
+//! 读环境会让开发机的构建配置悄悄改掉部署配置。
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -14,12 +11,12 @@ use std::path::{Path, PathBuf};
 use crate::error::{Error, Result};
 use crate::ui;
 
-/// `.env.prod.example` 里的占位值：填了这个等于没填（deploy.sh 同样判它未设置）。
+/// `config/deploy.example.toml` 里的占位值：填了这个等于没填。
 const PLACEHOLDER_HOST: &str = "your-server-ip-or-domain.com";
 
 pub struct Config {
-    /// 实际读的配置文件（报错信息里要指路）。
-    pub env_file: PathBuf,
+    /// 实际读的密钥文件（报错信息里要指路）。
+    pub secret_file: PathBuf,
     /// 仓库根目录。
     pub project_dir: PathBuf,
 
@@ -59,6 +56,9 @@ pub struct Config {
     /// `BUILD_TARGET`：留空或 `native` 表示本机编译。
     pub build_target: Option<String>,
 
+    /// `WITH_FFPROBE`：是否把 ffprobe 随产物带上。
+    pub with_ffprobe: bool,
+
     /// 缺失时为 `None`。
     ///
     /// 只读命令不该因为一个跟它无关的密钥而失败，所以这里不校验；
@@ -71,7 +71,7 @@ impl std::fmt::Debug for Config {
     /// 就把它打出来。unit 文件之所以要 chmod 600，也是同一个理由。
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Config")
-            .field("env_file", &self.env_file)
+            .field("secret_file", &self.secret_file)
             .field("project_dir", &self.project_dir)
             .field("remote_host", &self.remote_host)
             .field("remote_user", &self.remote_user)
@@ -92,49 +92,40 @@ impl std::fmt::Debug for Config {
             .field("backup_retain_days", &self.backup_retain_days)
             .field("backup_retain_count", &self.backup_retain_count)
             .field("build_target", &self.build_target)
+            .field("with_ffprobe", &self.with_ffprobe)
             .field("jwt_secret", &self.jwt_secret.as_ref().map(|_| "<已设置>"))
             .finish()
     }
 }
 
 impl Config {
-    /// 读取 `.env.prod`（或 `--env-file` 指定的文件）。
-    pub fn load(env_file: Option<&Path>) -> Result<Self> {
+    /// 读取配置目录（默认 `<仓库根>/config`）。
+    pub fn load(config_dir: Option<&Path>) -> Result<Self> {
         let project_dir = project_dir();
-        let env_file = match env_file {
-            Some(p) => p.to_path_buf(),
-            None => project_dir.join(".env.prod"),
-        };
-        let text = std::fs::read_to_string(&env_file).map_err(|e| {
-            Error::io(
-                format!(
-                    "读取 {}（模板见 .env.prod.example，复制一份改名即可）",
-                    env_file.display()
-                ),
-                e,
-            )
-        })?;
-        Self::from_vars(parse_env(&text), env_file, project_dir)
+        let config_dir = config_dir
+            .map(Path::to_path_buf)
+            .unwrap_or_else(|| project_dir.join("config"));
+        let vars = crate::config_file::load(&config_dir)?;
+        let secret_file = config_dir.join("secret.toml");
+        Self::from_vars(vars, secret_file, project_dir)
     }
 
     /// 纯函数部分，便于单测。
     ///
-    /// **配置只来自 `.env.prod`（加约定派生），不读进程环境。** 这条是刻意的：
+    /// **配置只来自 `config/*.toml`（加约定派生），不读进程环境。** 这条是刻意的：
     /// `cargo xtask` 是 `cargo run`，而 `.cargo/config.toml` 的 `[env]` 会把
     /// `DATABASE_URL=sqlite:brainbow.db` 注进 xtask 进程 —— 读环境就等于让
-    /// "开发机的构建配置"悄悄改掉"部署配置"（部署会把数据库指到开发库的相对路径，
-    /// 而 `.env.prod` 里根本没写它）。任何在 shell 里 export 过的同名变量同理。
-    /// 要覆盖某一项，就写进 `.env.prod`。
+    /// "开发机的构建配置"悄悄改掉"部署配置"。任何在 shell 里 export 过的同名变量同理。
+    /// 要覆盖某一项，就写进对应的 TOML。
     fn from_vars(
         vars: BTreeMap<String, String>,
-        env_file: PathBuf,
+        secret_file: PathBuf,
         project_dir: PathBuf,
     ) -> Result<Self> {
         let lookup = |key: &str| lookup(&vars, key);
         let missing = |key: &str| {
             Error::msg(format!(
-                "缺少 {key}：请在 {} 里补上（模板见 .env.prod.example）",
-                env_file.display()
+                "缺少 {key}：请在 config/*.toml 里补上（模板见 config/*.example.toml）"
             ))
         };
         let required = |key: &str| lookup(key).ok_or_else(|| missing(key));
@@ -142,8 +133,7 @@ impl Config {
         let remote_host = required("REMOTE_HOST")?;
         if remote_host == PLACEHOLDER_HOST {
             return Err(Error::msg(format!(
-                "{} 里的 REMOTE_HOST 还是模板占位值（{PLACEHOLDER_HOST}），请填真实主机",
-                env_file.display()
+                "config/deploy.toml 里的 REMOTE_HOST 还是模板占位值（{PLACEHOLDER_HOST}），请填真实主机"
             )));
         }
         let remote_user = required("REMOTE_USER")?;
@@ -165,7 +155,7 @@ impl Config {
         let data_dir = format!("{remote_dir}/data");
 
         Ok(Self {
-            env_file,
+            secret_file,
             project_dir,
             remote_host,
             remote_user,
@@ -194,6 +184,8 @@ impl Config {
             backup_retain_days: number_u32(&vars, "BACKUP_RETAIN_DAYS", 30)?,
             backup_retain_count: number_u32(&vars, "BACKUP_RETAIN_COUNT", 20)? as usize,
             build_target: lookup("BUILD_TARGET"),
+            with_ffprobe: lookup("WITH_FFPROBE")
+                .is_some_and(|v| v == "1" || v.eq_ignore_ascii_case("true")),
             jwt_secret: lookup("JWT_SECRET"),
         })
     }
@@ -239,12 +231,21 @@ impl Config {
         format!("{}/tmp", self.remote_dir)
     }
 
+    /// 远端配置目录：`app.toml` + `secret.toml`。
+    pub fn config_dir(&self) -> String {
+        format!("{}/config", self.remote_dir)
+    }
+
+    pub fn secret_config_path(&self) -> String {
+        format!("{}/secret.toml", self.config_dir())
+    }
+
     /// 渲染 systemd unit 的路径。
     pub fn unit_path(&self) -> String {
         format!("/etc/systemd/system/{}.service", self.app_name)
     }
 
-    /// 取 JWT_SECRET；`generate` 为真时缺失就现场生成并写回 `.env.prod`。
+    /// 取 JWT_SECRET；`generate` 为真时缺失就现场生成并写回 `secret.toml`。
     ///
     /// 只有渲染 systemd unit 的路径会用到（unit 里含该密钥）。
     /// 把"写回配置文件"限制在这里，是为了不让 `just logs` 这种只读命令
@@ -256,15 +257,15 @@ impl Config {
         }
         if !generate {
             return Err(Error::msg(format!(
-                "缺少 JWT_SECRET：请在 {} 里补一行\n  JWT_SECRET=<openssl rand -hex 32 的输出>",
-                self.env_file.display()
+                "缺少 JWT_SECRET：请在 {} 的 [jwt] 下补 secret（openssl rand -hex 32 的输出）",
+                self.secret_file.display()
             )));
         }
         let secret = random_hex_32()?;
-        append_secret(&self.env_file, &secret)?;
+        write_secret_toml(&self.secret_file, &secret)?;
         ui::warn(&format!(
             "{} 里没有 JWT_SECRET：已生成并写回（重启后会话依然有效）",
-            self.env_file.display()
+            self.secret_file.display()
         ));
         self.jwt_secret = Some(secret.clone());
         Ok(secret)
@@ -278,45 +279,6 @@ fn project_dir() -> PathBuf {
         .parent()
         .unwrap_or_else(|| Path::new("."))
         .to_path_buf()
-}
-
-/// 解析 `KEY=VALUE` 行。忽略空行与 `#` 注释；容忍 `export ` 前缀与成对引号。
-///
-/// 刻意**不**剥离行内注释：`source` 也不会（未加引号的值里 `#` 之后的内容
-/// 在 bash 里同样属于值的一部分，除非前面有空白）。保持一致比"更聪明"重要。
-pub fn parse_env(text: &str) -> BTreeMap<String, String> {
-    let mut out = BTreeMap::new();
-    for raw in text.lines() {
-        let line = raw.trim();
-        if line.is_empty() || line.starts_with('#') {
-            continue;
-        }
-        let line = line
-            .strip_prefix("export ")
-            .map(str::trim_start)
-            .unwrap_or(line);
-        let Some((key, value)) = line.split_once('=') else {
-            continue;
-        };
-        let key = key.trim();
-        if key.is_empty() {
-            continue;
-        }
-        out.insert(key.to_string(), unquote(value.trim()).to_string());
-    }
-    out
-}
-
-/// 去掉成对的单/双引号（`.env` 惯例）。
-fn unquote(value: &str) -> &str {
-    let bytes = value.as_bytes();
-    if bytes.len() >= 2 {
-        let first = bytes[0];
-        if (first == b'"' || first == b'\'') && bytes[bytes.len() - 1] == first {
-            return &value[1..value.len() - 1];
-        }
-    }
-    value
 }
 
 /// 查找一个值：**只认文件**；空串视为未设置。
@@ -397,18 +359,36 @@ fn fill_random(buf: &mut [u8]) -> Result<()> {
     Ok(())
 }
 
-/// 把新生成的密钥追加到配置文件末尾（沿用 deploy.sh 的写回行为）。
-fn append_secret(env_file: &Path, secret: &str) -> Result<()> {
-    use std::io::Write;
-    let mut file = std::fs::OpenOptions::new()
-        .append(true)
-        .open(env_file)
-        .map_err(|e| Error::io(format!("追加 JWT_SECRET 到 {}", env_file.display()), e))?;
-    writeln!(
-        file,
-        "\n# 部署时自动生成的 JWT 密钥（勿改，重启后会话保持有效）\nJWT_SECRET={secret}"
-    )
-    .map_err(|e| Error::io(format!("写入 {}", env_file.display()), e))?;
+/// 把新生成的密钥写入 secret.toml（保留文件里的其他键/注释）。
+fn write_secret_toml(path: &Path, secret: &str) -> Result<()> {
+    let text = if path.is_file() {
+        std::fs::read_to_string(path)
+            .map_err(|e| Error::io(format!("读取 {}", path.display()), e))?
+    } else {
+        "version = 1\n".to_string()
+    };
+    let mut doc: toml_edit::DocumentMut = text
+        .parse()
+        .map_err(|e| Error::msg(format!("解析 {} 失败：{e}", path.display())))?;
+    let table = doc.as_table_mut();
+    if !table.contains_key("version") {
+        table.insert("version", toml_edit::value(1));
+    }
+    if !table.contains_key("jwt") {
+        table.insert("jwt", toml_edit::Item::Table(toml_edit::Table::new()));
+    }
+    let jwt = table["jwt"]
+        .as_table_mut()
+        .ok_or_else(|| Error::msg(format!("{} 的 [jwt] 必须是表", path.display())))?;
+    jwt.insert("secret", toml_edit::value(secret));
+    std::fs::write(path, doc.to_string())
+        .map_err(|e| Error::io(format!("写入 {}", path.display()), e))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o600))
+            .map_err(|e| Error::io(format!("设置 {} 权限", path.display()), e))?;
+    }
     Ok(())
 }
 
@@ -432,7 +412,7 @@ impl Config {
         .into_iter()
         .map(|(k, v)| (k.to_string(), v.to_string()))
         .collect();
-        Self::from_vars(vars, root.join(".env.prod"), root).expect("测试配置应当成立")
+        Self::from_vars(vars, root.join("config/secret.toml"), root).expect("测试配置应当成立")
     }
 }
 
@@ -458,44 +438,9 @@ mod tests {
     fn build(pairs: &[(&str, &str)]) -> Result<Config> {
         Config::from_vars(
             vars(pairs),
-            PathBuf::from("/repo/.env.prod"),
+            PathBuf::from("/repo/config/secret.toml"),
             PathBuf::from("/repo"),
         )
-    }
-
-    #[test]
-    fn parses_comments_quotes_and_export() {
-        let parsed = parse_env(
-            "# 注释\r\n\
-             \n\
-             DOMAIN=\"brainbow.top\"\n\
-             SERVICE_PORT=8080\n\
-             export BIND_HOST='127.0.0.1'\n\
-             CORS_ALLOW_ORIGIN=https://a.top,http://a.top\n\
-             这行没有等号\n\
-             =缺键名\n",
-        );
-        assert_eq!(
-            parsed.get("DOMAIN").map(String::as_str),
-            Some("brainbow.top")
-        );
-        assert_eq!(parsed.get("SERVICE_PORT").map(String::as_str), Some("8080"));
-        assert_eq!(
-            parsed.get("BIND_HOST").map(String::as_str),
-            Some("127.0.0.1")
-        );
-        assert_eq!(parsed.len(), 4);
-    }
-
-    #[test]
-    fn keeps_shell_metacharacters_intact() {
-        // 这几个字符正是 sed "s|@@X@@|$X|g" 渲染会咬坏的东西。
-        let parsed = parse_env("CORS_ALLOW_ORIGIN=https://a.top?a=1&b=2|c\nNAME=含 空格 的值\n");
-        assert_eq!(
-            parsed.get("CORS_ALLOW_ORIGIN").map(String::as_str),
-            Some("https://a.top?a=1&b=2|c")
-        );
-        assert_eq!(parsed.get("NAME").map(String::as_str), Some("含 空格 的值"));
     }
 
     #[test]
@@ -583,7 +528,7 @@ mod tests {
             .require_jwt_secret(false)
             .expect_err("缺失且不允许生成时应当报错");
         let text = err.to_string();
-        assert!(text.contains("/repo/.env.prod"), "{text}");
+        assert!(text.contains("/repo/config/secret.toml"), "{text}");
         assert!(text.contains("openssl rand -hex 32"), "{text}");
     }
 
@@ -643,7 +588,7 @@ mod tests {
         pairs.push(("SERVICE_PORT".into(), "8080x".into()));
         let err = Config::from_vars(
             pairs.into_iter().collect(),
-            PathBuf::from("/repo/.env.prod"),
+            PathBuf::from("/repo/config/secret.toml"),
             PathBuf::from("/repo"),
         )
         .expect_err("非法端口应当报错");
@@ -671,7 +616,7 @@ mod tests {
         pairs.push(("BACKUP_RETAIN_DAYS".into(), "很多天".into()));
         let err = Config::from_vars(
             pairs.into_iter().collect(),
-            PathBuf::from("/repo/.env.prod"),
+            PathBuf::from("/repo/config/secret.toml"),
             PathBuf::from("/repo"),
         )
         .expect_err("非整数应当报错");
@@ -687,7 +632,7 @@ mod tests {
         pairs.push(("SERVICE_PORT".into(), "9090".into()));
         let cfg = Config::from_vars(
             pairs.into_iter().collect(),
-            PathBuf::from("/repo/.env.prod"),
+            PathBuf::from("/repo/config/secret.toml"),
             PathBuf::from("/repo"),
         )
         .expect("配置应当成立");
@@ -696,7 +641,7 @@ mod tests {
         // 没写的走约定/默认值 —— 而不是"碰巧在环境里"的东西
         let cfg = Config::from_vars(
             minimal(),
-            PathBuf::from("/repo/.env.prod"),
+            PathBuf::from("/repo/config/secret.toml"),
             PathBuf::from("/repo"),
         )
         .expect("配置应当成立");
@@ -711,7 +656,7 @@ mod tests {
         pairs.push(("JWT_SECRET".into(), "   ".into()));
         let cfg = Config::from_vars(
             pairs.into_iter().collect(),
-            PathBuf::from("/repo/.env.prod"),
+            PathBuf::from("/repo/config/secret.toml"),
             PathBuf::from("/repo"),
         )
         .expect("配置应当成立");

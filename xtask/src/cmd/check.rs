@@ -114,16 +114,23 @@ pub fn run(cfg: &Config, remote: &Remote) -> Result<()> {
         Err(e) => report.warn(&format!("libc 兼容性检查跑不起来 —— {e}")),
     }
 
-    // ── 9. JWT_SECRET 已配置（只告警）──
-    // 只有渲染 systemd unit 的部署路径需要它（unit 里要写进去）。
-    // 放在这里是为了让"首次部署会被自动生成并写回 .env.prod"这件事在部署前就可见，
-    // 而不是等部署时才动那个文件。
-    match &cfg.jwt_secret {
-        Some(_) => report.pass("JWT_SECRET 已配置"),
-        None => report.warn(&format!(
-            "{} 里没有 JWT_SECRET（首次部署会自动生成并写回）",
-            cfg.env_file.display()
-        )),
+    // ── 9. 配置文件（只告警）──
+    let app_config = cfg.project_dir.join("config/app.prod.toml");
+    if app_config.is_file() {
+        report.pass("config/app.prod.toml 已就位");
+    } else {
+        report.warn(&format!(
+            "{} 不存在（从 config/app.prod.example.toml 复制）",
+            app_config.display()
+        ));
+    }
+    if cfg.secret_file.is_file() {
+        report.pass("config/secret.toml 已就位");
+    } else {
+        report.warn(&format!(
+            "{} 不存在（首次部署会自动生成并写回）",
+            cfg.secret_file.display()
+        ));
     }
 
     report.finish("环境检查通过")

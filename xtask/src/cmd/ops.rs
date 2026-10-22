@@ -55,10 +55,7 @@ pub fn run_render(cfg: &mut Config, what: RenderTarget) -> Result<()> {
             Ok(())
         }
         RenderTarget::Unit => {
-            let secret = cfg.require_jwt_secret(false)?;
-            let unit = render::systemd_unit(cfg, &secret)?;
-            // 密钥打码：要看的是结构，不是密钥本身
-            print!("{}", unit.replace(&secret, "<已隐藏>"));
+            print!("{}", render::systemd_unit(cfg)?);
             Ok(())
         }
     }

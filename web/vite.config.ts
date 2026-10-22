@@ -1,7 +1,9 @@
 /// <reference types="vite-plus/test" />
 
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
-import { defineConfig, loadEnv, type Plugin, lazyPlugins } from "vite-plus";
+import { parse } from "smol-toml";
+import { defineConfig, type Plugin, lazyPlugins } from "vite-plus";
 import solid from "vite-plugin-solid";
 import {
 	MODULE_KINDS,
@@ -20,13 +22,36 @@ function seoPlugin(siteUrl: string): Plugin {
 	};
 }
 
-export default defineConfig(({ command, mode }) => {
-	// 配置读取项目根目录的 .env.dev / .env.prod（package.json 用 --mode dev/prod 选择）
-	const envDir = fileURLToPath(new URL("..", import.meta.url));
-	const env = loadEnv(mode, envDir, "");
+type TomlConfig = {
+	site?: { url?: string };
+	frontend?: { port?: number; api_target?: string };
+};
 
-	// 站点域名：用于生成 sitemap.xml 的绝对 URL（VITE_SITE_URL，缺省回退生产域名）
-	const siteUrl = (env.VITE_SITE_URL ?? "https://brainbow.top").replace(
+export default defineConfig(({ command, mode }) => {
+	// 配置读取项目根目录的 config/app.<mode>.toml（package.json 用 --mode dev/prod 选择）。
+	// Vite 默认 mode 是 development/production；测试固定读 dev。
+	const configMode =
+		mode === "test" || mode === "development"
+			? "dev"
+			: mode === "production"
+				? "prod"
+				: mode;
+	const configUrl = new URL(
+		`../config/app.${configMode}.toml`,
+		import.meta.url,
+	);
+	const configPath = fileURLToPath(configUrl);
+	let fileConfig: TomlConfig = {};
+	if (existsSync(configPath)) {
+		fileConfig = parse(readFileSync(configPath, "utf8")) as TomlConfig;
+	} else if (mode !== "test") {
+		throw new Error(
+			`缺少 ${configPath}：从 config/app.${configMode}.example.toml 复制一份`,
+		);
+	}
+
+	// 站点域名：用于生成 sitemap.xml 的绝对 URL
+	const siteUrl = (fileConfig.site?.url ?? "https://brainbow.top").replace(
 		/\/+$/,
 		"",
 	);
@@ -46,13 +71,15 @@ export default defineConfig(({ command, mode }) => {
 		]),
 	);
 
-	// 开发服务器端口与后端代理目标（VITE_PORT / VITE_API_TARGET）
-	const port = Number(env.VITE_PORT ?? 3001);
+	// 开发服务器端口与后端代理目标
+	const port = Number(fileConfig.frontend?.port ?? 3001);
 	// 配置 fail-fast：端口非法时立即报错，而不是静默回退
 	if (!Number.isInteger(port) || port <= 0 || port > 65535) {
-		throw new Error(`VITE_PORT 无效: ${env.VITE_PORT}`);
+		throw new Error(
+			`config/app.${configMode}.toml 的 frontend.port 无效: ${port}`,
+		);
 	}
-	const apiTarget = env.VITE_API_TARGET ?? "http://localhost:3000";
+	const apiTarget = fileConfig.frontend?.api_target ?? "http://localhost:3000";
 
 	// vitest 以 `mode: "test"` 运行（`vp test run` 不带 --mode）。
 	//
@@ -126,7 +153,6 @@ export default defineConfig(({ command, mode }) => {
 			options: { typeAware: true, typeCheck: true },
 		},
 		plugins: lazyPlugins(() => [solid({ hot: !isTest }), seoPlugin(siteUrl)]),
-		envDir,
 
 		css: {
 			modules: {

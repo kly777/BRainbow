@@ -81,11 +81,6 @@ async fn shutdown_signal() {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 开发构建自动加载根目录 .env.dev（生产由 systemd 注入环境变量，不读文件）
-    if cfg!(debug_assertions) {
-        dotenvy::from_filename(".env.dev").ok();
-    }
-
     init_logging();
 
     // 命令行模式：无参数 = 启动服务；--check = 只读自检；--help = 用法
@@ -102,8 +97,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    // 加载配置
-    let config = Config::from_env();
+    // 加载 TOML 配置（BRAINBOW_CONFIG；debug 缺省 config/app.dev.toml）
+    let config = Config::load()?;
 
     // 连接数据库：PRAGMA 约定集中在 db::connect（外键显式开启 + busy_timeout + WAL/NORMAL）
     let options = db::connect::connect_options(&config.database_url)?;

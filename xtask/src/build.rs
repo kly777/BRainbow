@@ -537,8 +537,8 @@ fn bundle_ffmpeg(cfg: &Config) -> Result<()> {
     ));
 
     // ffprobe 默认不发：各自 ~77MB，而它只负责给"浏览器读不出容器"的视频
-    // 回填时长。要它就 WITH_FFPROBE=1。
-    let wants_ffprobe = std::env::var("WITH_FFPROBE").is_ok_and(|value| value == "1");
+    // 回填时长。要它就 config/build.toml 的 with_ffprobe = true。
+    let wants_ffprobe = cfg.with_ffprobe;
     let ffprobe = vendor.join("ffprobe");
     if wants_ffprobe && local::is_executable(&ffprobe) {
         local::copy_file(&ffprobe, &bin.join("ffprobe"))?;

@@ -21,7 +21,7 @@ use chrono::NaiveDateTime;
 use crate::config::Config;
 use crate::db::utc_stamp;
 use crate::error::{Error, Result};
-use crate::remote::{Remote, path_of, sh_quote};
+use crate::remote::{Remote, glob_in, path_of, sh_quote};
 use crate::stamp;
 use crate::ui;
 
@@ -190,6 +190,24 @@ pub fn restore_code(cfg: &Config, remote: &Remote, stem: &str) -> Result<()> {
             sh_quote(&live)
         ))?;
         remote.ok(&format!("rm -rf {}", sh_quote(&old)))?;
+    }
+
+    // 新备份里带 config/；老备份没有这一项就保持现状。
+    let staged_config = path_of(&staging, "config");
+    if remote.exists(&staged_config) {
+        let live_config = cfg.config_dir();
+        remote.ok(&format!(
+            "mkdir -p {} && mv -f {} {}",
+            sh_quote(&live_config),
+            glob_in(&staged_config, "*"),
+            sh_quote(&live_config)
+        ))?;
+        remote.ok(&format!(
+            "chmod 700 {dir} && chmod 644 {app} && chmod 600 {secret}",
+            dir = sh_quote(&live_config),
+            app = sh_quote(&path_of(&live_config, "app.toml")),
+            secret = sh_quote(&path_of(&live_config, "secret.toml"))
+        ))?;
     }
 
     let _ = remote.ok(&format!("rm -rf {}", sh_quote(&staging)));

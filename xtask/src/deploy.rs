@@ -291,6 +291,10 @@ struct Payload<'a> {
     /// `build/REVISION` → 归档里的 `REVISION`（本次构建是哪个 git 版本）。
     /// 老产物可能没有这个文件，所以是 `Option`。
     revision: Option<PathBuf>,
+    /// 本地 `config/app.prod.toml` → 归档里的 `config/app.toml`。
+    config_app: PathBuf,
+    /// 本地 `config/secret.toml` → 归档里的 `config/secret.toml`。
+    config_secret: PathBuf,
 }
 
 /// 已上传到远端暂存目录、等着就位的产物。
@@ -331,6 +335,12 @@ fn write_payload(
             .append_path_with_name(revision, local::REVISION_FILE)
             .map_err(|e| Error::io(format!("打包 {}", revision.display()), e))?;
     }
+    archive
+        .append_path_with_name(&payload.config_app, "config/app.toml")
+        .map_err(|e| Error::io("打包 config/app.toml", e))?;
+    archive
+        .append_path_with_name(&payload.config_secret, "config/secret.toml")
+        .map_err(|e| Error::io("打包 config/secret.toml", e))?;
     Ok(())
 }
 
@@ -408,6 +418,13 @@ pub fn run(cfg: &mut Config, remote: &Remote) -> Result<()> {
             dist.join("index.html").display()
         )));
     }
+    let app_config = cfg.project_dir.join("config/app.prod.toml");
+    if !app_config.is_file() {
+        return Err(Error::msg(format!(
+            "应用配置 {} 不存在：从 config/app.prod.example.toml 复制一份",
+            app_config.display()
+        )));
+    }
 
     // 动远端之前先确认这个二进制在那台机器上跑得起来：libc 不匹配的话
     // 服务已经停了、备份已经做了才会发现（真实踩过一次）。
@@ -426,14 +443,15 @@ pub fn run(cfg: &mut Config, remote: &Remote) -> Result<()> {
         ui::field("版本", &revision);
     }
 
-    // JWT_SECRET：只有这条路径会生成并写回 .env.prod
-    let jwt_secret = cfg.require_jwt_secret(true)?;
+    // JWT_SECRET：只有这条路径会生成并写回 config/secret.toml
+    // 首次部署时生成并写回 secret.toml；它随 config/ 一起上传。
+    cfg.require_jwt_secret(true)?;
 
     // 模板先在本地渲染好（纯字符串替换 + 占位符残留断言），
     // 失败在部署开始之前就发生。
     let plan = Plan {
         timestamp: utc_stamp(),
-        unit: render::systemd_unit(cfg, &jwt_secret)?,
+        unit: render::systemd_unit(cfg)?,
         caddyfile: render::caddyfile(cfg)?,
     };
 
@@ -558,16 +576,26 @@ impl Deploy<'_> {
         Ok(())
     }
 
-    /// 代码归档：只含 `brainbow` + `dist/`（不含数据库，也不含 76MB 的 ffmpeg）。
+    /// 代码归档：含 `brainbow` + `dist/` + `config/`（不含数据库/ffmpeg）。
     ///
-    /// 失败只告警：数据库备份才是硬要求，代码备份缺了不该拦住部署。
+    /// 归档里的路径统一成 `brainbow` / `dist/…` / `config/…`（用 GNU tar 的
+    /// `--transform` 去掉 `service/` 前缀），这样回滚既能恢复旧产物，也能
+    /// 恢复与新二进制匹配的配置。失败只告警：数据库备份才是硬要求。
     fn code_archive(&self) -> Result<()> {
         let name = stamp::code_filename(&self.plan.timestamp);
         let dest = format!("{}/{}", self.cfg.backup_dir, name);
+        let config_dir = self.cfg.config_dir();
+        let with_config = self.remote.is_dry_run() || self.remote.exists(&config_dir);
+        let paths = if with_config {
+            "service/brainbow service/dist/ config"
+        } else {
+            "service/brainbow service/dist/"
+        };
         let cmd = format!(
-            "tar -czf {} -C {} brainbow dist/",
+            "tar -czf {} -C {} --transform 's,^service/,,' {}",
             sh_quote(&dest),
-            sh_quote(&self.cfg.service_dir)
+            sh_quote(&self.cfg.remote_dir),
+            paths
         );
         match self.remote.ok(&cmd) {
             Ok(()) => {
@@ -621,6 +649,8 @@ impl Deploy<'_> {
             ship_bin,
             // 没有就不带（老产物 / 手工塞的 build/），部署照常
             revision: revision.is_file().then_some(revision),
+            config_app: self.cfg.project_dir.join("config/app.prod.toml"),
+            config_secret: self.cfg.secret_file.clone(),
         };
         self.remote.send_tar(
             &format!("tar -xzf - -C {}", sh_quote(&staging)),
@@ -673,6 +703,24 @@ impl Deploy<'_> {
         ))?;
         activate_dist(self.cfg, self.remote, staging)?;
 
+        // 配置跟二进制一起就位：unit 只指向 config/ 下的两个文件。
+        let live_config = self.cfg.config_dir();
+        let staged_config = path_of(staging, "config");
+        if self.remote.is_dry_run() || self.remote.exists(&staged_config) {
+            self.remote.ok(&format!(
+                "mkdir -p {} && mv -f {} {}",
+                sh_quote(&live_config),
+                glob_in(&staged_config, "*"),
+                sh_quote(&live_config)
+            ))?;
+            self.remote.ok(&format!(
+                "chmod 700 {dir} && chmod 644 {app} && chmod 600 {secret}",
+                dir = sh_quote(&live_config),
+                app = sh_quote(&path_of(&live_config, "app.toml")),
+                secret = sh_quote(&path_of(&live_config, "secret.toml"))
+            ))?;
+        }
+
         let staged_bin = path_of(staging, "bin");
         if !staged.bin.is_empty() && (self.remote.is_dry_run() || self.remote.exists(&staged_bin)) {
             let bin_dir = path_of(&self.cfg.service_dir, "bin");
@@ -702,7 +750,7 @@ impl Deploy<'_> {
     /// 本地有哪些 `bin/` 文件要随产物走（取决于 WITH_FFPROBE）。
     fn bin_files(&self) -> Vec<(PathBuf, String)> {
         let vendor = self.cfg.project_dir.join("vendor/ffmpeg/bin");
-        let wants_ffprobe = std::env::var("WITH_FFPROBE").is_ok_and(|value| value == "1");
+        let wants_ffprobe = self.cfg.with_ffprobe;
         [("ffmpeg", true), ("ffprobe", wants_ffprobe)]
             .into_iter()
             .filter(|(_, wanted)| *wanted)
@@ -759,7 +807,7 @@ impl Deploy<'_> {
         let unit_path = self.cfg.unit_path();
         self.remote
             .write_file_sudo(&unit_path, self.plan.unit.as_bytes(), "systemd unit")?;
-        // unit 里含 JWT 密钥，限 root 可读
+        // unit 只含路径；仍限 root 可读，避免暴露远端布局
         self.remote
             .ok(&format!("sudo chmod 600 {}", sh_quote(&unit_path)))?;
         Ok(())
@@ -938,6 +986,9 @@ mod tests {
         let _ = std::fs::remove_dir_all(&root);
         std::fs::create_dir_all(build.join("dist/assets")).expect("建目录");
         std::fs::create_dir_all(build.join("bin")).expect("建目录");
+        std::fs::create_dir_all(root.join("config")).expect("建配置目录");
+        std::fs::write(root.join("config/app.toml"), "version = 1\n").expect("写配置");
+        std::fs::write(root.join("config/secret.toml"), "version = 1\n").expect("写密钥");
         std::fs::write(build.join("brainbow"), vec![0u8; 1024]).expect("写");
         std::fs::write(build.join("dist/index.html"), b"<html>").expect("写");
         std::fs::write(build.join("dist/assets/a.js"), b"console.log(1)").expect("写");
@@ -971,6 +1022,8 @@ mod tests {
             bin: &files,
             ship_bin: true,
             revision: Some(build.join(local::REVISION_FILE)),
+            config_app: root.join("config/app.toml"),
+            config_secret: root.join("config/secret.toml"),
         };
 
         let mut buf = Vec::new();
@@ -1002,6 +1055,8 @@ mod tests {
                 "REVISION",
                 "bin/ffmpeg",
                 "brainbow",
+                "config/app.toml",
+                "config/secret.toml",
                 "dist/",
                 "dist/assets",
                 "dist/assets/a.js",
@@ -1103,6 +1158,8 @@ mod tests {
             ship_bin: false,
             // 老产物没有 REVISION：那一项也不该出现在归档里
             revision: None,
+            config_app: root.join("config/app.toml"),
+            config_secret: root.join("config/secret.toml"),
         };
 
         let mut buf = Vec::new();
@@ -1149,6 +1206,8 @@ mod tests {
             bin: &files,
             ship_bin: true,
             revision: Some(build.join(local::REVISION_FILE)),
+            config_app: root.join("config/app.toml"),
+            config_secret: root.join("config/secret.toml"),
         };
 
         let mut buf = Vec::new();

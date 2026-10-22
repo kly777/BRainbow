@@ -16,6 +16,7 @@ mod caddy;
 mod cmd;
 mod compat;
 mod config;
+mod config_file;
 mod db;
 mod deploy;
 mod devel;
@@ -51,9 +52,9 @@ struct Cli {
     #[arg(long, global = true)]
     dry_run: bool,
 
-    /// 配置文件（默认 <仓库根>/.env.prod）
-    #[arg(long, global = true, value_name = "FILE")]
-    env_file: Option<PathBuf>,
+    /// 配置目录（默认 <仓库根>/config）
+    #[arg(long, global = true, value_name = "DIR")]
+    config_dir: Option<PathBuf>,
 
     #[command(subcommand)]
     command: Command,
@@ -190,7 +191,7 @@ fn main() -> ExitCode {
 }
 
 fn run(cli: Cli) -> Result<()> {
-    let mut cfg = Config::load(cli.env_file.as_deref())?;
+    let mut cfg = Config::load(cli.config_dir.as_deref())?;
     let remote = Remote::new(&cfg, cli.dry_run);
     match cli.command {
         Command::Build { target } => build::run_build(&cfg, target.as_deref()),

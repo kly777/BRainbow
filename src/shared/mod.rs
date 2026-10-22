@@ -10,6 +10,7 @@ pub mod actor;
 pub mod batch;
 pub mod claims;
 pub mod config;
+pub mod config_file;
 pub mod csv;
 pub mod db_query;
 pub mod error_types;

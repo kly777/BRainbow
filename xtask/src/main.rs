@@ -104,6 +104,8 @@ enum Command {
     // ── 部署与运维 ──
     /// 仅部署前端：不停服、不动 unit、不备份数据库
     DeployWeb,
+    /// 仅同步 app.toml + secret.toml 并重启：不传二进制、不备份数据库
+    DeployConfig,
     /// 只同步 Caddy 配置并重载（改 deploy/Caddyfile 后用）
     Caddy,
     /// 回滚：[时间戳] 精确指定，缺省用最新备份；数据库那部分要确认
@@ -206,6 +208,7 @@ fn run(cli: Cli) -> Result<()> {
         Command::Health => cmd::health::run(&cfg, &remote),
         Command::ListBackups => cmd::backups::run(&cfg, &remote),
         Command::DeployWeb => deploy::run_deploy_web(&cfg, &remote),
+        Command::DeployConfig => deploy::run_deploy_config(&cfg, &remote),
         Command::Caddy => cmd::ops::run_caddy(&cfg, &remote),
         Command::Rollback { stamp, yes } => cmd::ops::run_rollback(&cfg, &remote, stamp, yes),
         Command::DbCheck => cmd::ops::run_db_check(&cfg, &remote),

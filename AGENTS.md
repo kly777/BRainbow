@@ -3,7 +3,7 @@
 ## 硬约束（用户偏好，必须遵守）
 
 - **禁止擅自 git commit / push**：除非用户明确要求
-- **禁止擅自部署/远端操作**：`just deploy` / `deploy-web` / `db-push` / `rollback` 必须用户明确许可
+- **禁止擅自部署/远端操作**：`just deploy` / `deploy-web` / `deploy-config` / `db-push` / `rollback` 必须用户明确许可
 - **禁止自写外部测试脚本**：不得为验证目的在仓库外创建临时脚本；用项目已有测试体系
 - **禁止用脚本编辑文件（含批量替换）**：`perl -pi` / `python` / `sed -i` / `awk` / `truncate` / `echo >` 之类的"就地改文件"一律不许用 —— **改文件只能用编辑器工具（Edit / Write）**，一处一处改。项目自带的格式化/lint 工具（`cargo fmt`、`cargo clippy --fix`、`pnpm run lint`）属于例外，它们本来就是项目工作流的一部分
 - **逐步提交**：用户偏好小步改动、每阶段验证（不强制，但尽量）
@@ -30,6 +30,7 @@ just check            # 部署前环境检查：SSH / 免密 sudo 白名单 / Ca
 just health|status|info|logs|list-backups
 just caddy            # 仅同步 Caddy 配置并重载（不停服）—— 改 deploy/Caddyfile 后用这个
 just deploy-web       # 仅前端（不停服、不动 unit）
+just deploy-config    # 仅配置（不传二进制、不备份数据库）
 just rollback [时间戳] [--yes] | db-pull | db-push | db-backup | db-check | db-optimize | backup-prune
 just render unit|caddy # 打印渲染结果（可与现网逐字节 diff）
 just fmt|lint|test|test-web|sqlx-prepare|fetch-ffmpeg

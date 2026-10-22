@@ -117,6 +117,10 @@ deploy *args:
 deploy-web *args:
 	@cargo xtask deploy-web {{args}}
 
+# 仅同步 app.toml + secret.toml 并重启：不传二进制、不备份数据库
+deploy-config *args:
+	@cargo xtask deploy-config {{args}}
+
 # 只同步 Caddy 配置并重载（改 deploy/Caddyfile 后用）
 caddy *args:
 	@cargo xtask caddy {{args}}

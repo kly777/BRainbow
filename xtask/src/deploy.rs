@@ -126,6 +126,103 @@ pub fn run_deploy_web(cfg: &Config, remote: &Remote) -> Result<()> {
     Ok(())
 }
 
+/// `deploy-config`：只同步 `app.toml` + `secret.toml`，重启服务并同步 unit/Caddy。
+///
+/// 不传二进制、不备份数据库、不重建前端 —— 配置变更通常只有几 KB，走完整
+/// `deploy` 会白传 37MB、白备 246MB。代价是**没有自动回滚**；配置改错时
+/// 用 `just logs` 看原因，修好再跑一次（或从备份取回旧配置）。
+pub fn run_deploy_config(cfg: &Config, remote: &Remote) -> Result<()> {
+    ui::banner(&format!(
+        "仅部署配置 {} → {}",
+        cfg.app_name, cfg.remote_host
+    ));
+
+    let app = cfg.project_dir.join("config/app.prod.toml");
+    if !app.is_file() {
+        return Err(Error::msg(format!(
+            "{} 不存在：从 config/app.prod.example.toml 复制一份",
+            app.display()
+        )));
+    }
+    if !cfg.secret_file.is_file() {
+        return Err(Error::msg(format!(
+            "密钥文件 {} 不存在：先补上 [jwt].secret",
+            cfg.secret_file.display()
+        )));
+    }
+    let app_bytes =
+        std::fs::read(&app).map_err(|e| Error::io(format!("读取 {}", app.display()), e))?;
+    let secret_bytes = std::fs::read(&cfg.secret_file)
+        .map_err(|e| Error::io(format!("读取 {}", cfg.secret_file.display()), e))?;
+
+    let unit = render::systemd_unit(cfg)?;
+    let caddyfile = render::caddyfile(cfg)?;
+
+    let staging = format!("{}/config_{}", cfg.remote_tmp_dir(), utc_stamp());
+    remote.ok(&format!("mkdir -p {}", sh_quote(&cfg.remote_tmp_dir())))?;
+    sweep_stale_staging(cfg, remote);
+    remote.ok(&format!(
+        "rm -rf {s} && mkdir -p {s}",
+        s = sh_quote(&staging)
+    ))?;
+    remote.send_stdin(
+        &format!("cat > {}", sh_quote(&path_of(&staging, "app.toml"))),
+        &app_bytes,
+        "应用配置",
+    )?;
+    remote.send_stdin(
+        &format!("cat > {}", sh_quote(&path_of(&staging, "secret.toml"))),
+        &secret_bytes,
+        "密钥配置",
+    )?;
+
+    if !remote.is_dry_run() {
+        for name in ["app.toml", "secret.toml"] {
+            let staged = path_of(&staging, name);
+            if !remote.condition(&format!("[ -s {} ]", sh_quote(&staged))) {
+                return Err(Error::msg(format!(
+                    "配置上传后 {staged} 为空/不存在（传输被截断？已中止）"
+                )));
+            }
+        }
+    }
+
+    let live = cfg.config_dir();
+    remote.ok(&format!(
+        "mkdir -p {} && mv -f {} {} && mv -f {} {}",
+        sh_quote(&live),
+        sh_quote(&path_of(&staging, "app.toml")),
+        sh_quote(&path_of(&live, "app.toml")),
+        sh_quote(&path_of(&staging, "secret.toml")),
+        sh_quote(&path_of(&live, "secret.toml"))
+    ))?;
+    remote.ok(&format!(
+        "chmod 700 {dir} && chmod 644 {app} && chmod 600 {secret}",
+        dir = sh_quote(&live),
+        app = sh_quote(&path_of(&live, "app.toml")),
+        secret = sh_quote(&path_of(&live, "secret.toml"))
+    ))?;
+    let _ = remote.ok(&format!("rm -rf {}", sh_quote(&staging)));
+
+    // unit 指向的路径可能新增；先装 unit，再重启服务。
+    let unit_path = cfg.unit_path();
+    remote.write_file_sudo(&unit_path, unit.as_bytes(), "systemd unit")?;
+    remote.ok(&format!("sudo chmod 600 {}", sh_quote(&unit_path)))?;
+    remote.ok("sudo systemctl daemon-reload")?;
+    remote.ok(&format!(
+        "sudo systemctl restart {}",
+        sh_quote(&cfg.app_name)
+    ))?;
+    wait_for_ready(cfg, remote)?;
+
+    // 端口/域名可能变了，Caddy 最后同步；失败时服务本身已经起来。
+    caddy::sync(cfg, remote, &caddyfile)?;
+    caddy::reload(remote)?;
+
+    ui::done("配置部署完成（未传二进制/未备份数据库）");
+    Ok(())
+}
+
 /// 产物比源码旧时提示一句。
 ///
 /// 老 `make deploy` 是「build + deploy」一条命令，`just` 这边拆成了两个
@@ -391,7 +488,7 @@ fn needs_db_restore(schema_before: Option<i64>, schema_now: Option<i64>) -> bool
 fn sweep_stale_staging(cfg: &Config, remote: &Remote) {
     let cmd = format!(
         "find {tmp} -mindepth 1 -maxdepth 1 -mtime +0 \
-         \\( -name 'deploy_*' -o -name 'web_*' -o -name 'rollback_*' \\) \
+         \\( -name 'deploy_*' -o -name 'web_*' -o -name 'rollback_*' -o -name 'config_*' \\) \
          -exec rm -rf {{}} + 2>/dev/null || true",
         tmp = sh_quote(&cfg.remote_tmp_dir())
     );

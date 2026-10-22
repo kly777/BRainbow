@@ -109,6 +109,7 @@ just build          # 前端 typecheck+vite 与后端 release 并行，组装 bu
 just deploy         # 上传（不停服）→ 停服 → 备份 → 就位 → 起服 → 自检（失败自动恢复）
 just deploy --dry-run   # 只打印将要执行的远端命令，不做任何改动
 just deploy-web     # 仅前端：不停服、不动 unit、不备份数据库
+just deploy-config  # 仅配置：不传二进制、不备份数据库，重启服务并同步 unit/Caddy
 just health         # 健康检查（4 项打分，任一不过退出码非零）
 just caddy          # 仅同步 Caddy 配置并重载（不停服）
 just rollback       # 回滚（just rollback / just rollback 20260921_193500 / --yes）
@@ -124,6 +125,14 @@ just render unit|caddy   # 打印渲染结果，可与现网逐字节 diff
 `just deploy` **不构建**（老 `make deploy` 是 build + deploy 一步）：产物比源码旧时
 它会提示一句（比的是产物里的 `REVISION` 与当前 HEAD，拿不准再看 mtime），但不会
 替你重新构建。顺序是 `just build && just deploy`。
+
+按改动类型选命令，避免每次都走全量：
+
+- 只改前端：`just deploy-web`（不停服、不传二进制、不备份数据库）。
+- 只改 `config/app.prod.toml` / `secret.toml`：`just deploy-config`（只传几 KB 配置，
+  重启服务并同步 unit/Caddy；**没有自动回滚**，配置改错时看 `just logs`）。
+- 只改 Caddyfile：`just caddy`。
+- 改后端/数据库/迁移：`just build && just deploy`。
 
 ## 线上跑的是哪个提交
 

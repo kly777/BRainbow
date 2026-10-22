@@ -47,13 +47,33 @@ impl Remote {
     }
 
     /// 供 dry-run 展示与测试使用：完整的 ssh argv。
+    ///
+    /// Unix 上默认复用同一条 SSH 连接：部署有 20+ 次远端命令，每次都重新
+    /// TCP + 认证既慢，也更容易在链路抖动时偶发 exit 255。ControlMaster
+    /// 的 socket 放临时目录，进程退出后再保留 60s；设置
+    /// BRAINBOW_SSH_NO_MULTIPLEX=1 可临时关掉做排障。
+    /// Windows OpenSSH 不支持 ControlMaster，所以只在 Unix 加。
     pub fn argv(&self, cmd: &str) -> Vec<String> {
-        vec![
-            "-p".to_string(),
-            self.port.to_string(),
-            self.target(),
-            cmd.to_string(),
-        ]
+        let mut args = Vec::new();
+        let multiplex = cfg!(unix) && std::env::var_os("BRAINBOW_SSH_NO_MULTIPLEX").is_none();
+        if multiplex {
+            let control = std::env::temp_dir().join("brainbow-ssh-%C");
+            for option in [
+                "ControlMaster=auto".to_string(),
+                format!("ControlPath={}", control.display()),
+                "ControlPersist=60s".to_string(),
+                "ServerAliveInterval=15".to_string(),
+                "ServerAliveCountMax=3".to_string(),
+            ] {
+                args.push("-o".to_string());
+                args.push(option);
+            }
+        }
+        args.push("-p".to_string());
+        args.push(self.port.to_string());
+        args.push(self.target());
+        args.push(cmd.to_string());
+        args
     }
 
     /// 是否 dry-run（只打印、不执行）。

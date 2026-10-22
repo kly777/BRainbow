@@ -1,0 +1,1483 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="paper">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BRainbow 架构图谱 · 从功能到实现</title>
+<meta name="description" content="BRainbow 的自顶向下架构分析：功能树、实现矩阵、依赖图、冗余清单与目标架构。">
+<style>
+/* ── BRainbow 架构图谱 · Swiss / International Style ──
+   单文件、零外部依赖；纸白 + 墨黑 + 一个信号色。 */
+:root{
+  --paper:#ffffff;
+  --paper-2:#f6f6f3;
+  --ink:#141414;
+  --ink-2:#555550;
+  --ink-3:#7b7b74;
+  --rule:#d9d9d2;
+  --rule-2:#141414;
+  --accent:#256b57;
+  --accent-2:#e9f1ed;
+  --red:#a33a32;
+  --amber:#986a1f;
+  --blue:#2f5f86;
+  --violet:#6c4f86;
+  --steel:#4f6b7a;
+  --s-core:var(--accent);
+  --s-support:var(--blue);
+  --s-overlap:var(--amber);
+  --s-legacy:#6b6b66;
+  --s-dead:var(--red);
+  --s-toy:var(--violet);
+  --s-infra:#3f3f3c;
+  --s-tool:var(--steel);
+  --fill-core:#e7f0eb;
+  --fill-support:#e8eef4;
+  --fill-overlap:#f3ecdd;
+  --fill-legacy:#eeeeea;
+  --fill-dead:#f4e3e1;
+  --fill-toy:#eee9f3;
+  --fill-infra:#ecece8;
+  --fill-tool:#e7edf0;
+  --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --mono:"JetBrains Mono","SFMono-Regular",Consolas,"Liberation Mono",monospace;
+  --max:1320px;
+}
+html[data-theme="midnight"]{
+  --paper:#171717;
+  --paper-2:#1e1e1e;
+  --ink:#f1f1ed;
+  --ink-2:#bcbcb5;
+  --ink-3:#8d8d86;
+  --rule:#343430;
+  --rule-2:#f1f1ed;
+  --accent:#83bdaa;
+  --accent-2:#1f2e29;
+  --red:#d98a82;
+  --amber:#d2a75d;
+  --blue:#8fb7d6;
+  --violet:#b59bc9;
+  --steel:#93b0bd;
+  --s-legacy:#a2a29b;
+  --s-infra:#d0d0c9;
+  --fill-core:#20312b;
+  --fill-support:#20303d;
+  --fill-overlap:#382f20;
+  --fill-legacy:#2b2b28;
+  --fill-dead:#3a2523;
+  --fill-toy:#2f2838;
+  --fill-infra:#2a2a27;
+  --fill-tool:#243239;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:20px}
+body{margin:0;overflow-x:hidden;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.6;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none;border-bottom:1px solid var(--rule)}
+a:hover{border-color:var(--accent);color:var(--accent)}
+button{font:inherit}
+h1,h2,h3,h4,p{margin-top:0}
+.mono{font-family:var(--mono);font-size:.82em}
+.small{font-size:12px;color:var(--ink-2)}
+.kicker{font-size:10px;line-height:1.4;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:650}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.skip{position:absolute;left:16px;top:-60px;background:var(--ink);color:var(--paper);padding:8px 12px;z-index:100}
+.skip:focus{top:12px}
+
+/* ── 报头 ── */
+.masthead{padding:26px 0 0}
+.masthead-top{display:flex;justify-content:space-between;gap:16px;align-items:baseline;border-bottom:1px solid var(--ink);padding-bottom:9px}
+.brand{font-size:13px;font-weight:750;letter-spacing:-.01em}
+.brand span{font-weight:400;color:var(--ink-3);letter-spacing:.02em}
+.masthead-meta{font-family:var(--mono);font-size:10px;color:var(--ink-3);text-align:right}
+.masthead-main{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:32px;align-items:end;padding:44px 0 30px}
+.masthead h1{font-size:clamp(40px,6.6vw,86px);line-height:.95;letter-spacing:-.055em;font-weight:760;margin:8px 0 18px;max-width:900px}
+.lede{font-size:16px;line-height:1.65;color:var(--ink-2);max-width:760px;margin:0}
+.masthead-side{border-left:1px solid var(--rule);padding-left:18px;font-size:11px;color:var(--ink-3);line-height:1.7}
+.masthead-side b{display:block;color:var(--ink);font-size:12px;margin-bottom:2px}
+.masthead-tools{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 0}
+.stat-row{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);margin-top:26px}
+.stat{padding:14px 12px;border-right:1px solid var(--rule)}
+.stat:last-child{border-right:0}
+.stat b{display:block;font-size:28px;line-height:1;letter-spacing:-.04em;font-weight:720}
+.stat span{display:block;font-size:9px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);margin-top:6px}
+.stat small{display:block;font-size:10px;color:var(--ink-2);margin-top:4px;line-height:1.35}
+
+/* ── 外壳 / 侧栏 ── */
+.shell{display:grid;grid-template-columns:188px minmax(0,1fr);gap:48px;max-width:var(--max);margin:0 auto;padding:0 24px;min-width:0}
+.rail{position:sticky;top:0;align-self:start;max-height:100vh;overflow:auto;padding:30px 0;min-width:0}
+.rail .kicker{margin-bottom:10px}
+.rail a{display:block;border-bottom:1px solid var(--rule);padding:7px 0 7px 0;font-size:12px;color:var(--ink-3)}
+.rail a.active{color:var(--ink);font-weight:700;box-shadow:inset 2px 0 0 var(--accent);padding-left:9px}
+.rail .rail-note{margin-top:18px;font-size:10px;color:var(--ink-3);line-height:1.6;border-top:1px solid var(--rule);padding-top:10px}
+
+/* ── 章节 ── */
+.sec{padding:54px 0 58px;border-top:1px solid var(--rule)}
+.sec-head{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:32px;align-items:end;margin-bottom:26px}
+.sec-head h2{font-size:clamp(26px,3.3vw,44px);line-height:1;letter-spacing:-.045em;margin:7px 0 0;font-weight:740}
+.sec-deck{font-size:12px;color:var(--ink-2);line-height:1.65;margin:0}
+.subhead{font-size:10px;text-transform:uppercase;letter-spacing:.13em;color:var(--ink-3);border-bottom:1px solid var(--ink);padding-bottom:6px;margin:30px 0 14px;font-weight:650}
+
+/* ── 结论摘要 ── */
+.findings{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--ink);border-bottom:1px solid var(--ink)}
+.finding{padding:16px 16px;border-right:1px solid var(--rule);min-width:0}
+.finding:nth-child(3n){border-right:0}
+.finding:nth-child(n+4){border-top:1px solid var(--rule)}
+.finding:last-child{border-right:0}
+.big-num{font-size:34px;line-height:1;letter-spacing:-.05em;font-weight:730;color:var(--accent)}
+.finding h3{font-size:12px;line-height:1.35;margin:8px 0 4px;font-weight:700}
+.finding p{font-size:11px;line-height:1.5;color:var(--ink-2);margin:0;overflow-wrap:anywhere}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{border:1px solid var(--rule);background:var(--paper);padding:18px}
+.card h3{font-size:14px;line-height:1.3;margin:0 0 8px;letter-spacing:-.01em}
+.card p{font-size:12px;line-height:1.6;color:var(--ink-2);margin:0 0 8px}
+.card p:last-child{margin-bottom:0}
+.card ul{margin:6px 0 0;padding-left:16px;font-size:12px;color:var(--ink-2)}
+.card li{margin:3px 0}
+.flow{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin:10px 0}
+.flow .arrow{color:var(--ink-3);font-family:var(--mono);font-size:10px}
+.flow .step-chip{border:1px solid var(--rule);padding:3px 7px;font-size:10px;line-height:1.4;background:var(--paper-2)}
+.ladder{display:grid;grid-template-columns:repeat(5,1fr);border:1px solid var(--ink);margin-top:22px}
+.rung{padding:13px 12px;border-right:1px solid var(--rule)}
+.rung:last-child{border-right:0}
+.rung b{display:block;font-family:var(--mono);font-size:9px;color:var(--accent);letter-spacing:.06em}
+.rung span{display:block;font-size:11px;line-height:1.45;margin-top:4px}
+.rung small{display:block;font-size:10px;color:var(--ink-3);margin-top:3px}
+
+/* ── 控件 ── */
+.toolbar{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin:0 0 14px}
+.btn{appearance:none;border:1px solid var(--ink);background:var(--paper);color:var(--ink);padding:6px 10px;font-size:10px;line-height:1.4;letter-spacing:.06em;text-transform:uppercase;cursor:pointer;border-radius:0}
+.btn:hover{background:var(--ink);color:var(--paper)}
+.btn[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.btn.ghost{border-color:var(--rule);color:var(--ink-2)}
+.btn.ghost:hover{border-color:var(--ink);color:var(--paper)}
+.input{appearance:none;border:1px solid var(--ink);background:var(--paper);color:var(--ink);padding:6px 9px;font-size:11px;min-width:210px;border-radius:0}
+.input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.check{display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--ink-2);cursor:pointer}
+.check input{accent-color:var(--accent)}
+
+/* ── 状态标签 ── */
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid currentColor;padding:1px 6px;font-size:9px;line-height:1.55;letter-spacing:.07em;text-transform:uppercase;white-space:nowrap;vertical-align:middle;background:transparent}
+.chip-core{color:var(--s-core)}
+.chip-support{color:var(--s-support)}
+.chip-overlap{color:var(--s-overlap)}
+.chip-legacy{color:var(--s-legacy)}
+.chip-dead{color:var(--s-dead)}
+.chip-toy{color:var(--s-toy)}
+.chip-infra{color:var(--s-infra)}
+.chip-tool{color:var(--s-tool)}
+.chip-plain{color:var(--ink-3)}
+
+/* ── 目标树 ── */
+.tree-layout{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px;align-items:start;min-width:0}
+.tree{min-width:0}
+.detail{min-width:0}
+.tree-root{border:1px solid var(--ink);padding:16px 18px;margin-bottom:14px;background:var(--paper)}
+.tree-root h3{font-size:20px;line-height:1.15;letter-spacing:-.03em;margin:4px 0 6px}
+.tree-root p{font-size:12px;color:var(--ink-2);margin:0}
+.tree{border-top:1px solid var(--ink)}
+.tnode{border-bottom:1px solid var(--rule)}
+.trow{display:grid;grid-template-columns:20px 54px minmax(0,1fr) 58px auto;gap:8px;align-items:center;padding:8px 4px;cursor:pointer}
+.trow:hover{background:var(--paper-2)}
+.trow[aria-selected="true"]{box-shadow:inset 3px 0 0 var(--accent);background:var(--paper-2)}
+.tcaret{font-family:var(--mono);font-size:12px;color:var(--ink-3);text-align:center;user-select:none}
+.tkicker{font-family:var(--mono);font-size:9px;color:var(--ink-3);letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
+.tlabel{font-size:13px;font-weight:620;line-height:1.35;min-width:0}
+.tloc{font-family:var(--mono);font-size:10px;color:var(--ink-3);text-align:right;white-space:nowrap}
+.tkids{margin-left:22px;border-left:1px solid var(--rule);padding-left:10px}
+.tstack{margin:2px 0 12px 76px;border-left:2px solid var(--accent);padding-left:10px}
+.impl{display:grid;grid-template-columns:38px minmax(0,1fr);gap:8px;padding:4px 0;border-bottom:1px dotted var(--rule);font-size:11px;line-height:1.45}
+.impl:last-child{border-bottom:0}
+.impl .type{font-family:var(--mono);font-size:9px;color:var(--accent);letter-spacing:.04em;text-transform:uppercase}
+.impl .path{display:block;font-family:var(--mono);font-size:9px;color:var(--ink-3);overflow-wrap:anywhere;margin-top:1px}
+.detail{position:sticky;top:16px;align-self:start;border:1px solid var(--ink);background:var(--paper-2);padding:16px;max-height:calc(100vh - 32px);overflow:auto}
+.detail h3{font-size:19px;line-height:1.15;letter-spacing:-.025em;margin:4px 0 8px}
+.detail h4{font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--ink-3);margin:14px 0 6px;border-top:1px solid var(--rule);padding-top:8px;font-weight:650}
+.detail p{font-size:11.5px;line-height:1.6;margin:0 0 7px;color:var(--ink-2)}
+.detail-meta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:9px}
+
+/* ── 表格 ── */
+.table-wrap{overflow:auto;border-top:1px solid var(--ink);margin-top:10px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);text-align:left;padding:8px;border-bottom:1px solid var(--ink);white-space:nowrap;vertical-align:bottom;font-weight:650}
+td{padding:8px;border-bottom:1px solid var(--rule);vertical-align:top;line-height:1.45}
+tbody tr:hover{background:var(--paper-2)}
+tr[data-status="dead"] td:first-child{box-shadow:inset 3px 0 0 var(--red)}
+tr[data-status="legacy"] td:first-child{box-shadow:inset 3px 0 0 var(--s-legacy)}
+tr[data-status="overlap"] td:first-child{box-shadow:inset 3px 0 0 var(--amber)}
+.num{text-align:right;font-family:var(--mono);font-size:11px;white-space:nowrap}
+.bar{height:6px;background:var(--rule);min-width:64px;margin-top:4px}
+.bar span{display:block;height:100%;background:var(--accent)}
+.tr-link{cursor:pointer}
+.note{font-size:10px;color:var(--ink-3);margin:8px 0 0;line-height:1.5}
+
+/* ── 热力图 ── */
+.heat-wrap{overflow:auto;border:1px solid var(--rule);padding:12px;background:var(--paper-2)}
+.heat{border-collapse:separate;border-spacing:2px;font-size:9px;min-width:780px}
+.heat th{border:0;padding:0}
+.heat th.col{writing-mode:vertical-rl;transform:rotate(180deg);height:72px;text-align:left;font-size:9px;letter-spacing:.03em;color:var(--ink-3);white-space:nowrap}
+.heat th.row{text-align:right;padding-right:6px;font-size:10px;white-space:nowrap;color:var(--ink-2);font-family:var(--mono)}
+.heat td{width:22px;height:22px;text-align:center;border:0;font-family:var(--mono);font-size:8px;cursor:pointer;color:var(--ink)}
+.heat td.zero{background:transparent;color:transparent;cursor:default}
+.heat td.self{background:var(--ink);opacity:.08;cursor:default}
+.heat td.cross{outline:1px solid var(--amber)}
+.heat td.violation-cell{outline:1px solid var(--red)}
+.heat-key{display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:var(--ink-2);margin-top:8px}
+.heat-key i{display:inline-block;width:10px;height:10px;margin-right:4px;vertical-align:-1px}
+
+/* ── 图表通用 ── */
+.chart{width:100%;height:auto;display:block;border:1px solid var(--rule);background:var(--paper-2)}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin:9px 0;font-size:10px;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:4px}
+.legend i{width:10px;height:10px;display:inline-block;border:1px solid currentColor}
+.map-detail{border:1px solid var(--rule);padding:12px 14px;margin-top:10px;font-size:11px;color:var(--ink-2);min-height:52px}
+
+/* ── 依赖图 ── */
+.dep-svg{width:100%;height:auto;border:1px solid var(--rule);background:var(--paper-2);touch-action:pan-y}
+.gnode{cursor:pointer}
+.gnode circle{stroke:var(--paper);stroke-width:2;transition:stroke .12s}
+.gnode:hover circle{stroke:var(--ink)}
+.gnode text{font-family:var(--sans);font-size:11px;fill:var(--ink);text-anchor:middle;pointer-events:none;font-weight:600}
+.gnode text.sub{font-family:var(--mono);font-size:9px;fill:var(--ink-3);font-weight:400}
+.gedge{fill:none;stroke:var(--ink-3);stroke-width:1.2;opacity:.55;transition:opacity .12s,stroke-width .12s}
+.gedge.domain{stroke:var(--accent)}
+.gedge.cycle{stroke:var(--amber)}
+.gedge.violation{stroke:var(--red)}
+.gedge.port{stroke:var(--blue)}
+.gedge.settings{stroke:var(--amber)}
+.gedge.registry{stroke:var(--blue);stroke-dasharray:4 3}
+.gedge.composition{stroke:var(--ink-3);stroke-dasharray:2 3;opacity:.22}
+.gedge.infra{stroke:var(--ink-3);stroke-dasharray:1 3;opacity:.18}
+.gedge.hl{opacity:1;stroke-width:2.2}
+.gnode.dim,.gedge.dim{opacity:.1}
+.edge-label{font-family:var(--mono);font-size:8px;fill:var(--ink-3);text-anchor:middle;pointer-events:none}
+.band-label{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;fill:var(--ink-3)}
+
+/* ── 重叠 / 取舍 / 目标 ── */
+.overlap-card{border:1px solid var(--rule);padding:16px;background:var(--paper)}
+.overlap-card h3{font-size:14px;margin:0 0 5px}
+.overlap-card .mini{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0}
+.overlap-card .mini span{border:1px solid var(--rule);padding:2px 6px;font-family:var(--mono);font-size:9px;color:var(--ink-2);background:var(--paper-2)}
+.overlap-card .verdict{font-size:11px;border-top:1px solid var(--rule);padding-top:8px;margin-top:8px;color:var(--ink)}
+.callout{border:1px solid var(--ink);background:var(--accent-2);padding:16px 18px}
+.callout h3{font-size:14px;margin:0 0 8px}
+.callout ul{margin:0;padding-left:16px;font-size:11px;color:var(--ink-2)}
+.callout li{margin:4px 0}
+.quad-svg{width:100%;height:auto;border:1px solid var(--rule);background:var(--paper-2)}
+.target-svg{width:100%;height:auto;border:1px solid var(--rule);background:var(--paper-2)}
+.timeline{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--ink);border-left:1px solid var(--rule);margin-top:16px}
+.step{padding:13px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);background:var(--paper)}
+.step .n{font-family:var(--mono);font-size:9px;color:var(--accent);letter-spacing:.08em}
+.step h4{font-size:12px;line-height:1.35;margin:3px 0 5px}
+.step p{font-size:10.5px;line-height:1.5;color:var(--ink-2);margin:0 0 7px}
+.step .meta{display:flex;gap:4px;flex-wrap:wrap}
+details{border-top:1px solid var(--rule);padding:9px 0}
+summary{cursor:pointer;font-size:12px;font-weight:650}
+summary:hover{color:var(--accent)}
+details .table-wrap{margin-top:8px}
+
+/* ── 页脚 / 打印 ── */
+.foot{border-top:1px solid var(--ink);margin-top:20px;padding:24px 0 40px}
+.foot p{font-size:10px;color:var(--ink-3);margin:0 0 4px}
+@media (max-width:1100px){
+  .masthead-main{grid-template-columns:1fr}
+  .masthead-side{border-left:0;padding-left:0;border-top:1px solid var(--rule);padding-top:12px}
+  .shell{display:block;width:100%;max-width:100%;min-width:0}
+  main{width:100%;max-width:100%;min-width:0}
+  .sec{min-width:0}
+  .rail{position:static;max-height:none;display:flex;gap:0;overflow-x:auto;padding:14px 0;border-bottom:1px solid var(--ink);min-width:0;width:100%;max-width:100%}
+  .rail .kicker,.rail .rail-note{display:none}
+  .rail a{border-bottom:0;border-right:1px solid var(--rule);padding:4px 12px 4px 0;white-space:nowrap}
+  .rail a.active{box-shadow:inset 0 -2px 0 var(--accent);padding-left:0}
+  .sec-head{grid-template-columns:1fr}
+  .tree-layout{grid-template-columns:1fr}
+  .detail{position:static;max-height:none}
+  .findings{grid-template-columns:repeat(2,1fr)}
+  .finding{border-bottom:1px solid var(--rule);border-top:0}
+  .finding:nth-child(3n){border-right:1px solid var(--rule)}
+  .finding:nth-child(2n){border-right:0}
+  .finding:nth-child(n+3){border-top:1px solid var(--rule)}
+  .stat-row{grid-template-columns:repeat(2,1fr)}
+  .stat{border-bottom:1px solid var(--rule)}
+  .grid-2,.grid-3{grid-template-columns:1fr}
+  .ladder{grid-template-columns:1fr}
+  .rung{border-right:0;border-bottom:1px solid var(--rule)}
+  .timeline{grid-template-columns:1fr}
+}
+@media (max-width:620px){
+  .wrap,.shell{padding:0 16px}
+  .masthead h1{font-size:40px}
+  .masthead-top{display:block}
+  .masthead-meta{text-align:left;margin-top:4px}
+  .findings{grid-template-columns:1fr}
+  .finding{border-right:0;border-top:1px solid var(--rule)}
+  .finding:first-child{border-top:0}
+  .stat-row{grid-template-columns:1fr}
+  .trow{grid-template-columns:18px 0 minmax(0,1fr) 48px auto;gap:6px}
+  .tkicker{visibility:hidden;font-size:0;letter-spacing:0;overflow:hidden}
+  .tstack{margin-left:32px}
+  .trow .chip{font-size:8px}
+  .sec{padding:38px 0 42px}
+}
+@media print{
+  .rail,.toolbar,.masthead-tools{display:none}
+  .shell{display:block;max-width:none}
+  .sec{break-inside:avoid;page-break-inside:avoid}
+  .detail{position:static;max-height:none}
+  a{border-bottom:0}
+  body{font-size:11px}
+}
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *{transition:none}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#main">跳到正文</a>
+<header class="masthead wrap" id="top">
+  <div class="masthead-top">
+    <div class="brand">BRainbow <span>/ Architecture Map</span></div>
+    <div class="masthead-meta">snapshot 3679c3dd · 2026-10-17 · working tree clean</div>
+  </div>
+  <div class="masthead-main">
+    <div>
+      <p class="kicker">Top-down · 功能 → 实现 → 依赖 → 取舍</p>
+      <h1>从功能到实现，<br>再到该砍的东西</h1>
+      <p class="lede">这份图谱不从目录开始，而从“用户最终能完成什么”开始：先拆出 4 条旅程与 12 个能力，再下钻到 61 个功能切片、159 个端点和 34 张表，最后用依赖图与证据表回答两个问题：<b>哪些实现其实没被需要</b>，<b>哪些依赖说不清楚</b>。</p>
+    </div>
+    <div class="masthead-side">
+      <b>读法</b>
+      01 先看五条判断<br>
+      02 在目标树里点开你关心的能力<br>
+      03 用依赖图和热力图找“说不清”<br>
+      04 在取舍清单里看证据与动作<br>
+      05 最后看目标架构与迁移顺序
+    </div>
+  </div>
+  <div class="stat-row" id="statRow"></div>
+  <div class="masthead-tools">
+    <button class="btn" id="themeBtn" type="button">切换明暗</button>
+    <button class="btn ghost" id="printBtn" type="button">打印 / 存 PDF</button>
+    <a class="btn ghost" href="#tree">直接看目标树</a>
+    <a class="btn ghost" href="#cut">直接看该砍什么</a>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="rail" id="rail" aria-label="章节导航">
+    <div class="kicker">Contents</div>
+    <a href="#summary" class="active">01 · 五条判断</a>
+    <a href="#tree">02 · 目标树</a>
+    <a href="#matrix">03 · 功能矩阵</a>
+    <a href="#treemap">04 · 代码分布</a>
+    <a href="#deps">05 · 依赖图</a>
+    <a href="#overlap">06 · 重叠与冗余</a>
+    <a href="#cut">07 · 该砍什么</a>
+    <a href="#target">08 · 目标架构</a>
+    <a href="#method">09 · 方法与附录</a>
+    <div class="rail-note">所有数字来自当前工作区。生产行数已去掉测试；证据都带文件:行。判断是分析，不是命令。</div>
+  </nav>
+
+  <main id="main">
+    <section class="sec" id="summary">
+      <div class="sec-head">
+        <div><p class="kicker">01 · Executive summary</p><h2>先看五条判断</h2></div>
+        <p class="sec-deck">BRainbow 不是单一知识库，而是一个“12 个工具 + 1 个外壳”的组合式 PKM。架构的强项是组合根与端口；弱项是同一件事的多套实现，以及几个从未接上的孤岛。</p>
+      </div>
+      <div class="findings" id="findings"></div>
+
+      <div class="subhead">四条用户旅程 · 产品真正承诺的东西</div>
+      <div class="grid-2" id="journeys"></div>
+
+      <div class="subhead">结构判断</div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>强项：三处“只写一次”</h3>
+          <ul>
+            <li><b>组合根</b>：<span class="mono">app/context.rs</span> 是唯一认识所有模块的地方；模块之间不互相 new。</li>
+            <li><b>SearchPort</b>：10 个 provider 并行聚合，新增搜索源不需要改聚合层。</li>
+            <li><b>单一声明 schema</b>：新库、老库、自检共用 <span class="mono">db/schema</span> 一份声明。</li>
+            <li><b>Actor</b>：admin / 普通用户的归属判据只有一处。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>弱项：同一件事的多套做法</h3>
+          <ul>
+            <li><b>标签</b>：<span class="mono">tag</span> / <span class="mono">file_tag</span> / <span class="mono">bookmark_tag</span> 三套表、三套服务、三套 UI。</li>
+            <li><b>文本</b>：card / chunk / text_note / reading_article / chat_node / bookmark / file.text_content / conv，八处存储。</li>
+            <li><b>检索</b>：模块内 FTS、全局 SearchPort、各域 search 端点、conv 遗留搜索、命令面板，五层入口。</li>
+            <li><b>AI</b>：前端拼 prompt 的 <span class="mono">/ai/chat</span> 与后端编排的 <span class="mono">/chat/.../chat</span> 两条路径。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="ladder" id="ladder"></div>
+    </section>
+
+    <section class="sec" id="tree">
+      <div class="sec-head">
+        <div><p class="kicker">02 · Top-down tree</p><h2>目标树：能力 → 功能 → 实现</h2></div>
+        <p class="sec-deck">L0 是产品目标，L1 是能力，L2 是功能切片；点开 L2 会看到它的实现栈（BE / FE / DB / INFRA / LOGIC）。状态是分析判断，不是代码事实。</p>
+      </div>
+      <div class="toolbar">
+        <input class="input" id="treeSearch" type="search" placeholder="搜索能力 / 功能 / 路径…" aria-label="搜索目标树">
+        <button class="btn" id="expandAll" type="button">展开全部</button>
+        <button class="btn" id="collapseAll" type="button">收起</button>
+        <button class="btn" id="coreOnly" type="button" aria-pressed="false">只看核心</button>
+      </div>
+      <div class="tree-layout">
+        <div class="tree" id="treeBody"></div>
+        <aside class="detail" id="treeDetail" aria-live="polite"></aside>
+      </div>
+    </section>
+
+    <section class="sec" id="matrix">
+      <div class="sec-head">
+        <div><p class="kicker">03 · Capability matrix</p><h2>功能 → 实现，一张表</h2></div>
+        <p class="sec-deck">生产行数（去掉测试）是复杂度的粗略代理；端点、表、依赖是结构事实。行按体量降序，点击行跳到目标树。</p>
+      </div>
+      <div class="table-wrap">
+        <table id="capTable">
+          <thead><tr><th>能力</th><th>模块</th><th>页面</th><th>端点</th><th>表</th><th>后端行</th><th>前端行</th><th>体量</th><th>依赖</th><th>判断</th></tr></thead>
+          <tbody id="capBody"></tbody>
+        </table>
+      </div>
+      <p class="note">端点按方法级统计（GET/POST/PATCH/DELETE/PUT 各算一个），共 159；表为 34 张基表，不含 10 个 FTS 虚表。前端行不含 <span class="mono">components/</span> 与 <span class="mono">shared/</span> 基础设施。</p>
+    </section>
+
+    <section class="sec" id="treemap">
+      <div class="sec-head">
+        <div><p class="kicker">04 · Where the code goes</p><h2>代码都花在哪了</h2></div>
+        <p class="sec-deck">面积 = 生产行数。颜色 = 分析状态。三个核心域吃掉 47%；Kumo 一项就占 7%，却没有活消费者。</p>
+      </div>
+      <div class="toolbar" id="mapModes">
+        <button class="btn" data-map="total" aria-pressed="true" type="button">合计</button>
+        <button class="btn" data-map="be" type="button">仅后端</button>
+        <button class="btn" data-map="fe" type="button">仅前端</button>
+      </div>
+      <svg class="chart" id="treemapSvg" viewBox="0 0 1200 520" role="img" aria-label="生产代码体量树图"></svg>
+      <div class="legend" id="mapLegend"></div>
+      <div class="map-detail" id="mapDetail"></div>
+      <div class="grid-3" style="margin-top:16px">
+        <div class="card"><h3>47.2%</h3><p>file + task + mem 三个域的生产代码占比。复杂度集中，不是均匀分布。</p></div>
+        <div class="card"><h3>54,952 行</h3><p>测试代码总量，约占源码的 33%。质量投入很高；也意味着任何跨域重构都要付测试迁移成本。</p></div>
+        <div class="card"><h3>14.5%</h3><p>死代码 / 遗留 / 运维工具 / 外围（Kumo、conv、sign、db_viewer、rainbow、key、color）的生产代码占比。不是最大，但最分散。</p></div>
+      </div>
+    </section>
+
+    <section class="sec" id="deps">
+      <div class="sec-head">
+        <div><p class="kicker">05 · Dependencies</p><h2>依赖图：契约 vs 实际</h2></div>
+        <p class="sec-deck">契约是 <span class="mono">modules → db + shared</span>，<span class="mono">app</span> 只做组合。实际有 6 条反向/环状边，以及一条最值得修的分层倒置：<span class="mono">file → app</span>。</p>
+      </div>
+      <div class="toolbar">
+        <button class="btn" id="graphBe" aria-pressed="true" type="button">后端依赖</button>
+        <button class="btn" id="graphFe" type="button">前端依赖</button>
+        <label class="check"><input type="checkbox" id="showInfra"> 显示基础设施边</label>
+        <label class="check"><input type="checkbox" id="showRegistry"> 显示搜索注册边</label>
+      </div>
+      <svg class="dep-svg" id="depSvg" viewBox="0 0 1200 820" role="img" aria-label="模块依赖图"></svg>
+      <div class="legend" id="depLegend"></div>
+      <p class="note">默认只画跨域与组合边；勾选「显示基础设施边」看 module → shared / ui 的全量引用。</p>
+      <div class="map-detail" id="depDetail"></div>
+      <div class="subhead">耦合热力图 · 谁 import 谁</div>
+      <div class="toolbar">
+        <button class="btn" id="heatAll" aria-pressed="true" type="button">全量矩阵</button>
+        <button class="btn" id="heatDomain" type="button">仅域间</button>
+      </div>
+      <div class="heat-wrap" id="heatWrap"></div>
+      <div class="map-detail" id="heatDetail"></div>
+      <div class="grid-2" style="margin-top:16px">
+        <div class="card">
+          <h3>最值得修的四条</h3>
+          <ul>
+            <li><b>file → app</b>：<span class="mono">file/handler.rs:408</span> 直接拿 <span class="mono">AuthService</span> 与 <span class="mono">optional_actor</span>。模块依赖组合层，无法独立测试。</li>
+            <li><b>task ↔ time_window</b>：17 条正向 + 2 条反向；反向只用到了 <span class="mono">ServiceError</span> 映射，却把两个域的生命周期绑死。</li>
+            <li><b>user → admin</b>：<span class="mono">user/handler.rs:12</span> 拿具体 <span class="mono">AdminService</span>，而 <span class="mono">AdminServicePort</span> 已经存在。</li>
+            <li><b>search 注册是手写的</b>：<span class="mono">app/context.rs</span> 逐个 <span class="mono">register</span>；新模块忘了就静默搜不到。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>可以接受的依赖</h3>
+          <ul>
+            <li><b>modules → shared / db</b>：契约允许；shared 是工具箱，db 是 schema 声明。</li>
+            <li><b>app → modules</b>：组合根必须认识所有模块；这是它的职责。</li>
+            <li><b>chat / bookmark → ai</b>：经 <span class="mono">AiChatPort</span> 接缝，方向正确；handler 里拿具体类型是待收口的小问题。</li>
+            <li><b>前端 modules → app/context/auth</b>：分层门禁明确允许（auth 是环境）。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" id="overlap">
+      <div class="sec-head">
+        <div><p class="kicker">06 · Overlap &amp; redundancy</p><h2>六组“同一件事的多种做法”</h2></div>
+        <p class="sec-deck">冗余不一定是错：有些是历史迁移，有些是不同作用域。真正的问题是它们各自演化、各自测试、各自长 UI。</p>
+      </div>
+      <div class="grid-2" id="overlapGrid"></div>
+    </section>
+
+    <section class="sec" id="cut">
+      <div class="sec-head">
+        <div><p class="kicker">07 · What to cut</p><h2>不需要的实现：候选清单</h2></div>
+        <p class="sec-deck">按证据强度排序，不是按个人喜好。每一行都能指到代码出处；“动作”是建议，不是命令。</p>
+      </div>
+      <div class="toolbar" id="cutFilters"></div>
+      <div class="table-wrap">
+        <table id="cutTable">
+          <thead><tr><th>对象</th><th>体量</th><th>证据</th><th>判断</th><th>建议动作</th><th>置信 / 风险</th></tr></thead>
+          <tbody id="cutBody"></tbody>
+        </table>
+      </div>
+      <div class="grid-2" style="margin-top:18px">
+        <div class="callout" style="grid-column:1/-1">
+          <h3>不要误删</h3>
+          <ul>
+            <li><b>office_oxide</b>：直接引用为 0，但它是 pdf_oxide 的版本钉；删了 PDF 抽取编译不过。</li>
+            <li><b>schema 的三份 DDL 文本</b>：看起来像重复，实际是“新库 / 老库 / 自检”共用的同一份声明。</li>
+            <li><b>file 的预览懒 chunk</b>：首屏看不到，不等于没人用；PDF/3D/Office 都是按需加载。</li>
+            <li><b>xtask 7.3k 行</b>：不是运行时，但部署/回滚/备份都靠它；别按“业务代码规模”判它。</li>
+            <li><b>55k 行测试</b>：贵，但它是这个项目敢做 schema 重构与多用户隔离的底气。</li>
+          </ul>
+        </div>
+        <div class="card" style="grid-column:1/-1">
+          <h3>价值 × 复杂度</h3>
+          <p>横轴是生产行数（对数），纵轴是主观价值（1–5）。右下角是“花了很多代码、但用户价值有限”的区域；右上角是必须保留的核心重镇。</p>
+          <svg class="quad-svg" id="quadSvg" viewBox="0 0 900 500" role="img" aria-label="价值与复杂度四象限"></svg>
+          <div class="map-detail" id="quadDetail"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" id="target">
+      <div class="sec-head">
+        <div><p class="kicker">08 · Target architecture</p><h2>如果重画：更少的重复，不是更少的模块</h2></div>
+        <p class="sec-deck">目标不是把 17 个域压成 5 个，而是让“标签、文本、搜索、AI、设置、查看器”各只有一条主路径。模块可以多，重复必须少。</p>
+      </div>
+      <svg class="target-svg" id="targetSvg" viewBox="0 0 1200 620" role="img" aria-label="目标架构"></svg>
+      <div class="legend">
+        <span><i style="border-color:var(--ink)"></i>上下文边界</span>
+        <span><i style="border-color:var(--accent)"></i>允许的依赖</span>
+        <span><i style="border-color:var(--blue);border-style:dashed"></i>端口 / 只读</span>
+      </div>
+      <div class="subhead">迁移顺序：先删，再收编，最后才迁移表</div>
+      <div class="timeline" id="roadmap"></div>
+      <div class="table-wrap" style="margin-top:18px">
+        <table id="movesTable">
+          <thead><tr><th>现在</th><th>目标</th><th>理由</th><th>成本</th></tr></thead>
+          <tbody id="movesBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="sec" id="method">
+      <div class="sec-head">
+        <div><p class="kicker">09 · Method &amp; appendix</p><h2>数字怎么来的，以及它们不能证明什么</h2></div>
+        <p class="sec-deck">静态分析能证明“有没有这行 import”，不能证明“运行时有没有走到”。LOC 是复杂度代理，不是价值度量。</p>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>口径</h3>
+          <ul>
+            <li>快照：commit <span class="mono">3679c3dd</span>，工作树干净；日期 2026-10-17。</li>
+            <li>生产行：去掉每个文件第一个 <span class="mono">#[cfg(test)]</span> 之后的行，以及 <span class="mono">tests.rs</span>；前端去掉 <span class="mono">*.test.ts(x)</span>。</li>
+            <li>依赖边：正则扫描 Rust <span class="mono">crate::modules::*</span> / <span class="mono">crate::app::*</span>，前端 <span class="mono">@modules/*</span>、<span class="mono">@app/*</span>、相对 import；计数是引用次数。</li>
+            <li>端点：按路由注册表统计方法级端点，共 159；表：<span class="mono">db/schema/tables.rs</span> 的 34 张基表。</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>局限</h3>
+          <ul>
+            <li>看不到动态分发与 registry：<span class="mono">SearchPort</span> 的 10 条边不是 import，是运行时注册。</li>
+            <li>看不到“功能是否真的被用户使用”；本地库近乎空库，不能拿行数当使用率。</li>
+            <li>“价值 1–5”是分析判断，不是埋点数据；它只用来把讨论从“代码多不多”拉到“值不值”。</li>
+            <li>删除建议没有考虑外部 API 消费者；sign 若被脚本调用，应先看访问日志。</li>
+            <li><b>文档漂移（已部分处理）</b>：<span class="mono">doc/</span> 此前被 <span class="mono">.gitignore</span> 忽略，<span class="mono">doc/README.md</span> / <span class="mono">guides/*</span> 曾不在工作区；2026-10-22 已汇集入库并完成现行文档对齐（本图谱自身仍是 2026-10-17 快照）。仍存内容漂移：<span class="mono">db_viewer</span> 的 feature-gate 描述与 Cargo.toml 不一致。</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="subhead">附录 A · 端点清单</div>
+      <details open><summary>17 个后端模块 · 159 个方法级端点</summary><div class="table-wrap"><table id="epTable"><thead><tr><th>模块</th><th>前缀</th><th>端点数</th><th>说明</th></tr></thead><tbody id="epBody"></tbody></table></div></details>
+
+      <div class="subhead">附录 B · 表归属</div>
+      <details><summary>34 张基表 · 谁写、谁读、什么状态</summary><div class="table-wrap"><table id="tableTable"><thead><tr><th>表</th><th>归属</th><th>写入者</th><th>主要读者</th><th>状态</th></tr></thead><tbody id="tableBody"></tbody></table></div></details>
+
+      <div class="subhead">附录 C · 依赖证据</div>
+      <details><summary>15 条值得记录的边</summary><div class="table-wrap"><table id="edgeTable"><thead><tr><th>from → to</th><th>次数</th><th>类型</th><th>证据</th><th>为什么值得记</th></tr></thead><tbody id="edgeBody"></tbody></table></div></details>
+
+      <div class="foot">
+        <p>BRainbow Architecture Map · 单文件 HTML · 无外部依赖 · 可离线打开。</p>
+        <p>数据快照 3679c3dd；分析日期 2026-10-17。判断部分由分析者负责，数字部分可复核。</p>
+      </div>
+    </section>
+  </main>
+</div>
+
+<noscript><div class="wrap" style="padding:24px"><p>这张图谱的树、图和表由内联脚本渲染；请启用 JavaScript。</p></div></noscript>
+<script>
+(function(){
+"use strict";
+/* ── 基础工具 ── */
+var $ = function(s, el){ return (el || document).querySelector(s); };
+var $$ = function(s, el){ return Array.prototype.slice.call((el || document).querySelectorAll(s)); };
+var esc = function(s){ return String(s == null ? "" : s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); };
+var fmt = function(n){ if(n >= 1000){ var v = n / 1000; return (v >= 10 ? v.toFixed(1) : v.toFixed(1)).replace(/\.0$/, "") + "k"; } return String(n); };
+var pct = function(n, d){ return (n / d * 100).toFixed(1) + "%"; };
+var STATUS = {
+ core:["核心","core"], support:["支撑","support"], overlap:["重叠","overlap"],
+ legacy:["遗留","legacy"], dead:["死代码","dead"], toy:["外围","toy"],
+ infra:["基础设施","infra"], tool:["工具","tool"]
+};
+var chip = function(s){ var x = STATUS[s] || STATUS.infra; return '<span class="chip chip-' + x[1] + '">' + x[0] + "</span>"; };
+var statusColor = function(s){ return "var(--s-" + (STATUS[s] ? s : "infra") + ")"; };
+var statusFill = function(s){ return "var(--fill-" + (STATUS[s] ? s : "infra") + ")"; };
+var totalProd = 112141;
+
+/* ── 摘要数据 ── */
+var FINDINGS = [
+ {n:"47%", h:"三个域吃掉近一半生产代码", p:"file 24.0k + task 16.6k + mem 12.3k = 52.9k 行，占 112k 生产代码的 47.2%。"},
+ {n:"7,853", h:"Kumo 组件库零活消费者", p:"唯一 import 是 ui/molecules/DialogCloseButton.tsx；该组件自身也没有任何消费者。"},
+ {n:"3 + 8", h:"三套标签、八处文本", p:"tag / file_tag / bookmark_tag；card / chunk / text_note / reading / chat / bookmark / file / conv。"},
+ {n:"10", h:"全局搜索有 10 个 SearchPort", p:"mem/card/task/bookmark/onto/text/reading/conv/chat/file；这是项目最干净的跨域接缝。"},
+ {n:"6", h:"六条反向 / 环状依赖", p:"task↔time_window、task→admin、user→admin、bookmark→ai、chat→ai、file→app。"}
+];
+var JOURNEYS = [
+ {t:"任务闭环", s:["首页待办","列表 / 看板","日历排期","完成 / 归档"], n:"task + time_window；唯一同时有状态机、依赖图与时间语义的域。"},
+ {t:"知识闭环", s:["书签 / 文件 / 阅读","卡片 / 文本","记忆卡","FSRS 复习"], n:"捕获 → 组织 → 记忆；四段之间没有统一的 note 模型。"},
+ {t:"AI 闭环", s:["对话树","分支 / 修订","生成记忆卡","复习"], n:"chat + ai + mem；流式对话与记忆卡生成是两条 AI 路径。"},
+ {t:"找回闭环", s:["⌘K","10 个 provider","结果页","详情 / 预览"], n:"search + command-palette；conv 是第五层遗留入口。"}
+];
+var LADDER = [
+ {l:"L0", t:"4 条用户旅程", s:"产品最终承诺"},
+ {l:"L1", t:"12 个能力", s:"任务 / 记忆 / 文件 …"},
+ {l:"L2", t:"61 个功能切片", s:"视图 / 调度 / 导入 …"},
+ {l:"L3", t:"159 端点 · 33 页 · 34 表", s:"实现面"},
+ {l:"L4", t:"证据与判断", s:"代码行 / 依赖 / 取舍"}
+];
+
+/* ── 目标树 ── */
+function L1(id,label,status,be,fe,summary,verdict,evidence,modules,children){
+ return {id:id,kicker:"L1 · 能力",label:label,status:status,loc:{be:be,fe:fe},summary:summary,verdict:verdict,evidence:evidence,modules:modules,children:children};
+}
+function L2(id,label,status,summary,impl,deps,verdict,evidence){
+ return {id:id,kicker:"L2 · 功能",label:label,status:status,summary:summary,impl:impl,deps:deps,verdict:verdict,evidence:evidence};
+}
+var TREE = {
+ id:"root", kicker:"L0 · 产品", label:"BRainbow：个人知识管理工具集", status:"core",
+ summary:"把“输入 → 组织 → 理解 → 记忆 → 复用”闭环做在一个自托管 Web 应用里；账号隔离，数据自己拿着。",
+ verdict:"产品形态是工具箱，不是单一知识库；架构评价标准应是“组合是否清晰、重复是否可控”，而不是“模块是否够少”。",
+ children:[
+  L1("task","任务与时间规划","core",5811,10745,
+   "把“要做的事”变成可排序、可排期、可完成的承诺；是唯一同时拥有状态机、依赖图与时间语义的域。",
+   "保留。它是项目里最完整的领域模型；复杂度主要来自四视图与排期算法，不是重复建设。",
+   "task + time_window：5.8k 生产行 / 32 个端点 / 4 张表。",["task","time_window"],[
+    L2("task-model","任务模型与状态流","core",
+     "四态 backlog/active/completed/archived、父子任务、p1–p4、start/due、精力估算、标签；状态流转有独立 handler 与测试。",
+     [["BE","model / dto / repository/status","src/modules/task/model.rs"],["FE","TaskItem / TaskMeta / TaskDrawer","web/src/modules/task/components/TaskItem.tsx"],["DB","task · task_dependency · task_tag_rel","src/db/schema/tables.rs"]],
+     "shared；admin 设置端口（工作时段）",
+     "保留；优先级与时间承诺的语义清楚。",
+     "task 生产行 4,387；状态与优先级都有 CHECK 约束。"),
+    L2("task-views","四视图：列表 / 看板 / 日历 / DAG","core",
+     "四视图共享同一份任务数据：拖拽改状态、日历拖拽排期、DAG 画依赖；筛选、分组、空态、搜索各自有实现。",
+     [["BE","/tasks /calendar /dag /tree /stats","src/modules/task/mod.rs"],["FE","TaskManager + TaskList / TaskKanban / TaskCalendar / TaskDag","web/src/modules/task/TaskManager.tsx"],["FE","calendar / dag-layout / dag-render / schedule","web/src/modules/task/lib/dag-layout.ts"]],
+     "无新增域外依赖；视图共享状态而非组件",
+     "保留，但四视图是前端最大单点（task 10.7k 行）；视图之间共享的是状态，不是组件。",
+     "TaskManager 是 33 个页面里最大的页面入口。"),
+    L2("task-deps","依赖与树","core",
+     "task_dependency 有向图 + 环检测（MAX_DEP_DEPTH=16）；/tree 父子树、/dag 依赖图；阻塞理由进入排序。",
+     [["LOGIC","MAX_DEP_DEPTH / blocked_factor","src/modules/task/ranking.rs"],["BE","repository/dependency + /tree /dag","src/modules/task/repository/dependency.rs"],["FE","TaskDag / DependenciesTab","web/src/modules/task/components/TaskDag.tsx"]],
+     "shared",
+     "保留；把坏数据（环）说破而不是静默，是正确取舍。",
+     "环检测有注释与排序理由，不是隐式行为。"),
+    L2("task-time","时间窗与日历","core",
+     "time_window 三型 feasible/planned/actual、循环规则、冲突检测、任务窗口统计；日历空白一次请求建任务 + 窗口。",
+     [["BE","time_window model / service / query","src/modules/time_window/service.rs"],["FE","TaskCalendar / TimeWindowsTab / CalendarSettings","web/src/modules/task/components/TaskCalendar.tsx"],["DB","time_window（+ user_id/type 索引）","src/db/schema/tables.rs"]],
+     "task ↔ time_window 双向端口；app 组装",
+     "保留；这是当前最复杂的域间依赖（见 05）。",
+     "task 侧 17 条引用，time_window 侧 2 条反向引用（只用于错误映射）。"),
+    L2("task-rank","排序与日程建议","core",
+     "加权乘积排序（due/priority/blocked/aging）+ 可解释理由；15 分钟粒度贪心装箱；工作时段读 app_settings。",
+     [["LOGIC","ranking.rs：四因子乘积 + reasons","src/modules/task/ranking.rs"],["LOGIC","slotting.rs：贪心装箱 + unscheduled 理由","src/modules/task/slotting.rs"],["BE","/tasks/suggestions + 工作时段设置","src/modules/task/query.rs"]],
+     "admin 设置端口（KEY_WORKING_HOURS）",
+     "保留；算法有理由、有测试，不是黑箱推荐。",
+     "排序理由恒非空；远期任务塌缩到常数，避免陈旧任务饿死。"),
+    L2("task-capture","捕获 / 归档 / 统计","support",
+     "快速录入、状态迁移、归档、统计、建议；与全局 quick-capture 浮窗功能重叠。",
+     [["FE","CaptureInput / TaskToolbar / SuggestionLayer","web/src/modules/task/components/CaptureInput.tsx"],["BE","/tasks/quick /complete /activate /archive","src/modules/task/handler/status.rs"],["FE","QuickCapture：Shift+Tab 建任务/卡片/书签","web/src/modules/quick-capture/QuickCapture.tsx"]],
+     "quick-capture → task",
+     "保留；两条录入路径应合并为一条。",
+     "CaptureInput 与 QuickCapture 都在做“输入一句话建任务”。")
+   ]),
+  L1("mem","间隔重复记忆","core",4790,7526,
+   "FSRS 间隔重复系统：知识块 → 记忆项 → 复习日志 → 参数优化；是整个产品最深的算法域。",
+   "保留。算法与数据模型完整；但卡片管理、导入导出、标签又造了一套 UI 与 API。",
+   "mem：4.8k 生产行 / 37 个端点 / 7 张表（含共享 tag）。",["mem"],[
+    L2("mem-fsrs","FSRS 调度","core",
+     "FSRS v6：new→learning→review⇄relearning，学习步进 [1m,10m]、重学 [10m]，desired retention 0.9，stability/difficulty/leech。",
+     [["LOGIC","fsrs/mod.rs + SchedulerConfig","src/modules/mem/fsrs/mod.rs"],["DB","mem · revlog · mem_mnemonic","src/db/schema/tables.rs"],["BE","review / undo / bury / suspend / reset","src/modules/mem/handler.rs"]],
+     "shared；fsrs crate",
+     "保留；算法与状态机是项目最硬的资产。",
+     "FSRS 参数优化也在这个域内，revlog 是训练数据。"),
+    L2("mem-review","复习队列与会话","core",
+     "到期队列 + 难度/遗忘/过期加权采样（Efraimidis–Spirakis）；会话预估、键盘评分、撤销、bury/suspend/reset、朗读。",
+     [["LOGIC","selection.rs：加权采样 + retrievability","src/modules/mem/selection.rs"],["FE","useDueQueue / useReviewKeyboard / ReviewCard","web/src/modules/mem/hooks/useDueQueue.ts"],["BE","/mem/due /session-estimate /upcoming-counts","src/modules/mem/mod.rs"]],
+     "shared",
+     "保留；同轮采样与 FSRS 跨轮间隔分工清楚。",
+     "队列不是固定顺序，难卡/遗忘卡有更高权重。"),
+    L2("mem-cards","卡片与知识块","core",
+     "cue/target 两个 chunk 组成一条 mem；支持 Markdown、图片、前置记忆（mem_prerequisite）。",
+     [["DB","chunk · mem · mem_prerequisite","src/db/schema/tables.rs"],["FE","MemAdd / ReviewCard / MarkdownEditor","web/src/modules/mem/MemAdd.tsx"],["BE","MemRepository（端口 + adapter）","src/modules/mem/port.rs"]],
+     "file（Markdown 文件选择）；shared",
+     "保留；chunk 是 mem 的内容原语，但它与 card/text_note 同形。",
+     "chunk 的 content 与 card.content、text_note.content 没有共享模型。"),
+    L2("mem-manage","管理 / 批量 / 导入导出","support",
+     "管理表、筛选、标签、批量打标/删除/重置/bury、CSV/PSV/JSON 导入、CSV 导出。",
+     [["FE","MemManage + ManageTable + 批量条","web/src/modules/mem/MemManage.tsx"],["BE","/mem/all /batch-* /import/* /export/csv","src/modules/mem/mod.rs"],["DB","tag · mem_tag（与 task 共享 tag）","src/db/schema/tables.rs"]],
+     "shared；file（Markdown）",
+     "保留；管理面很大，但与复习面共享同一套卡片。",
+     "mem 的管理 API 比 card 的 CRUD 丰富一个数量级。"),
+    L2("mem-ai","助记与 AI 生成","support",
+     "助记生成（前端拼 prompt 调 /ai/chat，后端存 mem_mnemonic）；连续忘记 3 次自动触发；/chat/mem 对话式生成记忆卡。",
+     [["FE","useMnemonic：fillPrompt + callAi","web/src/modules/mem/hooks/useMnemonic.ts"],["BE","/mem/{id}/mnemonic GET/PUT","src/modules/mem/handler.rs"],["FE","ChatMemPage：kind=mem 的对话树","web/src/modules/chat/ChatMemPage.tsx"]],
+     "shared/ai；chat → mem",
+     "保留；AI 路径与后端其他 AI 功能不一致，见 06。",
+     "助记 prompt 在前端拼，bookmark 标签 prompt 在后端拼。"),
+    L2("mem-opt","参数优化与统计","support",
+     "revlog 记录每次复习；FSRS 参数优化（optimizer）；counts/upcoming/session-estimate 统计。",
+     [["BE","/mem/optimize + optimizer.rs","src/modules/mem/optimizer.rs"],["BE","counts / upcoming / session-estimate","src/modules/mem/handler.rs"],["DB","revlog（含 before/after 状态）","src/db/schema/tables.rs"]],
+     "shared；fsrs crate",
+     "保留；优化是长周期功能，收益依赖数据量。",
+     "没有数据时优化没有意义，端点仍可用。")
+   ]),
+  L1("notes","知识碎片：卡片 / 文本","overlap",990,2492,
+   "卡片与文本两个“轻量知识碎片”域：一个只有 content 字段，一个是全局标签页；它们与 mem 的 chunk 在数据形状上高度重叠。",
+   "收编候选。保留一个统一 note 读模型，卡片/文本作为视图，而不是两套表 + 两套页面。",
+   "card 637 BE + 2,063 FE；text 353 BE + 429 FE；card 表只有 id/content/user_id/时间。",["card","text"],[
+    L2("card-crud","卡片 CRUD","overlap",
+     "单字段卡片 CRUD、搜索、分页；模型只有 id/content/created_at/updated_at。",
+     [["BE","CardService / CardQueryService","src/modules/card/service.rs"],["DB","card（+ card_fts）","src/db/schema/tables.rs"],["FE","api.ts + useCardAdd / useCardEdit","web/src/modules/card/api.ts"]],
+     "shared；file（Markdown 文件选择）",
+     "保留能力，收编模型；卡片本质是 note 的一种 kind。",
+     "card 表没有 title，列表靠内容截断。"),
+    L2("card-browse","浏览 / 筛选 / 搜索","overlap",
+     "瀑布流、筛选、详情、首页最近卡片；4 个页面（列表/详情/新建/编辑）。",
+     [["FE","CardsList / CardMasonry / CardFilter","web/src/modules/card/CardsList.tsx"],["FE","CardDetail / CardAdd / CardEdit","web/src/modules/card/CardEdit.tsx"],["BE","/cards /cards/search","src/modules/card/mod.rs"]],
+     "home → card",
+     "保留交互；4 个页面服务一个单字段模型，页面/模型比例偏高。",
+     "卡片前端 2,063 生产行，后端 637。"),
+    L2("text-tabs","文本标签页","overlap",
+     "单条全局文档 + 多标签页，PUT 整体保存；没有按用户的多文档列表。",
+     [["BE","TextService：get/save 整包","src/modules/text/service.rs"],["DB","text_note（+ text_note_fts）","src/db/schema/tables.rs"],["FE","TextEditor + useTextEditor","web/src/modules/text/TextEditor.tsx"]],
+     "shared",
+     "收编候选；可作为 note 的全屏编辑视图，而不是独立域。",
+     "text 只有一个全局文档，却有一套独立 API/页面/表。"),
+    L2("note-markdown","Markdown 与文件插入","support",
+     "MarkdownEditor + 文件上传/选择；文件能力从 file 模块的根级支撑件注入，避免 components 反向依赖 modules。",
+     [["FE","MarkdownEditor / MarkdownCore","web/src/components/MarkdownEditor.tsx"],["FE","MarkdownFilePicker / uploadToFileService","web/src/modules/file/markdown-editor-support.tsx"],["BE","/file/upload","src/modules/file/handler.rs"]],
+     "card → file；mem → file",
+     "保留；这是跨模块 UI 依赖里最合理的一处，但能力位置仍偏 file。",
+     "mem 与 card 都从 file 根级支撑件取 Markdown 文件能力。")
+   ]),
+  L1("file","通用文件库","core",8218,15830,
+   "通用文件服务：上传去重、类型识别、可见性、标签、缩略图、正文抽取、15+ 格式预览；是项目最大的模块。",
+   "保留核心，拆分/降级预览。它承担了“附件”与“浏览器”两种职责，24k 生产行里很大一部分是格式查看器。",
+   "8.2k BE + 15.8k FE = 24.0k 生产行（21.4%）；13 个端点；4 张表；15+ viewer。",["file"],[
+    L2("file-ingest","上传 / 去重 / 类型识别","core",
+     "multipart 上传、SHA-256 去重、两阶段类型识别（族→种）、分档上限、stored_id、公开/私密。",
+     [["BE","mime.rs + kind.rs + limits.rs","src/modules/file/mime.rs"],["BE","service.rs：hash / dedupe / spawn_text_capture","src/modules/file/service.rs"],["DB","file（category 生成列）· file_meta","src/db/schema/tables.rs"]],
+     "shared","保留；类型识别是 file 模块最值得保留的硬资产。","“这种类型能干什么”只在 kind.rs 的 KINDS 表定义一处。"),
+    L2("file-manage","列表 / 标签 / 可见性","core",
+     "列表/筛选/搜索、全局标签、改名/删除/批量、可见性切换、乐观更新。",
+     [["BE","FileQueryService + push_visibility","src/modules/file/query.rs"],["FE","FileList / FileCard / BatchBar / TagManager","web/src/modules/file/FileList.tsx"],["DB","file_tag · file_tag_rel（name 全局 UNIQUE）","src/db/schema/tables.rs"]],
+     "shared；app（内容路由的可选凭据）","保留；可见性规则三处（SQL/详情/内容路由）要同步。","file_tag 的名字全局唯一，与 tag 的按用户唯一是两种作用域。"),
+    L2("file-preview","预览矩阵","core",
+     "PDF / Office / EPUB / 压缩包 / 数据库 / CSV / Hex / 代码 / Markdown / HTML / 图片 / 音视频 / 3DGS 的只读查看器；统一 registry。",
+     [["BE","preview.rs：docx/xlsx/pptx/epub 解析 + 分页游标","src/modules/file/preview.rs"],["FE","viewers/registry.ts + 15 个 viewer","web/src/modules/file/viewers/registry.ts"],["FE","PDF：pdf.js 懒 chunk；3DGS：three.js 懒 chunk","web/src/modules/file/lib/pdfThumb.ts"]],
+     "shared；pdfjs-dist；three","保留但按需：这是 file 模块最大的复杂度来源，可作为可选 feature / 独立 chunk。","preview.rs 单文件 103KB；viewers 目录约 15 个组件。"),
+    L2("file-thumb","缩略图与媒体","core",
+     "图片 160/320/640/1280 阶梯；视频 ffmpeg 海报帧；PDF 首页 pdf.js（前端）；60MP 保护；磁盘缓存。",
+     [["BE","thumb/image.rs + thumb/video.rs","src/modules/file/thumb/video.rs"],["FE","usePdfThumb / useThumbPreview / Thumb","web/src/modules/file/hooks/usePdfThumb.ts"],["INFRA","ffmpeg 随产物走；缺失降级为后缀徽章","src/modules/file/thumb/mod.rs"]],
+     "ffmpeg；pdfjs-dist","保留；视频走子进程隔离是正确取舍。","缩略图目录按 content_hash，不是 stored_id；一致性扫描天然忽略它。"),
+    L2("file-search","正文抽取与搜索","support",
+     "docx/xlsx/pptx/epub/pdf 正文抽取到 file.text_content（1MiB 上限），上传后后台抽 + 启动回填。",
+     [["BE","extract.rs：逐页 catch_unwind + 预算","src/modules/file/extract.rs"],["BE","spawn_text_capture / 启动回填","src/modules/file/service.rs"],["DB","file.text_content","src/db/schema/tables.rs"]],
+     "pdf_oxide（+ office_oxide 版本钉）","保留；换抽取器要连带一次重抽。","扫描件抽到空串（不再重试），整篇失败留 NULL（下次重试）。"),
+    L2("file-maint","一致性与维护","support",
+     "上传目录可写、缺失/孤儿/大小/分类一致性、缩略图缓存回收、去重时纠正旧 mime。",
+     [["BE","consistency.rs + service/maintenance.rs","src/modules/file/consistency.rs"],["BE","reconcile_mime（去重时纠正类型）","src/modules/file/service.rs"],["INFRA","启动自检 + just check-backend","src/app/self_check.rs"]],
+     "app 自检；shared","保留；这是文件服务敢长期运行的护栏。","缺失/孤儿/大小/分类四类问题分开报。"),
+    L2("file-3d","3DGS 查看器","toy",
+     "3DGS .ply 查看器：three.js、fit 分位、worker 排序、rAF 合并；与 PKM 主线关系弱，是专家工具。",
+     [["FE","SplatViewer + engine / fit / renderer / worker","web/src/modules/file/viewers/SplatViewer.tsx"],["LOGIC","FIT_MASS=0.9 / FIT_FILL=0.85 / 环绕 0.61","web/src/modules/file/viewers/splat/fit.ts"],["INFRA","three.js 独立懒 chunk（不进首屏）","web/vite.config.ts"]],
+     "three","保留为懒加载专家工具；不要为它扩大主包。","3DGS 查看器是 file 模块里最典型的“高成本低频率”。")
+   ]),
+  L1("bookmark","网页书签","core",2543,3112,
+   "网页书签：CRUD/标签/搜索/访问计数 + favicon 抓取 + URL 元数据 + Firefox HTML 导入 + AI 标签建议。",
+   "保留。边界清楚，SSRF 防线是加分项；AI 标签建议让它多了一条对 ai 的依赖。",
+   "2.5k BE + 3.1k FE；17 个端点；3 张表。",["bookmark"],[
+    L2("bm-crud","书签 CRUD / 标签 / 搜索","core",
+     "书签 CRUD、标签、搜索、按标签分组、访问计数、批量删除。",
+     [["BE","BookmarkService / BookmarkQueryService","src/modules/bookmark/service.rs"],["FE","BookmarkPage / BookmarkManagePage / BookmarkDetail","web/src/modules/bookmark/BookmarkPage.tsx"],["DB","bookmark · bookmark_tag · bookmark_tag_rel","src/db/schema/tables.rs"]],
+     "shared","保留；标签是独立命名空间（与 tag / file_tag 不共享）。","bookmark_tag.name 全局 UNIQUE，用户 id 只是记录。"),
+    L2("bm-favicon","favicon / SSRF","support",
+     "公开 favicon 代理 + 磁盘缓存 + SSRF 双防线（IP 字面量 + 解析器）+ 大小/超时/文件数上限。",
+     [["BE","favicon.rs：缓存 / 抓取 / 首页 link 解析","src/modules/bookmark/favicon.rs"],["INFRA","shared/outbound.rs：PublicOnlyResolver","src/shared/outbound.rs"],["FE","Favicon 组件（<img> 不带 Authorization）","web/src/modules/bookmark/components/Favicon.tsx"]],
+     "shared/outbound","保留；这是安全上最值得保留的一处“额外复杂度”。","IP 字面量必须单独拒：hyper 对 IP 字面量跳过 DNS。"),
+    L2("bm-fetch","URL 元数据抓取","support",
+     "抓取页面 title/description；逐跳重定向校验；失败降级。",
+     [["BE","fetch_url + check_url","src/modules/bookmark/handler.rs"],["FE","useBookmarkForm → fetchUrlE","web/src/modules/bookmark/hooks/useBookmarkForm.ts"]],
+     "shared/outbound；reqwest","保留；与 favicon 共用 SSRF 防线。","逐跳校验重定向，Policy::limited 只看跳数不看去向。"),
+    L2("bm-import","HTML 导入","support",
+     "Firefox 导出 HTML 解析，64MiB body 上限。",
+     [["BE","import_html.rs","src/modules/bookmark/import_html.rs"],["FE","useBookmarkImport","web/src/modules/bookmark/hooks/useBookmarkImport.ts"]],
+     "shared","保留；低频但高价值（迁移入口）。","导入是书签模块的一次性成本。"),
+    L2("bm-ai","AI 标签建议","support",
+     "AI 根据标题/URL/描述建议标签；服务端 prompt。",
+     [["BE","suggest_tags → AiChatPort","src/modules/bookmark/service.rs"],["BE","/bookmarks/{id}/suggest-tags","src/modules/bookmark/mod.rs"],["FE","TagManager / BookmarkFormModal","web/src/modules/bookmark/components/TagManager.tsx"]],
+     "bookmark → ai（AiChatPort）","保留；与 mem 助记一起收敛到统一 AI gateway。","同一条 AI 能力，bookmark 在后端拼 prompt，mem 在前端拼。")
+   ]),
+  L1("reading","英语阅读","support",1043,1390,
+   "英语阅读：上传文章、切词、标记认识/不认识/忽略、生词表、下一篇推荐、笔记。",
+   "保留为轻量工具；与 mem 没有打通（生词不能直接变记忆卡），这是产品缺口而不是代码冗余。",
+   "1.0k BE + 1.4k FE；8 个端点；3 张表。",["reading"],[
+    L2("read-article","文章与生词","support",
+     "文章上传/切词/词数/认识率；reading_article + reading_article_word。",
+     [["BE","ReadingService：extract_words / known_ratio","src/modules/reading/service.rs"],["DB","reading_article · reading_article_word","src/db/schema/tables.rs"],["FE","ReadingList / ArticleCard","web/src/modules/reading/ReadingList.tsx"]],
+     "shared","保留；切词是 ASCII 字母 + 撇号/连字符的简单规则。","recommend_next 按认识率距离推荐，不是随机。"),
+    L2("read-reader","阅读器与标记","support",
+     "阅读器 + 单词标记（known/unknown/ignored）；三态枚举收在 model.rs 一处。",
+     [["BE","WordStatus + mark_word","src/modules/reading/model.rs"],["FE","ReadingDetail / ArticleContent","web/src/modules/reading/ReadingDetail.tsx"],["DB","reading_user_word（word 全局 UNIQUE）","src/db/schema/tables.rs"]],
+     "shared","保留；多用户下 word 全局 UNIQUE 会串数据。","reading_user_word 有 user_id，但 UNIQUE(word) 是全局的。"),
+    L2("read-unknown","生词表与推荐","support",
+     "生词表、出现次数、推荐下一篇。",
+     [["BE","/reading/unknown + recommend_next","src/modules/reading/query.rs"],["FE","ReadingUnknown / useReadingDetail","web/src/modules/reading/ReadingUnknown.tsx"]],
+     "shared","保留；生词表没有“一键变记忆卡”，是产品缺口。","与 mem 的 chunk/mem 没有连接。"),
+    L2("read-notes","文章笔记","support",
+     "文章笔记读写（notes 字段）。",
+     [["BE","get_notes / update_notes","src/modules/reading/handler.rs"],["DB","reading_article.notes","src/db/schema/tables.rs"]],
+     "shared","保留；笔记是单字段，和 card 的 content 同形。","又一个“一段文本存在某张表里”的例子。")
+   ]),
+  L1("ontology","本体与符号","overlap",1034,1005,
+   "本体（name/description 的平面清单）与能指-所指关系（signifier/signified/onto/weight）两个“概念组织”域。",
+   "本体是薄壳，符号是孤岛。“概念网络”的产品承诺没有兑现：没有图、没有关系浏览、没有前端入口。",
+   "onto 510 BE + 1,005 FE；sign 524 BE + 0 FE；sign 不在全局搜索注册。",["onto","sign"],[
+    L2("onto-crud","本体 CRUD","support",
+     "本体 CRUD、分页列表；模型只有 id/name/description/user_id。",
+     [["BE","OntoService / OntoQueryService","src/modules/onto/service.rs"],["DB","onto（+ onto_fts）","src/db/schema/tables.rs"],["FE","CreateOntoModal / useOntologyList","web/src/modules/ontology/components/CreateOntoModal.tsx"]],
+     "shared","保留能力；如果保留，应补关系图/反向引用。","onto 前端 1,005 行服务一个两字段模型。"),
+    L2("onto-ui","网格 / 表格 / 详情","support",
+     "网格/表格/详情/创建弹窗；两种列表视图。",
+     [["FE","OntologyGrid / OntologyTable / OntologyDetail","web/src/modules/ontology/components/OntologyTable.tsx"],["FE","OntologyList / OntologyDetail 页面","web/src/modules/ontology/OntologyList.tsx"]],
+     "shared","保留；详情页只有 name/description，信息密度低。","没有关系浏览，也没有与 sign 的连接。"),
+    L2("sign-crud","能指-所指关系","dead",
+     "能指-所指 CRUD、按能指/所指查询；无页面、无消费者、不在搜索注册。",
+     [["BE","SignService / SignQueryService + 5 端点","src/modules/sign/service.rs"],["DB","signifier_signified","src/db/schema/tables.rs"],["FE","无页面、无 import","—"]],
+     "onto_id（弱关联）","删除候选；除非有外部脚本/API 消费者。","前端 grep 不到 /sign 或 signifier 的调用。")
+   ]),
+  L1("ai","AI 对话与生成","core",2087,5110,
+   "AI 对话与生成：对话树/分支/修订、SSE 流式、提示词预设、每用户 AI 配置、记忆卡生成、助记/标签建议。",
+   "保留，但收敛成一条 AI gateway。现在提示词一半在前端、一半在后端，流式与非流式两套路径。",
+   "chat 1.6k + ai 0.5k BE；5.1k FE；15 个端点；4 张表。",["chat","ai"],[
+    L2("chat-tree","会话树 / 分支 / 修订","core",
+     "树/节点/分支/修订（revised_from）；系统提示词；标题生成；kind=chat / mem。",
+     [["BE","ChatService + ChatRepo","src/modules/chat/service.rs"],["DB","chat_tree · chat_node（revised_from/reasoning）","src/db/schema/tables.rs"],["FE","ChatPage / ChatSidebar / BranchBar","web/src/modules/chat/ChatPage.tsx"]],
+     "shared；ai（port）","保留；树状分支是产品差异化能力。","修订用 revised_from 记录来源，不是覆盖。"),
+    L2("chat-stream","SSE 流式与回滚","core",
+     "SSE：__R__ 推理前缀、__DONE__、__ERROR__、失败回滚已插入节点；流式不重试。",
+     [["BE","stream_chat + 事务回滚","src/modules/chat/service.rs"],["FE","streamChatRequest：TextDecoder 逐行解析","web/src/modules/chat/hooks/streamChatRequest.ts"],["LOGIC","SSE_DONE / SSE_ERROR_PREFIX 前后端一致","src/modules/chat/service.rs"]],
+     "ai（SSE 解析）；eventsource-stream","保留；流式协议是前后端契约。","流式不能设总超时。"),
+    L2("chat-prompt","提示词预设与标题","support",
+     "提示词预设 CRUD；系统提示词；标题生成。",
+     [["BE","prompt_preset + /trees/{id}/title","src/modules/chat/handler.rs"],["FE","ChatPromptsPage / Composer","web/src/modules/chat/ChatPromptsPage.tsx"]],
+     "ai（标题生成）","保留；预设是低频功能，但让提示词可复用。","标题生成也走 AiChatPort。"),
+    L2("ai-settings","每用户 AI 配置与代理","support",
+     "每用户 endpoint/api_key/model/mnemonic_prompt；api_key 不回显；/ai/chat 非流式代理。",
+     [["BE","AiService + AiRepo + /ai/settings /ai/chat","src/modules/ai/service.rs"],["DB","ai_settings（user_id 主键）","src/db/schema/tables.rs"],["FE","AiSettingsModal + shared/ai","web/src/modules/ai-setting/AiSettingsModal.tsx"]],
+     "shared；reqwest","保留；api_key 不进浏览器是正确边界。","非流式重试 2 次；流式不重试。"),
+    L2("ai-mem","记忆卡生成","core",
+     "chat kind=mem 生成记忆卡；前端 useChatMem 直接调 mem API；保存为 mem。",
+     [["FE","ChatMemPage / useChatMem","web/src/modules/chat/hooks/useChatMem.ts"],["BE","chat kind=mem + mem create","src/modules/chat/service.rs"],["DB","chat_tree.kind · mem/chunk","src/db/schema/tables.rs"]],
+     "chat → mem；ai（流式）","保留；这是 AI 与记忆域之间最有价值的一条链路。","生成的是“对话树里的卡片”，保存动作在前端调 mem API。"),
+    L2("ai-aux","助记 / 标签建议 / 标题","support",
+     "mem 助记（前端 prompt）+ bookmark 标签建议（后端 prompt）+ 标题生成（后端）。",
+     [["FE","useMnemonic → /ai/chat","web/src/modules/mem/hooks/useMnemonic.ts"],["BE","bookmark suggest_tags → AiChatPort","src/modules/bookmark/service.rs"],["BE","chat generate_title → AiChatPort","src/modules/chat/service.rs"]],
+     "mem → ai；bookmark → ai；chat → ai","收编候选；三种 AI 用法应共用 prompt registry。","同一个模型能力，三种编排位置。")
+   ]),
+  L1("search","检索","core",91,2087,
+   "检索：10 个 SearchPort 的全局聚合、⌘K 命令面板、结果页、各域自己的搜索端点，以及一套只读的 conv 遗留搜索。",
+   "全局搜索的端口设计是项目最佳实践；conv 是历史包袱，应删除或补导入。",
+   "search 91 BE + palette 1.8k + page 254 FE；1 个聚合端点；10 个 provider；conv 3 个端点。",["search","conv","command-palette"],[
+    L2("search-global","全局搜索端口","core",
+     "SearchRegistry 并行聚合 10 个 provider；Actor 控制可见范围；统一 SearchHit / SearchTarget。",
+     [["BE","SearchQueryService + SearchRegistry","src/shared/search.rs"],["BE","10 个 provider 注册（app/context.rs）","src/app/context.rs"],["LOGIC","多词 = AND；FTS / LIKE 同语义","src/shared/search.rs"]],
+     "shared；各模块 SearchPort","保留；这是最干净的跨域接缝。","注册是手写的：新模块忘了就静默搜不到。"),
+    L2("palette","命令面板 ⌘K","core",
+     "idle 导航、本地模糊、站内搜索、IME 闸门、a11y、焦点归还；/ 导航只列实路径。",
+     [["FE","CommandPalette + usePalette / usePaletteSearch","web/src/modules/command-palette/CommandPalette.tsx"],["FE","fuzzy / suggestions / resolveTargetUrl","web/src/modules/command-palette/hooks/fuzzy.ts"],["FE","search page 复用同一套检索","web/src/modules/search/api.ts"]],
+     "search → command-palette（页面薄门面）","保留；它是“找回”旅程的主入口。","search 模块只有 254 行，检索能力实际住在 command-palette。"),
+    L2("search-page","结果页","support",
+     "结果页按 kind 分组/跳转；API 面是 command-palette 的薄门面。",
+     [["FE","SearchPage + search/api.ts","web/src/modules/search/SearchPage.tsx"],["BE","/search?q=&limit=","src/modules/search/handler.rs"]],
+     "command-palette","保留；页面是结果的另一种呈现。","search 页面与 ⌘K 共用 searchE。"),
+    L2("conv-legacy","旧知识搜索","legacy",
+     "conv_titles/articles 只读搜索 + 详情 + 概念；生产代码无写入，表无导入管线。",
+     [["BE","ConvQueryService：只读 SQL","src/modules/conv/query.rs"],["DB","conv_titles · articles（无生产写入）","src/db/schema/tables.rs"],["FE","ConvSearch / ConvDetail / ConvConcept（3 页）","web/src/modules/conv/ConvSearch.tsx"]],
+     "shared；搜索注册（只读）","删除候选；如果历史数据还要用，补一条导入管线。","INSERT 只出现在 #[cfg(test)]；生产只有 SELECT。")
+   ]),
+  L1("identity","账户 / 权限 / 管理","support",1172,1343,
+   "账户/权限/管理：bcrypt + JWT + API Key、首个用户 admin、require_admin、限速、注册开关、JWT 轮换、系统信息。",
+   "保留。授权判据收在 Actor 一处是强项；user→admin 的具体类型依赖需要收口。",
+   "user 423 + admin 749 BE；4 个表（user/api_key/app_settings + 关联）；8+3 个端点。",["user","admin","auth"],[
+    L2("auth","注册 / 登录 / 密码","core",
+     "注册/登录/登出/改密；bcrypt；JWT HS256 TTL 10 天；首个注册用户 admin。",
+     [["BE","user + app/auth：AuthService","src/app/auth/service.rs"],["BE","/user/register /login /password","src/modules/user/handler.rs"],["FE","AuthDialog / AuthGuard / useAuth","web/src/modules/auth/AuthDialog.tsx"]],
+     "shared；admin（注册开关 / JWT）","保留；认证边界是唯一把凭据翻成 Actor 的地方。","JWT_SECRET 缺省随机生成（重启失效）；实际以 DB app_settings 优先。"),
+    L2("jwt-apikey","JWT / API Key / 限速","core",
+     "API Key（X-API-Key，库存 SHA-256，明文只显示一次）；限速按 CF-Connecting-IP；401/403 统一。",
+     [["BE","create/list/delete API key","src/app/http/auth.rs"],["DB","api_key（role 冻结）","src/db/schema/tables.rs"],["INFRA","/login /register 10 次/分；/ai 独立桶","src/app/http/rate_limit.rs"]],
+     "shared；admin","保留；api_key.role 冻结是已知取舍。","限速键只认 CF-Connecting-IP。"),
+    L2("admin-settings","注册开关 / JWT 轮换","support",
+     "开放注册开关、JWT 密钥轮换、app_settings 持久化。",
+     [["BE","AdminService + /admin/settings","src/modules/admin/service.rs"],["DB","app_settings（key/value）","src/db/schema/tables.rs"],["FE","RegistrationCard / JwtCard","web/src/modules/admin/components/RegistrationCard.tsx"]],
+     "shared","保留；运行时覆盖 env 的设计清楚。","JWT 轮换立即作废旧 token。"),
+    L2("admin-system","系统信息 / 统计","support",
+     "系统信息/统计/备份目录/服务器指标（尽力而为，读不到显示 —）。",
+     [["BE","admin/system.rs：/proc、statvfs、目录占用","src/modules/admin/system.rs"],["FE","ServerInfoCard / ServiceInfoCard / StatCards","web/src/modules/admin/components/ServerInfoCard.tsx"]],
+     "shared；libc（unix）","保留；开发机显示 — 是正确降级，不是 bug。","绝不把“读不到”报成 0。"),
+    L2("key-page","API Key 管理页","overlap",
+     "API Key 管理页；与 admin 设置重叠。",
+     [["FE","KeyPage + api.ts","web/src/modules/key/KeyPage.tsx"],["BE","/auth/key*（3 个端点）","src/app/http/auth.rs"]],
+     "app/context/auth","收编候选；并入 admin 设置。","KeyPage 369 行，只做 API Key 的创建/列表/删除。")
+   ]),
+  L1("platform","平台与运维","infra",5522,5955,
+   "平台与运维：单一声明 schema + reconcile + FTS + 时间触发器、启动自检、迁移/备份/回滚、SSH 部署、SEO/Agent 产物、测试/构建工具链。",
+   "保留。它是项目最“工程化”的部分；复杂度高但有明确回报。",
+   "app 1.5k + db 2.6k + shared 1.4k BE；xtask 7.3k；34 张表；10 个 FTS 索引。",["app","db","shared","xtask"],[
+    L2("schema","schema / 迁移 / FTS","infra",
+     "tables/time/fts/legacy/repairs 单一声明；reconcile 按形状补齐；新库 = 老库升级路径。",
+     [["BE","tables.rs 声明 + apply.rs reconcile","src/db/schema/tables.rs"],["BE","FTS 10 个索引 + 时间归一化触发器","src/db/schema/fts.rs"],["LOGIC","升级 ≡ 新建库的测试","src/db/mod.rs"]],
+     "shared","保留；这是项目最值得保留的“额外复杂度”。","改 schema = 改声明 + SCHEMA_VERSION += 1。"),
+    L2("self-check","启动自检","infra",
+     "schema 漂移、quick_check、上传目录、存储一致性、缩略图缓存、时间戳格式；致命/告警分级。",
+     [["BE","app/self_check.rs","src/app/self_check.rs"],["BE","db/verify.rs","src/db/verify.rs"],["INFRA","启动浅检查；--check 深检查","src/main.rs"]],
+     "db；file；bookmark","保留；部署收尾自动跑一次。","①②③ 致命中止启动；④⑤ 只告警。"),
+    L2("deploy","部署 / 备份 / 回滚","infra",
+     "SSH 通道 tar 流、systemd/Caddy、备份/回滚、glibc/musl 兼容、db push/pull。",
+     [["INFRA","xtask/src/deploy.rs + rollback.rs","xtask/src/deploy.rs"],["INFRA","deploy/brainbow.service + Caddyfile","deploy/brainbow.service"],["INFRA","justfile + .env.prod","justfile"]],
+     "—","保留；部署是 Linux 专属，Windows 不跑。","上传在停服之前；回滚按 user_version 判断是否连库一起回。"),
+    L2("seo","SEO / Agent 产物","support",
+     "sitemap/robots/llms.txt/_md/openapi/api-catalog 构建时生成。",
+     [["FE","vite seoPlugin + web/scripts","web/vite.config.ts"],["FE","generate-seo.ts + 模板","web/scripts/generate-seo.ts"],["INFRA","Caddy Accept: text/markdown 协商","deploy/Caddyfile"]],
+     "config/paths.ts + navigation.ts","保留；改路径/导航后构建自动重生成。","不要手改 dist 里的 SEO 产物。"),
+    L2("tooling","测试 / 构建工具链","infra",
+     "justfile + xtask + biome/stylelint/vitest/playwright；951 Rust 测试函数、216 前端测试文件。",
+     [["INFRA","justfile（182 行）+ xtask（7.3k 行）","justfile"],["FE","vite 8 + vitest 4 + biome + stylelint","web/vite.config.ts"],["FE","Playwright 5 个 e2e spec","web/e2e/specs"]],
+     "—","保留；测试密度是项目敢做 schema 重构的底气。","全量测试很贵：按模块跑。")
+   ]),
+  L1("shell","外壳与外围","support",1091,6891,
+   "应用外壳与外围：首页/落地页、快速记录、主题/字号、彩虹生成器、数据库查看器、Kumo 组件库。",
+   "外壳保留；外围分散。Kumo 是死代码，key/color 应进设置，db_viewer 应 dev-only，rainbow 可拆。",
+   "home/landing/quick/color/rainbow 约 3.3k FE；db_viewer 1.1k BE + 3.3k FE；kumo 7.9k FE 零活消费者。",["home","landing","quick-capture","color","rainbow","db_viewer","kumo"],[
+    L2("home","首页 / 落地页","support",
+     "首页模块九宫格 + 待办 + 最近卡片；未登录落地页。",
+     [["FE","HomePage / LandingPage + HomeGuard","web/src/modules/home/HomePage.tsx"],["FE","MODULE_CARDS 九宫格数据源","web/src/config/module-cards.ts"]],
+     "home → task / card；app 路由","保留；首页是组合视图，不拥有数据。","HomeGuard 分流 LandingPage / HomePage。"),
+    L2("quick","快速记录","support",
+     "Shift+Tab 快速创建任务/卡片/书签；#任务 @URL 默认卡片。",
+     [["FE","QuickCapture + useQuickCapture","web/src/modules/quick-capture/QuickCapture.tsx"],["FE","写路径：task / card / bookmark API","web/src/modules/quick-capture/hooks/useQuickCapture.ts"]],
+     "quick-capture → task / card / bookmark","保留；与 task 的 CaptureInput 功能重叠，二选一。","快速记录是“跨域写”的 UI 组合，适合放外壳层。"),
+    L2("theme","主题 / 字号","support",
+     "paper/midnight/auto + 字号三档；/color 页。",
+     [["FE","theme.ts：initTheme / applyTheme / fontScale","web/src/shared/styles/theme.ts"],["FE","tokens.css：--t-* + data-theme","web/src/shared/styles/tokens.css"],["FE","ColorPage：主题/字号切换","web/src/modules/color/ColorPage.tsx"]],
+     "shared/styles","收编候选；/color 页并入设置。","主题切换是全局能力，不值得一个一级导航页。"),
+    L2("rainbow","彩虹生成器","toy",
+     "彩虹生成器（角度/颜色/绘制），与 PKM 无关。",
+     [["FE","RainbowGenerator + AngleEditor / ColorEditor / Drawer","web/src/modules/rainbow/RainbowGenerator.tsx"],["FE","useRainbowGenerator + geometry","web/src/modules/rainbow/hooks/useRainbowGenerator.ts"]],
+     "shared","拆出候选；保留为 /labs 彩蛋。","1,344 行前端，零后端、零表、零搜索。"),
+    L2("db-viewer","数据库查看器","tool",
+     "管理员只读数据库浏览：表/分页/筛选/排序/行详情/反查/导出。",
+     [["BE","db_viewer：4 个端点 + 动态表名白名单","src/modules/db_viewer/handler.rs"],["FE","DbViewer + DbTable + FilterChips + BackRefs","web/src/modules/db/DbViewer.tsx"],["INFRA","AGENTS 说 feature-gated；Cargo.toml 实际无 [features]","Cargo.toml"]],
+     "所有表（只读）","降级候选；生产默认关，dev/管理员按需开。","1,091 BE + 3,261 FE；它不是业务功能，是运维工具。"),
+    L2("kumo","Kumo 组件库","dead",
+     "vendored SolidJS Kumo（17 族 + 预编译 CSS）；唯一 import 是零消费者的 DialogCloseButton；内部 search-control 38KB 也零引用。",
+     [["FE","17 个组件族 + kumo.css 75KB","web/src/components/kumo/index.ts"],["FE","唯一 import：DialogCloseButton","web/src/components/ui/molecules/DialogCloseButton.tsx"],["FE","search-control.tsx 38KB，零引用","web/src/components/kumo/internal/search-control.tsx"]],
+     "@photon-ai/base-ui-solid；cnfast","删除；连同 DialogCloseButton 与两个依赖。","7,853 行 + 75KB CSS + 2 个运行时依赖，零活消费者。")
+   ])
+ ]
+};
+
+/* ── 能力矩阵（数组：名称/模块/页面/端点/表/后端/前端/状态/依赖/树节点） ── */
+var CAPS = [
+ ["任务与时间","task + time_window",2,32,4,5811,10745,"core","shared · admin(settings) · 双向 port","task"],
+ ["间隔记忆","mem",3,37,7,4790,7526,"core","shared · file(UI) · ai(client)","mem"],
+ ["通用文件","file",2,13,4,8218,15830,"core","shared · app(auth)","file"],
+ ["网页书签","bookmark",3,17,3,2543,3112,"core","shared · ai(port)","bookmark"],
+ ["AI 对话","chat + ai",3,15,4,2087,5110,"core","ai(port) · mem(UI)","ai"],
+ ["英语阅读","reading",3,8,3,1043,1390,"support","—","reading"],
+ ["卡片 + 文本","card + text",5,8,2,990,2492,"overlap","file(UI)","notes"],
+ ["本体 + 符号","onto + sign",2,10,2,1034,1005,"overlap","—","ontology"],
+ ["旧知识搜索","conv",3,3,2,590,879,"legacy","只读 SQL","search"],
+ ["全局检索","search + command-palette",1,1,0,91,2087,"core","10 SearchPort","search"],
+ ["账户 / 权限","user + auth",1,8,2,423,793,"support","admin","identity"],
+ ["管理员","admin",1,3,1,749,919,"support","app_settings","identity"],
+ ["数据库查看","db_viewer",1,4,34,1091,3261,"tool","all tables","shell"],
+ ["外壳（不含 DB / Key）","home/landing/quick/color/rainbow",3,0,0,0,3261,"support","—","shell"],
+ ["Kumo 组件","components/kumo",0,0,0,0,7853,"dead","—","shell"],
+ ["平台 / 运维","app + db + shared + xtask",0,0,34,5522,5955,"infra","all","platform"],
+ ["UI 基础","components/ui",0,0,0,0,4722,"support","—","platform"],
+ ["共享前端","shared",0,0,0,1442,4592,"infra","—","platform"]
+];
+
+/* ── 树图：精确到 112,141 生产行 ── */
+var MAP = [
+ ["文件库",8218,15830,"core","13 端点 / 4 表 / 15+ viewer；21.4% 生产代码。"],
+ ["任务 / 时间",5811,10745,"core","32 端点 / 4 表；四视图 + 排期算法。"],
+ ["记忆",4790,7526,"core","37 端点 / 7 表；FSRS + 复习队列 + 管理面。"],
+ ["AI / 对话",2087,5110,"core","15 端点 / 4 表；树状对话 + SSE + 记忆卡生成。"],
+ ["书签",2543,3112,"core","17 端点 / 3 表；favicon + HTML 导入 + AI 标签。"],
+ ["DB 查看",1091,3261,"tool","管理员只读工具；生产可关。"],
+ ["UI 基础",0,4722,"support","Atoms / molecules / organisms；真正共享的 UI。"],
+ ["Kumo",0,7853,"dead","零活消费者；唯一 import 的组件也没人用。"],
+ ["卡片 / 文本",990,2492,"overlap","两套表、两套页面、一个 content 字段。"],
+ ["共享前端",0,4592,"infra","api / utils / styles / ai；前端工具箱。"],
+ ["阅读",1043,1390,"support","8 端点 / 3 表；生词与 mem 未打通。"],
+ ["账户 / 管理",1172,1343,"support","JWT / API Key / 注册开关 / 系统信息。"],
+ ["全局检索",91,2087,"core","10 provider + ⌘K + 结果页。"],
+ ["本体 / 符号",1034,1005,"overlap","onto 是平面清单；sign 无前端。"],
+ ["外壳",0,1917,"support","home / landing / quick-capture / color。"],
+ ["旧 conv",590,879,"legacy","生产只读；写入只在测试。"],
+ ["Rainbow",0,1344,"toy","与 PKM 无关的绘图工具。"],
+ ["平台后端",5522,0,"infra","app + db + shared；组合根 / schema / 工具箱。"],
+ ["API Key 页",0,369,"overlap","可并入 admin。"],
+ ["Config",0,412,"infra","paths / navigation / module-cards。"],
+ ["App 前端",0,951,"infra","Layout / routes / auth context / ambient。"],
+ ["入口 main",219,0,"infra","启动 / 日志 / 优雅关闭。"]
+];
+
+/* ── 依赖图（数组：id/label/loc/status/band；边：from/to/kind/count） ── */
+var BE_N = [
+ ["app","app",1480,"infra",0],
+ ["file","file",8218,"core",1],["mem","mem",4790,"core",1],["task","task",4387,"core",1],
+ ["bookmark","bookmark",2543,"core",1],["chat","chat",1551,"core",1],["time_window","time_window",1424,"core",1],
+ ["db_viewer","db_viewer",1091,"tool",1],["reading","reading",1043,"support",1],["admin","admin",749,"support",1],
+ ["card","card",637,"overlap",1],["conv","conv",590,"legacy",1],["ai","ai",536,"core",1],
+ ["sign","sign",524,"dead",1],["onto","onto",510,"support",1],["user","user",423,"support",1],
+ ["text","text",353,"overlap",1],["search","search",91,"core",1],
+ ["shared","shared",1442,"infra",2],["db","db",2600,"infra",2]
+];
+var BE_E = [
+ ["app","file","composition",1],["app","mem","composition",1],["app","task","composition",1],["app","bookmark","composition",1],["app","chat","composition",1],["app","time_window","composition",1],["app","db_viewer","composition",1],["app","reading","composition",1],["app","admin","composition",1],["app","card","composition",1],["app","conv","composition",1],["app","ai","composition",1],["app","sign","composition",1],["app","onto","composition",1],["app","user","composition",1],["app","text","composition",1],["app","search","composition",1],
+ ["file","shared","infra",16],["mem","shared","infra",32],["task","shared","infra",34],["bookmark","shared","infra",15],["chat","shared","infra",13],["time_window","shared","infra",14],["db_viewer","shared","infra",6],["reading","shared","infra",9],["admin","shared","infra",3],["card","shared","infra",11],["conv","shared","infra",9],["ai","shared","infra",4],["sign","shared","infra",8],["onto","shared","infra",10],["user","shared","infra",6],["text","shared","infra",8],["search","shared","infra",4],["db","shared","infra",4],
+ ["task","time_window","cycle",17],["time_window","task","cycle",2],["task","admin","settings",2],["user","admin","settings",2],["file","app","violation",6],["bookmark","ai","port",4],["chat","ai","port",9],
+ ["mem","search","registry",1],["card","search","registry",1],["task","search","registry",1],["bookmark","search","registry",1],["onto","search","registry",1],["text","search","registry",1],["reading","search","registry",1],["conv","search","registry",1],["chat","search","registry",1],["file","search","registry",1]
+];
+var FE_N = [
+ ["app","app",951,"infra",0],
+ ["file","file",15830,"core",1],["task","task",10745,"core",1],["mem","mem",7526,"core",1],
+ ["chat","chat",4846,"core",1],["db","db",3261,"tool",1],["bookmark","bookmark",3112,"core",1],
+ ["card","card",2063,"overlap",1],["command-palette","palette",1833,"core",1],["reading","reading",1390,"support",1],
+ ["rainbow","rainbow",1344,"toy",1],["ontology","ontology",1005,"support",1],["admin","admin",919,"support",1],
+ ["conv","conv",879,"legacy",1],["quick-capture","quick",623,"support",1],["landing","landing",464,"support",1],
+ ["home","home",463,"support",1],["text","text",429,"overlap",1],["auth","auth",424,"support",1],
+ ["key","key",369,"overlap",1],["color","color",367,"toy",1],["ai-setting","ai-set",264,"support",1],
+ ["search","search",254,"core",1],
+ ["ui","ui",4722,"support",2],["shared","shared",4592,"infra",2],["config","config",412,"infra",2],
+ ["kumo","kumo",7853,"dead",3]
+];
+var FE_E = [
+ ["app","file","composition",1],["app","task","composition",1],["app","mem","composition",1],["app","chat","composition",1],["app","db","composition",1],["app","bookmark","composition",1],["app","card","composition",1],["app","command-palette","composition",1],["app","reading","composition",1],["app","rainbow","composition",1],["app","ontology","composition",1],["app","admin","composition",1],["app","conv","composition",1],["app","quick-capture","composition",1],["app","landing","composition",1],["app","home","composition",1],["app","text","composition",1],["app","auth","composition",1],["app","key","composition",1],["app","color","composition",1],["app","ai-setting","composition",1],["app","search","composition",1],["app","ui","composition",1],["app","shared","composition",1],["app","config","composition",1],
+ ["file","ui","infra",45],["file","shared","infra",30],["task","ui","infra",27],["task","shared","infra",17],["mem","ui","infra",22],["mem","shared","infra",27],["bookmark","ui","infra",14],["bookmark","shared","infra",13],["chat","ui","infra",8],["chat","shared","infra",9],["card","ui","infra",6],["card","shared","infra",7],["reading","ui","infra",5],["reading","shared","infra",4],["conv","ui","infra",4],["conv","shared","infra",6],["db","ui","infra",6],["db","shared","infra",4],["admin","ui","infra",5],["admin","shared","infra",2],["ontology","ui","infra",4],["ontology","shared","infra",2],["rainbow","ui","infra",5],["rainbow","shared","infra",4],["command-palette","ui","infra",1],["command-palette","shared","infra",6],["ai-setting","ui","infra",1],["ai-setting","shared","infra",3],["auth","ui","infra",1],["auth","shared","infra",1],["key","ui","infra",1],["key","shared","infra",1],["home","ui","infra",2],["home","shared","infra",1],["text","shared","infra",1],["color","ui","infra",2],["color","shared","infra",1],["landing","ui","infra",1],["quick-capture","shared","infra",1],["search","ui","infra",1],["search","shared","infra",1],["ui","shared","infra",11],
+ ["home","task","domain",1],["home","card","domain",2],["quick-capture","task","domain",1],["quick-capture","card","domain",1],["quick-capture","bookmark","domain",1],["chat","mem","domain",1],["mem","file","domain",3],["card","file","domain",2],["search","command-palette","domain",1],["command-palette","ai-setting","domain",1],
+ ["admin","app","port",1],["key","app","port",1],["auth","app","port",2],["ui","kumo","violation",1]
+];
+
+/* ── 重叠 / 取舍 / 四象限 ── */
+var OVERLAP = [
+ ["标签：三套表，三种作用域",["tag(name, user_id)","file_tag(name UNIQUE)","bookmark_tag(name UNIQUE)"],"mem/task 用 tag（按用户唯一）；file 用 file_tag（全局唯一）；bookmark 用 bookmark_tag（全局唯一）。三套表、三套 service、三套 TagInput/TagFilter。","src/db/schema/tables.rs:449 / 281 / 534；web/src/modules/{file,bookmark}/components/TagInput.tsx","建议：统一 tag + scope + tag_rel；先统一读模型与 UI，表迁移后做。"],
+ ["文本：八处存储",["card.content","chunk.content","text_note.content","reading_article.content","chat_node.content","bookmark.description","file.text_content","conv_titles/articles"],"它们都存“一段可搜索文本”，但各自有表、各自有搜索、各自有编辑 UI。file.text_content 是派生文本，其它是主文本。","card/chunk/text_note/reading_article/chat_node/bookmark/file/conv 的 DDL 与 repository","建议：先统一 note 读模型（title/content/kind/tags），不急着迁表；file.text_content 保持派生。"],
+ ["检索：五层入口",["模块内 FTS","全局 SearchPort","各域 /search","conv 遗留","⌘K 面板"],"全局搜索是端口聚合；各域又有自己的 search 端点；conv 只读旧表；命令面板与结果页共用 searchE。用户看到 5 个入口，代码里有 5 套排序/片段逻辑。","src/shared/search.rs；src/modules/*/{query,repository}.rs；web/src/modules/command-palette","建议：保留 SearchPort + 各域 filter 端点；删除 conv 入口；结果页只做呈现。"],
+ ["AI：两条路径",["/ai/chat 非流式（前端 prompt）","/chat/.../chat SSE（后端编排）","bookmark 标签建议（后端 prompt）"],"mem 助记在前端 fillPrompt 后调 /ai/chat；chat 与 bookmark 在后端拼 prompt。流式不重试，非流式重试 2 次；错误格式与取消语义各自一套。","web/src/modules/mem/hooks/useMnemonic.ts:56；src/modules/chat/service.rs；src/modules/bookmark/service.rs","建议：统一 AI gateway + prompt registry；前端只拿流，服务端负责编排与重试。"],
+ ["文件预览：两栈三运行时",["后端 Rust 解析","前端 pdf.js / three.js","ffmpeg 子进程"],"Office/EPUB 在后端解压解析；PDF 首页在浏览器渲染；3DGS 用 three；视频海报用 ffmpeg。每条栈都有自己的懒加载、错误与降级。","src/modules/file/preview.rs；web/src/modules/file/lib/pdfThumb.ts；thumb/video.rs","建议：保留；按格式拆成可选 feature / 独立 chunk。"],
+ ["UI：重复的小组件",["TagFilter ×2","TagInput ×2","Pagination ×2","Modal / ConfirmModal / kumo Dialog"],"file 与 bookmark 各有一套 TagFilter/TagInput；SimplePagination 与 db 的 PaginationBar 各一套；Modal、ConfirmModal 与 kumo Dialog 三套浮层。","web/src/modules/{file,bookmark}/components；components/ui/molecules/SimplePagination.tsx；components/kumo","建议：把重复组件提升到 components/ui；kumo 直接删。"]
+];
+var CUTS = [
+ ["components/kumo","7,853 行（含 75KB CSS）","唯一 import 是 ui/molecules/DialogCloseButton.tsx；该组件零消费者；internal/search-control.tsx 38KB 零引用。","死代码","删除","高","低（同步删 2 个依赖）"],
+ ["db_viewer","1,091 BE + 3,261 FE","仅 admin 挂载；Cargo.toml 无 [features]，AGENTS 的 feature-gate 描述已失效。","运维工具","降级","高","低"],
+ ["card + text","3,482 行","card 表只有 content；text_note 也是 content；mem chunk 同形；两套页面/API/表。","重叠","收编","中","中（迁移/前端路由）"],
+ ["conv","1,469 行","conv_titles/articles 生产代码只读；INSERT 只出现在 #[cfg(test)]；无导入管线。","遗留","删除","高","低-中（删表需 schema 版本）"],
+ ["sign","524 行","5 个端点 + 1 张表；前端零引用；不在搜索注册。","孤岛","删除","高","低（除非外部 API 使用者）"],
+ ["rainbow","1,344 行","与 PKM 无关，纯前端绘图；零后端、零表。","外围","降级","中","低"],
+ ["key","369 行","API Key 管理页；admin 设置已有认证管理。","重叠","收编","中","低"],
+ ["color","367 行","主题/字号切换，属于设置。","重叠","收编","中","低"],
+ ["三套标签","3 张表 + 3 套服务/UI","tag(name,user_id) / file_tag(name UNIQUE) / bookmark_tag(name UNIQUE)。","冗余","收编","高","高（迁移）"],
+ ["八处文本存储","7 张表 + 文件磁盘","card/chunk/text_note/reading_article/chat_node/bookmark.description/file.text_content/conv。","碎片化","收编","中","高"],
+ ["两条 AI 路径","ai 0.5k + chat 1.6k BE","/ai/chat 非流式（前端 prompt）vs /chat/.../chat SSE（后端编排）。","分裂","收编","中","中"]
+];
+var QUAD = [
+ ["file","文件库",24048,4,"core","核心重镇；但 24k 行里大量是查看器。"],
+ ["task","任务",16556,5,"core","核心重镇；四视图 + 排期。"],
+ ["mem","记忆",12316,5,"core","核心重镇；算法 + 管理面。"],
+ ["kumo","Kumo",7853,0,"dead","花了很多代码，用户价值 0。"],
+ ["chat","AI 对话",7197,5,"core","核心重镇；树状对话。"],
+ ["bookmark","书签",5655,4,"core","边界清楚。"],
+ ["ui","UI 基础",4722,3,"support","共享 UI。"],
+ ["db","DB 查看",4352,2,"tool","运维价值，不是用户价值。"],
+ ["card","卡片",2700,3,"overlap","单字段模型配了 4 个页面。"],
+ ["identity","账户/权限",2515,5,"support","隐藏宝石；判据集中。"],
+ ["reading","阅读",2433,3,"support","轻量工具；与 mem 未打通。"],
+ ["search","检索",2178,5,"core","隐藏宝石；SearchPort 是最佳接缝。"],
+ ["onto","本体/符号",2039,2,"overlap","平面清单 + 无入口的符号。"],
+ ["shell","外壳",1917,2,"support","首页/落地/快速记录。"],
+ ["conv","旧 conv",1469,1,"legacy","只读旧数据。"],
+ ["rainbow","Rainbow",1344,1,"toy","与 PKM 无关。"],
+ ["text","文本",782,2,"overlap","全局单文档。"],
+ ["sign","符号",524,1,"dead","无前端入口。"],
+ ["key","Key 页",369,2,"overlap","可并入 admin。"],
+ ["color","主题页",367,2,"toy","可并入设置。"]
+];
+var EPS = [
+ ["user / auth","/user/* · /auth/key*",8,"注册/登录/登出/改密 + API Key 3 个"],
+ ["task","/tasks/*",24,"CRUD + 四视图 + 状态迁移 + 依赖"],
+ ["time_window","/time-windows/*",8,"CRUD + 任务窗口 + 冲突"],
+ ["card","/cards/*",6,"CRUD + search"],
+ ["onto","/onto/*",5,"CRUD"],
+ ["sign","/sign/*",5,"CRUD + by signifier/signified"],
+ ["text","/text",2,"get / put"],
+ ["file","/file/*",13,"上传/列表/标签/删除 + 公开 data/preview/thumb"],
+ ["mem","/mem/*",37,"复习/管理/标签/导入导出/优化"],
+ ["reading","/reading/*",8,"文章/单词/生词/推荐/笔记"],
+ ["bookmark","/bookmarks/*",17,"CRUD/标签/favicon/fetch/import/AI 建议"],
+ ["conv","/conv/*",3,"search/detail/concept（只读）"],
+ ["chat","/chat/*",13,"树/节点/流式/搜索/预设"],
+ ["ai","/ai/*",2,"settings + chat 代理"],
+ ["search","/search",1,"10 provider 聚合"],
+ ["admin","/admin/*",3,"settings / jwt rotate / system-info"],
+ ["db_viewer","/db/*",4,"表/数据/反查/导出"]
+];
+var TABLES = [
+ ["user","auth","user service","auth/admin","active"],["card","card","card service","card/search","active"],["onto","onto","onto service","onto/search","active"],["task","task","task service","task/search/dashboard","active"],["task_dependency","task","task service","DAG/ranking","active"],["task_tag_rel","task","task service","tag filter","active"],["time_window","time_window","time window service","calendar/slotting","active"],["file","file","file service","file/search/admin","active"],["file_tag","file","file service","file list","active（全局唯一）"],["file_tag_rel","file","file service","file list","active"],["file_meta","file","file service","metadata/search","active"],["signifier_signified","sign","sign service","sign API only","dead"],["text_note","text","text service","text/search","active"],["chunk","mem","mem repo","mem/search","active"],["mem","mem","mem service","review/manage/search","active"],["mem_prerequisite","mem","mem service","mem add","active"],["revlog","mem","mem service","FSRS optimizer","active"],["mem_mnemonic","mem","mem service","review","active"],["tag","mem + task","mem/task service","tags","active（按用户唯一）"],["mem_tag","mem","mem service","tag filter","active"],["conv_titles","conv","tests only","conv search","legacy"],["articles","conv","tests only","conv search/file search","legacy"],["bookmark","bookmark","bookmark service","bookmark/search","active"],["bookmark_tag","bookmark","bookmark service","tags","active（全局唯一）"],["bookmark_tag_rel","bookmark","bookmark service","tags","active"],["reading_article","reading","reading service","reading/search","active"],["reading_article_word","reading","reading service","reader","active"],["reading_user_word","reading","reading service","unknown words","active（word 全局 UNIQUE）"],["chat_tree","chat","chat service","chat/search","active"],["chat_node","chat","chat service","chat/search","active"],["prompt_preset","chat","chat service","prompts","active"],["ai_settings","ai","ai service","AI proxy","active"],["api_key","auth","auth service","auth","active"],["app_settings","admin","admin service","admin/task/mem","active"]
+];
+var EDGES = [
+ ["file → app",6,"violation","src/modules/file/handler.rs:408,416,457,569,754；src/modules/file/mod.rs:65","模块依赖组合层的 AuthService / optional_actor，无法独立测试。"],
+ ["task → time_window",17,"cycle","src/modules/task/service.rs；query.rs；slotting.rs","建任务要校验/创建时间窗；反向还有 2 条。"],
+ ["time_window → task",2,"cycle","src/modules/time_window/service.rs:62,145","只借用了 task::service::ServiceError 做映射，却形成环。"],
+ ["task → admin",2,"settings","src/modules/task/query.rs:10-11","读工作时段设置，却 import 了 admin service 的常量。"],
+ ["user → admin",2,"settings","src/modules/user/handler.rs:12-13,33,63","注册/登录直接拿具体 AdminService；AdminServicePort 已存在。"],
+ ["bookmark → ai",4,"port","src/modules/bookmark/service.rs:7-8；handler.rs:7；mod.rs","service 用 AiChatPort，handler 拿具体 AiService。"],
+ ["chat → ai",9,"port","src/modules/chat/service.rs:3-4；handler.rs:9,119,143","同上；流式端口用 Arc<dyn AiChatPort>。"],
+ ["search ← 10 providers",10,"registry","src/app/context.rs 的 SearchRegistry 注册块","不是 import；运行时注册。新增模块忘了 register 就静默搜不到。"],
+ ["ui → kumo",1,"violation","web/src/components/ui/molecules/DialogCloseButton.tsx:1","唯一 kumo 消费者自身零引用，等于双重死代码。"],
+ ["mem/card → file",5,"domain","web/src/modules/mem/components/ReviewCard.tsx:17；card/CardEdit.tsx:10","Markdown 文件选择从 file 根级支撑件注入；在边界规则内，但能力位置偏 file。"],
+ ["chat → mem",1,"domain","web/src/modules/chat/hooks/useChatMem.ts:10","生成记忆卡直接调 mem API；页面级编排可接受。"],
+ ["admin/key/auth → app",4,"port","AdminPage.tsx:3；KeyPage.tsx:4；AuthGuard.tsx:1","前端分层门禁明确允许（auth 是环境）。"],
+ ["reading_user_word.word",1,"data","src/db/schema/tables.rs:589","UNIQUE(word) 全局，但有 user_id；多用户会串数据。"],
+ ["bookmark_tag.name / file_tag.name",2,"data","src/db/schema/tables.rs:281,534","全局 UNIQUE；与 tag 的按用户唯一是两种作用域。"],
+ ["api_key.role",1,"data","src/db/schema/tables.rs:673","role 在建 key 时冻结；admin 降级后旧 key 仍是 admin。"]
+];
+var ROADMAP = [
+ ["01","删 Kumo + DialogCloseButton","同步删 @photon-ai/base-ui-solid 与 cnfast；跑 check/test。","S","低"],
+ ["02","处置 sign","删路由/状态/表（SCHEMA_VERSION + legacy 登记）；先看访问日志。","S","低"],
+ ["03","决定 conv","无导入管线就删 UI/路由；保留表只读或一并 drop。","S/M","低"],
+ ["04","收编外围","key→admin；color→设置；db_viewer dev-only；rainbow→labs。","M","低"],
+ ["05","统一标签读模型","先统一 API 与 UI，表迁移后做；加 scope 概念。","M","中"],
+ ["06","统一 note 读模型","card/text/chunk 先共享读模型；迁移分阶段。","L","高"],
+ ["07","抽端口","SettingsPort、ViewerResolver、AI gateway；搜索注册加启动断言。","M","中"],
+ ["08","拆 file","file-core / file-preview / file-ingest；API 不变，查看器按需。","L","中"],
+ ["09","统一检索 UI","删 conv 页；⌘K + 结果页两条入口；各域 filter 保留。","S/M","低"]
+];
+var MOVES = [
+ ["card / text / chunk","Knowledge Core 的 note 类型","三者都是“一段文本 + 标签 + 归属”，应共享读模型","L"],
+ ["tag / file_tag / bookmark_tag","tag + scope + tag_rel","三套标签是同一个概念的三次实现","XL"],
+ ["sign","删除","无页面、无搜索、无消费者","S"],
+ ["conv","删除或补导入","生产只读旧表，没有写入路径","S/M"],
+ ["kumo","删除","零活消费者","S"],
+ ["db_viewer","dev-only feature","管理员运维工具，不是用户功能","S"],
+ ["key / color","并入 admin / 设置","两个一级导航页只做设置","S"],
+ ["rainbow","/labs 或拆出","与 PKM 无关","S"],
+ ["file preview / 3DGS","file-preview 可选 feature","格式查看器是最大复杂度来源","L"],
+ ["/ai/chat + /chat/.../chat","AI gateway + prompt registry","两条路径、两种 prompt 所有权","M"],
+ ["user/task → admin service","SettingsPort","去掉对 admin 具体类型的依赖","M"],
+ ["file → app AuthService","ViewerResolver port","去掉模块对组合层的反向依赖","M"]
+];
+
+/* ══════════════ 渲染 ══════════════ */
+var NODE_MAP = {};
+var CURRENT = "root";
+(function indexTree(n){ NODE_MAP[n.id] = n; (n.children || []).forEach(indexTree); })(TREE);
+
+function renderSummary(){
+ var stats = [["12","能力","4 条用户旅程"],["61","功能切片","目标树 L2"],["17 / 22","后端域 / 前端模块","33 页 · 159 端点"],["34","张基表","10 个 FTS 索引"],["112k","生产行","55k 测试行"]];
+ $("#statRow").innerHTML = stats.map(function(x){ return '<div class="stat"><b>'+x[0]+'</b><span>'+x[1]+'</span><small>'+x[2]+'</small></div>'; }).join("");
+ $("#findings").innerHTML = FINDINGS.map(function(f){ return '<div class="finding"><div class="big-num">'+f.n+'</div><h3>'+esc(f.h)+'</h3><p>'+esc(f.p)+'</p></div>'; }).join("");
+ $("#journeys").innerHTML = JOURNEYS.map(function(j){ return '<div class="card"><h3>'+esc(j.t)+'</h3><div class="flow">'+j.s.map(function(s,i){ return (i?'<span class="arrow">→</span>':'')+'<span class="step-chip">'+esc(s)+'</span>'; }).join("")+'</div><p>'+esc(j.n)+'</p></div>'; }).join("");
+ $("#ladder").innerHTML = LADDER.map(function(x){ return '<div class="rung"><b>'+x.l+'</b><span>'+esc(x.t)+'</span><small>'+esc(x.s)+'</small></div>'; }).join("");
+}
+
+function implHTML(it){ return '<div class="impl"><span class="type">'+esc(it[0])+'</span><span>'+esc(it[1])+'<span class="path">'+esc(it[2])+'</span></span></div>'; }
+function nodeText(n){ return (n.label+" "+(n.summary||"")+" "+(n.modules||[]).join(" ")+" "+(n.impl||[]).map(function(i){return i[1]+" "+i[2];}).join(" ")).toLowerCase(); }
+function filterNode(n,q,core,ancestorHit){
+ var self = !q || nodeText(n).indexOf(q) >= 0 || ancestorHit;
+ var kids = (n.children || []).map(function(c){ return filterNode(c,q,core,ancestorHit || self); });
+ var any = kids.some(function(c){ return c._show; });
+ var coreOk = !core || n.status === "core" || n.status === "infra" || any;
+ return Object.assign({}, n, {_show: coreOk && (self || any), _open: !!q || core, _children: kids});
+}
+function nodeHTML(n,open){
+ var kids = n._children || n.children || [];
+ var hasKids = kids.length > 0;
+ var hasImpl = (n.impl || []).length > 0;
+ var can = hasKids || hasImpl;
+ var op = !!open && can;
+ var h = '<div class="tnode" data-id="'+esc(n.id)+'" data-status="'+esc(n.status)+'">';
+ h += '<div class="trow" role="button" tabindex="0" aria-expanded="'+(op?'true':'false')+'" aria-selected="false">';
+ h += '<span class="tcaret">'+(can?(op?'−':'+'):'·')+'</span><span class="tkicker">'+esc(n.kicker||"")+'</span><span class="tlabel">'+esc(n.label)+'</span><span class="tloc">'+(n.loc?fmt(n.loc.be+n.loc.fe):"")+'</span>'+chip(n.status);
+ h += '</div>';
+ if(hasKids) h += '<div class="tkids"'+(op?'':' hidden')+'>'+kids.map(function(c){return nodeHTML(c,op);}).join("")+'</div>';
+ if(hasImpl) h += '<div class="tstack"'+(op?'':' hidden')+'>'+n.impl.map(implHTML).join("")+'</div>';
+ return h + '</div>';
+}
+function renderTree(q,core){
+ var list = TREE.children;
+ if(q || core) list = list.map(function(c){return filterNode(c,q,core,false);}).filter(function(c){return c._show;});
+ var body = list.length ? list.map(function(c){return nodeHTML(c,!!c._open);}).join("") : '<div class="card" style="margin:14px 0">没有匹配项。换个词，或取消“只看核心”。</div>';
+ $("#treeBody").innerHTML = '<div class="tree-root"><div class="kicker">L0 · 产品</div><h3>'+esc(TREE.label)+'</h3><p>'+esc(TREE.summary)+'</p><div class="detail-meta" style="margin-top:10px">'+chip("core")+'<span class="mono">12 能力 · 61 功能 · 159 端点</span></div></div>' + body;
+ selectNode(CURRENT);
+}
+function toggleNode(node){
+ var row = node.querySelector(":scope > .trow");
+ var panel = node.querySelector(":scope > .tkids, :scope > .tstack");
+ if(!row || !panel) return;
+ var opening = panel.hasAttribute("hidden");
+ if(opening) panel.removeAttribute("hidden"); else panel.setAttribute("hidden","");
+ row.setAttribute("aria-expanded", opening ? "true" : "false");
+ var c = row.querySelector(".tcaret"); if(c) c.textContent = opening ? "−" : "+";
+}
+function openNode(node){
+ var panel = node.querySelector(":scope > .tkids, :scope > .tstack");
+ var row = node.querySelector(":scope > .trow");
+ if(panel && panel.hasAttribute("hidden")){ panel.removeAttribute("hidden"); if(row) row.setAttribute("aria-expanded","true"); var c=row?row.querySelector(".tcaret"):null; if(c)c.textContent="−"; }
+}
+function findPath(n,id,path){
+ if(n.id === id){ path.push(n); return true; }
+ var kids = n.children || [];
+ for(var i=0;i<kids.length;i++){ if(findPath(kids[i],id,path)){ path.unshift(n); return true; } }
+ return false;
+}
+function openTreeTo(id){
+ if(id === "root"){ var t=$("#treeBody"); if(t) t.scrollIntoView({behavior:"smooth",block:"start"}); selectNode("root"); return; }
+ var path=[]; if(findPath(TREE,id,path)) path.forEach(function(n){ var el=document.querySelector('.tnode[data-id="'+n.id+'"]'); if(el) openNode(el); });
+ var target=document.querySelector('.tnode[data-id="'+id+'"]');
+ if(target){ target.scrollIntoView({behavior:"smooth",block:"center"}); selectNode(id); }
+}
+function detailHTML(n){
+ if(!n) return "";
+ var h = '<div class="kicker">'+esc(n.kicker||"")+'</div><h3>'+esc(n.label)+'</h3><div class="detail-meta">'+chip(n.status)+(n.loc?'<span class="mono">'+fmt(n.loc.be+n.loc.fe)+' 行</span>':'')+'</div><p>'+esc(n.summary||"")+'</p>';
+ if(n.modules && n.modules.length) h += '<h4>涉及模块</h4><p class="mono">'+n.modules.map(esc).join(" · ")+'</p>';
+ if(n.impl && n.impl.length) h += '<h4>实现栈</h4>'+n.impl.map(implHTML).join("");
+ if(n.deps) h += '<h4>依赖</h4><p class="mono">'+esc(n.deps)+'</p>';
+ if(n.verdict) h += '<h4>判断</h4><p>'+esc(n.verdict)+'</p>';
+ if(n.evidence) h += '<h4>证据</h4><p class="small">'+esc(n.evidence)+'</p>';
+ if(n.children && n.children.length) h += '<h4>下一层</h4><p class="small">'+n.children.length+' 个功能切片；点左侧展开。</p>';
+ return h;
+}
+function selectNode(id){
+ var n = NODE_MAP[id] || TREE; CURRENT = n.id;
+ $$("#treeBody .trow").forEach(function(r){ r.setAttribute("aria-selected","false"); });
+ var row = document.querySelector('#treeBody .tnode[data-id="'+id+'"] > .trow'); if(row) row.setAttribute("aria-selected","true");
+ $("#treeDetail").innerHTML = detailHTML(n);
+}
+
+function renderCaps(){
+ var max = Math.max.apply(null, CAPS.map(function(c){return c[5]+c[6];}));
+ $("#capBody").innerHTML = CAPS.map(function(c){
+  var total=c[5]+c[6];
+  return '<tr class="tr-link" data-tree="'+esc(c[9])+'" data-status="'+esc(c[7])+'"><td><b>'+esc(c[0])+'</b></td><td class="mono small">'+esc(c[1])+'</td><td class="num">'+c[2]+'</td><td class="num">'+c[3]+'</td><td class="num">'+c[4]+'</td><td class="num">'+fmt(c[5])+'</td><td class="num">'+fmt(c[6])+'</td><td><div class="num" style="text-align:left">'+fmt(total)+'</div><div class="bar"><span style="width:'+(total/max*100).toFixed(1)+'%"></span></div></td><td class="small">'+esc(c[8])+'</td><td>'+chip(c[7])+'</td></tr>';
+ }).join("");
+ $$("#capBody tr").forEach(function(tr){ tr.addEventListener("click", function(){ var id=tr.getAttribute("data-tree"); if(id) openTreeTo(id); }); });
+}
+
+function binaryLayout(items,x,y,w,h,out){
+ if(!items.length) return;
+ if(items.length===1){ out.push({it:items[0],x:x,y:y,w:w,h:h}); return; }
+ var total=items.reduce(function(s,i){return s+i.value;},0), acc=0, split=1;
+ for(var i=0;i<items.length-1;i++){ acc+=items[i].value; if(acc>=total/2){ split=i+1; break; } }
+ if(split<1) split=1;
+ var a=items.slice(0,split), b=items.slice(split), ar=a.reduce(function(s,i){return s+i.value;},0)/total;
+ if(w>=h){ binaryLayout(a,x,y,w*ar,h,out); binaryLayout(b,x+w*ar,y,w*(1-ar),h,out); }
+ else { binaryLayout(a,x,y,w,h*ar,out); binaryLayout(b,x,y+h*ar,w,h*(1-ar),out); }
+}
+var mapMode="total";
+function renderMap(mode){
+ mapMode=mode||mapMode;
+ var items=MAP.map(function(it){ return {name:it[0],value:mapMode==="be"?it[1]:mapMode==="fe"?it[2]:it[1]+it[2],status:it[3],note:it[4]}; }).filter(function(it){return it.value>0;}).sort(function(a,b){return b.value-a.value;});
+ var out=[]; binaryLayout(items,0,0,1200,520,out);
+ var s="";
+ out.forEach(function(o){
+  var it=o.it, x=o.x+1, y=o.y+1, w=Math.max(0,o.w-2), h=Math.max(0,o.h-2);
+  var val=fmt(it.value)+" · "+pct(it.value,totalProd);
+  s += '<g class="map-cell" data-name="'+esc(it.name)+'" style="cursor:pointer"><rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+h.toFixed(1)+'" fill="'+statusFill(it.status)+'" stroke="'+statusColor(it.status)+'" stroke-width="1"/><title>'+esc(it.name+" · "+val+" · "+it.note)+'</title>';
+  if(w>86 && h>34){ s += '<text x="'+(x+7).toFixed(1)+'" y="'+(y+16).toFixed(1)+'" font-size="11" font-weight="700" fill="var(--ink)">'+esc(it.name)+'</text><text x="'+(x+7).toFixed(1)+'" y="'+(y+30).toFixed(1)+'" font-size="9" fill="var(--ink-2)">'+esc(val)+'</text>'; }
+  else if(w>52 && h>18){ s += '<text x="'+(x+5).toFixed(1)+'" y="'+(y+14).toFixed(1)+'" font-size="9" font-weight="700" fill="var(--ink)">'+esc(it.name)+'</text>'; }
+  s += '</g>';
+ });
+ $("#treemapSvg").innerHTML=s;
+ $("#mapLegend").innerHTML=["core","support","overlap","legacy","dead","toy","infra","tool"].map(function(k){ return '<span style="color:'+statusColor(k)+'"><i style="border-color:'+statusColor(k)+';background:'+statusFill(k)+'"></i>'+STATUS[k][0]+'</span>'; }).join("");
+ var total=items.reduce(function(a,b){return a+b.value;},0);
+ $("#mapDetail").innerHTML='<b>合计 '+fmt(total)+' 行</b>（生产代码，不含测试）。点击任意方块看说明。';
+ $$("#treemapSvg .map-cell").forEach(function(g){ g.addEventListener("click", function(){ var it=items.filter(function(x){return x.name===g.getAttribute("data-name");})[0]; if(it) $("#mapDetail").innerHTML='<b>'+esc(it.name)+'</b> · '+fmt(it.value)+' 行 · '+pct(it.value,totalProd)+' · '+chip(it.status)+'<br>'+esc(it.note); }); });
+}
+function setMapMode(mode){ mapMode=mode; $$("#mapModes .btn").forEach(function(b){ b.setAttribute("aria-pressed", b.getAttribute("data-map")===mode?"true":"false"); }); renderMap(mode); }
+
+var BE_NODES=BE_N.map(function(a){return{id:a[0],label:a[1],loc:a[2],status:a[3],band:a[4]};});
+var BE_EDGES=BE_E.map(function(a){return{from:a[0],to:a[1],kind:a[2],count:a[3]};});
+var FE_NODES=FE_N.map(function(a){return{id:a[0],label:a[1],loc:a[2],status:a[3],band:a[4]};});
+var FE_EDGES=FE_E.map(function(a){return{from:a[0],to:a[1],kind:a[2],count:a[3]};});
+var graphMode="be", graphSelected=null, showInfra=false, showRegistry=false;
+var EDGE_LABEL={composition:"组合",infra:"基础设施",domain:"域间",cycle:"环 / 双向",violation:"分层倒置",port:"端口",settings:"设置",registry:"搜索注册"};
+function radiusFor(n,mode){ if(n.band===0) return 26; var max=mode==="be"?8218:15830; return 10+24*Math.sqrt(Math.min(n.loc,max)/max); }
+function layoutGraph(nodes,mode){
+ var mods=nodes.filter(function(n){return n.band===1;}), cols=6, x0=110, xg=180, y0=230, yg=mode==="be"?100:92;
+ mods.forEach(function(n,i){ n.x=x0+(i%cols)*xg; n.y=y0+Math.floor(i/cols)*yg; n.r=radiusFor(n,mode); });
+ var app=nodes.filter(function(n){return n.id==="app";})[0]; if(app){ app.x=600; app.y=70; app.r=26; }
+ if(mode==="be"){
+  var sh=nodes.filter(function(n){return n.id==="shared";})[0], db=nodes.filter(function(n){return n.id==="db";})[0];
+  if(sh){ sh.x=360; sh.y=620; sh.r=radiusFor(sh,mode); } if(db){ db.x=840; db.y=620; db.r=radiusFor(db,mode); }
+ } else {
+  ["ui","shared","config"].forEach(function(id,i){ var n=nodes.filter(function(x){return x.id===id;})[0]; if(n){ n.x=300+i*300; n.y=640; n.r=radiusFor(n,mode); } });
+  var k=nodes.filter(function(n){return n.id==="kumo";})[0]; if(k){ k.x=600; k.y=745; k.r=radiusFor(k,mode); }
+ }
+ return nodes;
+}
+function edgePath(a,b,kind){
+ var dx=b.x-a.x, dy=b.y-a.y, c1x=a.x+dx*0.45, c1y=a.y+dy*0.15, c2x=a.x+dx*0.55, c2y=a.y+dy*0.85;
+ if(a.y===b.y){ var bend=(kind==="cycle" && b.x<a.x)?55:-55; c1y=a.y+bend; c2y=b.y+bend; }
+ return "M"+a.x.toFixed(1)+" "+a.y.toFixed(1)+" C"+c1x.toFixed(1)+" "+c1y.toFixed(1)+" "+c2x.toFixed(1)+" "+c2y.toFixed(1)+" "+b.x.toFixed(1)+" "+b.y.toFixed(1);
+}
+function renderGraph(mode){
+ graphMode=mode;
+ var nodes=layoutGraph((mode==="be"?BE_NODES:FE_NODES).map(function(n){return Object.assign({},n);}),mode);
+ var edges=(mode==="be"?BE_EDGES:FE_EDGES).filter(function(e){ return (showInfra||e.kind!=="infra") && (mode!=="be"||showRegistry||e.kind!=="registry"); });
+ var byId={}; nodes.forEach(function(n){byId[n.id]=n;});
+ var marker={domain:"var(--accent)",cycle:"var(--amber)",violation:"var(--red)",port:"var(--blue)",settings:"var(--amber)",registry:"var(--blue)"};
+ var s="<defs>"; Object.keys(marker).forEach(function(k){ s+='<marker id="ar-'+k+'" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="'+marker[k]+'"/></marker>'; }); s+="</defs>";
+ s+='<text class="band-label" x="24" y="32">'+(mode==="be"?"COMPOSITION ROOT / APP":"APP / ROUTES / LAYOUT")+'</text><line x1="24" y1="110" x2="1176" y2="110" stroke="var(--rule)" stroke-dasharray="2 4"/>';
+ s+='<text class="band-label" x="24" y="200">'+(mode==="be"?"DOMAIN MODULES · 17":"FRONTEND MODULES · 22")+'</text>';
+ if(mode==="be"){ s+='<text class="band-label" x="24" y="590">SHARED / DB</text><line x1="24" y1="585" x2="1176" y2="585" stroke="var(--rule)" stroke-dasharray="2 4"/>'; }
+ else { s+='<text class="band-label" x="24" y="610">UI / SHARED / CONFIG</text><line x1="24" y1="605" x2="1176" y2="605" stroke="var(--rule)" stroke-dasharray="2 4"/><text class="band-label" x="24" y="720">DEAD</text>'; }
+ edges.forEach(function(e){ var a=byId[e.from], b=byId[e.to]; if(!a||!b) return; var mk=marker[e.kind]?' marker-end="url(#ar-'+e.kind+')"':''; s+='<path class="gedge '+e.kind+'" data-from="'+esc(e.from)+'" data-to="'+esc(e.to)+'" data-kind="'+esc(e.kind)+'" d="'+edgePath(a,b,e.kind)+'"'+mk+'></path>'; if(e.count>1 && e.kind!=="composition" && e.kind!=="infra"){ s+='<text class="edge-label" x="'+((a.x+b.x)/2).toFixed(1)+'" y="'+((a.y+b.y)/2-7).toFixed(1)+'">'+e.count+'</text>'; } });
+ nodes.forEach(function(n){ s+='<g class="gnode" data-id="'+esc(n.id)+'"><title>'+esc(n.label+" · "+fmt(n.loc)+" 行 · "+STATUS[n.status][0])+'</title><circle cx="'+n.x.toFixed(1)+'" cy="'+n.y.toFixed(1)+'" r="'+n.r.toFixed(1)+'" fill="'+statusFill(n.status)+'" stroke="'+statusColor(n.status)+'" stroke-width="2"/><text x="'+n.x.toFixed(1)+'" y="'+(n.y+n.r+14).toFixed(1)+'">'+esc(n.label)+'</text><text class="sub" x="'+n.x.toFixed(1)+'" y="'+(n.y+n.r+25).toFixed(1)+'">'+fmt(n.loc)+'</text></g>'; });
+ $("#depSvg").innerHTML=s;
+ $("#depLegend").innerHTML=["composition","domain","cycle","violation","port","settings","infra","registry"].filter(function(k){return k!=="registry"||showRegistry;}).map(function(k){ var col=marker[k]||"var(--ink-3)", dash=(k==="composition"||k==="infra"||k==="registry")?"border-top-style:dashed;":""; return '<span><i style="border-color:'+col+';background:'+col+';'+dash+'"></i>'+EDGE_LABEL[k]+'</span>'; }).join("");
+ $$("#depSvg .gnode").forEach(function(g){ g.addEventListener("click",function(){selectGraph(g.getAttribute("data-id"));}); g.addEventListener("mouseenter",function(){highlightGraph(g.getAttribute("data-id"));}); g.addEventListener("mouseleave",clearGraphHighlight); });
+ $$("#depSvg .gedge").forEach(function(p){ p.addEventListener("click",function(){ $("#depDetail").innerHTML='<b>'+esc(p.getAttribute("data-from"))+' → '+esc(p.getAttribute("data-to"))+'</b> · '+esc(EDGE_LABEL[p.getAttribute("data-kind")]||p.getAttribute("data-kind"))+'<br>这是 import / 注册关系；点节点看该模块的全部入边与出边。'; }); });
+ if(graphSelected){ selectGraph(graphSelected,true); highlightGraph(graphSelected); }
+ else $("#depDetail").innerHTML="点击任意节点，查看它的入边与出边。实线 = import；虚线 = 组合 / 注册 / 基础设施；红色 = 分层倒置；琥珀 = 环或设置依赖；蓝色 = 端口。";
+}
+function clearGraphHighlight(){ $$("#depSvg .gnode").forEach(function(g){g.classList.remove("dim");}); $$("#depSvg .gedge").forEach(function(p){p.classList.remove("hl","dim");}); }
+function highlightGraph(id){
+ var nb={}; $$("#depSvg .gedge").forEach(function(p){ var a=p.getAttribute("data-from"), b=p.getAttribute("data-to"); if(a===id||b===id){ p.classList.add("hl"); p.classList.remove("dim"); nb[a]=1; nb[b]=1; } else { p.classList.add("dim"); p.classList.remove("hl"); } });
+ $$("#depSvg .gnode").forEach(function(g){ var gid=g.getAttribute("data-id"); if(gid===id||nb[gid]) g.classList.remove("dim"); else g.classList.add("dim"); });
+}
+function selectGraph(id,silent){
+ graphSelected=id;
+ var n=(graphMode==="be"?BE_NODES:FE_NODES).filter(function(x){return x.id===id;})[0]; if(!n) return;
+ var edges=(graphMode==="be"?BE_EDGES:FE_EDGES), ins=edges.filter(function(e){return e.to===id;}), outs=edges.filter(function(e){return e.from===id;});
+ var h='<b>'+esc(n.label)+'</b> · '+chip(n.status)+' · '+fmt(n.loc)+' 生产行';
+ if(n.id==="kumo") h+='<br>零活消费者：唯一 import 是 DialogCloseButton，而它自己也没有消费者。';
+ if(n.id==="file"&&graphMode==="be") h+='<br>8.2k 生产行；包含 13 个端点、4 张表、15+ viewer。';
+ if(ins.length) h+='<br><span class="mono">入边</span> '+ins.map(function(e){return esc(e.from)+' → '+esc(e.to)+(e.count>1?' ('+e.count+')':'');}).join(' · ');
+ if(outs.length) h+='<br><span class="mono">出边</span> '+outs.map(function(e){return esc(e.from)+' → '+esc(e.to)+(e.count>1?' ('+e.count+')':'');}).join(' · ');
+ if(!silent){ $("#depDetail").innerHTML=h; highlightGraph(id); }
+}
+
+var heatMode="all";
+function renderHeat(){
+ var nodes=heatMode==="domain"?BE_NODES.filter(function(n){return n.band===1;}):BE_NODES, set={}; nodes.forEach(function(n){set[n.id]=1;});
+ var vals={}, max=1;
+ BE_EDGES.forEach(function(e){ if(!set[e.from]||!set[e.to]) return; if(heatMode==="domain"&&(e.kind==="composition"||e.kind==="infra")) return; var k=e.from+"|"+e.to; if(!vals[k]) vals[k]={count:0,kind:e.kind}; vals[k].count+=e.count; if(vals[k].count>max) max=vals[k].count; });
+ var h='<table class="heat"><thead><tr><th></th>'; nodes.forEach(function(n){ h+='<th class="col" title="'+esc(n.label)+'">'+esc(n.label)+'</th>'; }); h+='</tr></thead><tbody>';
+ nodes.forEach(function(r){ h+='<tr><th class="row">'+esc(r.id)+'</th>'; nodes.forEach(function(c){ if(r.id===c.id){ h+='<td class="self"></td>'; return; } var v=vals[r.id+"|"+c.id]; if(!v){ h+='<td class="zero"></td>'; return; } var alpha=Math.min(.9,.06+Math.log(v.count+1)/Math.log(max+1)*.8), cls=v.kind==="violation"?"violation-cell":(v.kind==="cycle"||v.kind==="settings"||v.kind==="port"?"cross":""), color=alpha>.55?"var(--paper)":"var(--ink)"; h+='<td class="'+cls+'" data-from="'+esc(r.id)+'" data-to="'+esc(c.id)+'" title="'+esc(r.id+' → '+c.id+': '+v.count)+'" style="background:color-mix(in srgb, var(--accent) '+Math.round(alpha*100)+'%, transparent);color:'+color+'">'+(v.count>9?v.count:"")+'</td>'; }); h+='</tr>'; });
+ h+='</tbody></table>'; $("#heatWrap").innerHTML=h;
+ $("#heatDetail").innerHTML=heatMode==="domain"?"仅域间：去掉 app / shared / db 与组合、基础设施边。剩下的是真正的业务域耦合。":"全量：包含 app 组合边与 module → shared 基础设施边。颜色越深 = 引用次数越多。";
+ $$("#heatWrap td[data-from]").forEach(function(td){ td.addEventListener("click",function(){ var f=td.getAttribute("data-from"), t=td.getAttribute("data-to"), e=BE_EDGES.filter(function(x){return x.from===f&&x.to===t;})[0]; $("#heatDetail").innerHTML='<b>'+esc(f)+' → '+esc(t)+'</b> · '+(e?e.count:0)+' 次 · '+esc(e?EDGE_LABEL[e.kind]:'')+'<br>单元格显示的是源码引用次数（不是运行时调用）。'; }); });
+}
+
+function renderOverlap(){ $("#overlapGrid").innerHTML=OVERLAP.map(function(o){ return '<div class="overlap-card"><h3>'+esc(o[0])+'</h3><div class="mini">'+o[1].map(function(x){return '<span>'+esc(x)+'</span>';}).join("")+'</div><p>'+esc(o[2])+'</p><p class="small mono">'+esc(o[3])+'</p><div class="verdict">'+esc(o[4])+'</div></div>'; }).join(""); }
+
+var cutFilter="全部";
+function renderCuts(filter){
+ cutFilter=filter||cutFilter;
+ var list=cutFilter==="全部"?CUTS:CUTS.filter(function(c){return c[4]===cutFilter;});
+ $("#cutBody").innerHTML=list.map(function(c){ return '<tr data-status="'+(c[3]==="死代码"?"dead":c[3]==="遗留"?"legacy":c[3]==="重叠"?"overlap":"")+'"><td><b>'+esc(c[0])+'</b></td><td class="mono small">'+esc(c[1])+'</td><td class="small">'+esc(c[2])+'</td><td><span class="chip chip-plain">'+esc(c[3])+'</span></td><td><b>'+esc(c[4])+'</b></td><td class="small">'+esc(c[5])+' / '+esc(c[6])+'</td></tr>'; }).join("");
+ $$("#cutFilters .btn").forEach(function(b){ b.setAttribute("aria-pressed", b.getAttribute("data-filter")===cutFilter?"true":"false"); });
+}
+
+function renderQuad(){
+ var W=900,H=500,L=70,R=30,T=30,B=60,xmin=300,xmax=30000;
+ function X(v){ return L+(Math.log(Math.max(v,xmin))-Math.log(xmin))/(Math.log(xmax)-Math.log(xmin))*(W-L-R); }
+ function Y(v){ return H-B-(v/5)*(H-T-B); }
+ var s='<rect x="'+X(2500)+'" y="'+T+'" width="'+(W-R-X(2500))+'" height="'+(Y(3.5)-T)+'" fill="var(--fill-core)" opacity=".55"/><rect x="'+X(2500)+'" y="'+Y(3.5)+'" width="'+(W-R-X(2500))+'" height="'+(H-B-Y(3.5))+'" fill="var(--fill-dead)" opacity=".35"/><rect x="'+L+'" y="'+T+'" width="'+(X(2500)-L)+'" height="'+(Y(3.5)-T)+'" fill="var(--fill-support)" opacity=".35"/><rect x="'+L+'" y="'+Y(3.5)+'" width="'+(X(2500)-L)+'" height="'+(H-B-Y(3.5))+'" fill="var(--fill-legacy)" opacity=".3"/>';
+ [1,2,3,4,5].forEach(function(v){ s+='<line x1="'+L+'" y1="'+Y(v)+'" x2="'+(W-R)+'" y2="'+Y(v)+'" stroke="var(--rule)" stroke-dasharray="2 4"/><text x="'+(L-8)+'" y="'+(Y(v)+3)+'" font-size="9" fill="var(--ink-3)" text-anchor="end">'+v+'</text>'; });
+ [300,1000,3000,10000,30000].forEach(function(v){ s+='<line x1="'+X(v)+'" y1="'+T+'" x2="'+X(v)+'" y2="'+(H-B)+'" stroke="var(--rule)" stroke-dasharray="2 4"/><text x="'+X(v)+'" y="'+(H-B+16)+'" font-size="9" fill="var(--ink-3)" text-anchor="middle">'+fmt(v)+'</text>'; });
+ s+='<line x1="'+X(2500)+'" y1="'+T+'" x2="'+X(2500)+'" y2="'+(H-B)+'" stroke="var(--ink-3)"/><line x1="'+L+'" y1="'+Y(3.5)+'" x2="'+(W-R)+'" y2="'+Y(3.5)+'" stroke="var(--ink-3)"/>';
+ s+='<text x="'+(W-R-10)+'" y="'+(T+18)+'" font-size="10" fill="var(--accent)" text-anchor="end" font-weight="700">核心重镇</text><text x="'+(W-R-10)+'" y="'+(H-B-10)+'" font-size="10" fill="var(--red)" text-anchor="end" font-weight="700">过度建设</text><text x="'+(L+10)+'" y="'+(T+18)+'" font-size="10" fill="var(--blue)" font-weight="700">隐藏宝石</text><text x="'+(L+10)+'" y="'+(H-B-10)+'" font-size="10" fill="var(--ink-3)" font-weight="700">轻量工具</text><text x="'+(W/2)+'" y="'+(H-14)+'" font-size="9" fill="var(--ink-3)" text-anchor="middle">生产行数（对数）→</text><text x="14" y="'+(H/2)+'" font-size="9" fill="var(--ink-3)" transform="rotate(-90 14 '+(H/2)+')" text-anchor="middle">主观价值 →</text>';
+ var placed=[]; QUAD.forEach(function(q){ var x=X(q[2]),y=Y(q[3]); var show=!placed.some(function(p){return Math.abs(p[0]-x)<105 && Math.abs(p[1]-y)<13;}); if(show) placed.push([x,y]); var tx=x+10, anchor='start'; if(x>W-120){tx=x-10;anchor='end';} s+='<g class="quad-point" data-id="'+esc(q[0])+'" style="cursor:pointer"><title>'+esc(q[1]+' · '+fmt(q[2])+' 行 · 价值 '+q[3])+'</title><circle cx="'+x+'" cy="'+y+'" r="7" fill="'+statusFill(q[4])+'" stroke="'+statusColor(q[4])+'" stroke-width="2"/>'+(show?'<text x="'+tx+'" y="'+(y+4)+'" font-size="9" fill="var(--ink)" text-anchor="'+anchor+'">'+esc(q[1])+'</text>':'')+'</g>'; });
+ $("#quadSvg").innerHTML=s; $("#quadDetail").innerHTML="纵轴是主观价值评分（1–5），横轴是生产行数（对数）。点一个点看说明。";
+ $$("#quadSvg .quad-point").forEach(function(g){ g.addEventListener("click",function(){ var q=QUAD.filter(function(x){return x[0]===g.getAttribute("data-id");})[0]; if(q) $("#quadDetail").innerHTML='<b>'+esc(q[1])+'</b> · '+fmt(q[2])+' 行 · 价值 '+q[3]+' · '+chip(q[4])+'<br>'+esc(q[5]); }); });
+}
+
+function renderTarget(){
+ function box(x,y,w,h,title,sub,status){ return '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" fill="'+statusFill(status)+'" stroke="'+statusColor(status)+'" stroke-width="1.5"/><text x="'+(x+16)+'" y="'+(y+30)+'" font-size="15" font-weight="700" fill="var(--ink)">'+title+'</text><text x="'+(x+16)+'" y="'+(y+52)+'" font-size="10" fill="var(--ink-2)">'+sub+'</text>'; }
+ var s='<defs><marker id="tar-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--accent)"/></marker><marker id="tar-port" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="var(--blue)"/></marker></defs><text x="40" y="24" font-size="9" letter-spacing=".14em" fill="var(--ink-3)" font-weight="700">BOUNDED CONTEXTS</text>';
+ s+=box(40,40,340,100,"Identity &amp; Admin","user / auth / admin / api_key / app_settings","support");
+ s+=box(430,40,340,100,"Knowledge Core","note（card / text / chunk）· onto · tag + scope","core");
+ s+=box(820,40,340,100,"Memory","mem / FSRS / review / revlog","core");
+ s+=box(40,190,340,100,"Tasks &amp; Calendar","task / time_window / dependency / slotting","core");
+ s+=box(430,190,340,100,"Capture &amp; Library","file / bookmark / reading / import","core");
+ s+=box(820,190,340,100,"AI &amp; Search","ai gateway / chat / search / palette","core");
+ s+='<rect x="40" y="400" width="1120" height="100" fill="var(--fill-infra)" stroke="var(--ink)" stroke-width="1.5"/><text x="60" y="432" font-size="15" font-weight="700" fill="var(--ink)">Platform</text><text x="60" y="454" font-size="10" fill="var(--ink-2)">db/schema · shared ports（Actor / Search / Settings / Viewer / AI）· app composition root · self-check · deploy</text><text x="60" y="472" font-size="10" fill="var(--ink-3)">所有上下文只向下依赖 Platform；上下文之间只经端口，不互相 use 实现。</text>';
+ [210,600,990].forEach(function(x){ s+='<line x1="'+x+'" y1="140" x2="'+x+'" y2="400" stroke="var(--accent)" stroke-width="1.2" marker-end="url(#tar-arrow)"/><line x1="'+x+'" y1="290" x2="'+x+'" y2="400" stroke="var(--accent)" stroke-width="1.2" marker-end="url(#tar-arrow)"/>'; });
+ s+='<line x1="820" y1="140" x2="600" y2="140" stroke="var(--blue)" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#tar-port)"/><line x1="820" y1="240" x2="600" y2="140" stroke="var(--blue)" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#tar-port)"/><line x1="600" y1="240" x2="600" y2="140" stroke="var(--blue)" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#tar-port)"/><text x="610" y="132" font-size="9" fill="var(--blue)">只读 / 端口</text>';
+ $("#targetSvg").innerHTML=s;
+}
+
+function renderAppendix(){
+ $("#roadmap").innerHTML=ROADMAP.map(function(s){ return '<div class="step"><div class="n">'+esc(s[0])+'</div><h4>'+esc(s[1])+'</h4><p>'+esc(s[2])+'</p><div class="meta"><span class="chip chip-plain">'+esc(s[3])+'</span><span class="chip chip-plain">风险 '+esc(s[4])+'</span></div></div>'; }).join("");
+ $("#movesBody").innerHTML=MOVES.map(function(m){ return '<tr><td class="mono small">'+esc(m[0])+'</td><td><b>'+esc(m[1])+'</b></td><td class="small">'+esc(m[2])+'</td><td class="mono">'+esc(m[3])+'</td></tr>'; }).join("");
+ $("#epBody").innerHTML=EPS.map(function(e){ return '<tr><td><b>'+esc(e[0])+'</b></td><td class="mono small">'+esc(e[1])+'</td><td class="num">'+e[2]+'</td><td class="small">'+esc(e[3])+'</td></tr>'; }).join("");
+ $("#tableBody").innerHTML=TABLES.map(function(t){ var st=t[4].indexOf("dead")>=0?"dead":t[4].indexOf("legacy")>=0?"legacy":"core"; return '<tr data-status="'+st+'"><td class="mono">'+esc(t[0])+'</td><td>'+esc(t[1])+'</td><td class="small">'+esc(t[2])+'</td><td class="small">'+esc(t[3])+'</td><td><span class="chip chip-plain">'+esc(t[4])+'</span></td></tr>'; }).join("");
+ $("#edgeBody").innerHTML=EDGES.map(function(e){ return '<tr><td class="mono">'+esc(e[0])+'</td><td class="num">'+e[1]+'</td><td><span class="chip chip-plain">'+esc(e[2])+'</span></td><td class="mono small">'+esc(e[3])+'</td><td class="small">'+esc(e[4])+'</td></tr>'; }).join("");
+}
+
+function initEvents(){
+ $("#treeBody").addEventListener("click",function(e){ var row=e.target.closest(".trow"); if(!row) return; var node=row.parentElement; toggleNode(node); selectNode(node.getAttribute("data-id")); });
+ $("#treeBody").addEventListener("keydown",function(e){ if(e.key!=="Enter"&&e.key!==" ") return; var row=e.target.closest(".trow"); if(!row) return; e.preventDefault(); var node=row.parentElement; toggleNode(node); selectNode(node.getAttribute("data-id")); });
+ $("#treeSearch").addEventListener("input",function(e){ renderTree(e.target.value.trim().toLowerCase(), $("#coreOnly").getAttribute("aria-pressed")==="true"); });
+ $("#expandAll").addEventListener("click",function(){ $$("#treeBody .tkids, #treeBody .tstack").forEach(function(p){p.removeAttribute("hidden");}); $$("#treeBody .trow").forEach(function(r){ r.setAttribute("aria-expanded","true"); var c=r.querySelector(".tcaret"); if(c&&c.textContent!=="·") c.textContent="−"; }); });
+ $("#collapseAll").addEventListener("click",function(){ $$("#treeBody .tnode .tkids, #treeBody .tnode .tstack").forEach(function(p){p.setAttribute("hidden","");}); $$("#treeBody .trow").forEach(function(r){ r.setAttribute("aria-expanded","false"); var c=r.querySelector(".tcaret"); if(c&&c.textContent!=="·") c.textContent="+"; }); });
+ $("#coreOnly").addEventListener("click",function(){ var on=this.getAttribute("aria-pressed")==="true"; this.setAttribute("aria-pressed",on?"false":"true"); renderTree($("#treeSearch").value.trim().toLowerCase(), !on); });
+ $$("#mapModes .btn").forEach(function(b){ b.addEventListener("click",function(){setMapMode(b.getAttribute("data-map"));}); });
+ $("#graphBe").addEventListener("click",function(){ $("#graphBe").setAttribute("aria-pressed","true"); $("#graphFe").setAttribute("aria-pressed","false"); graphSelected=null; renderGraph("be"); });
+ $("#graphFe").addEventListener("click",function(){ $("#graphFe").setAttribute("aria-pressed","true"); $("#graphBe").setAttribute("aria-pressed","false"); graphSelected=null; renderGraph("fe"); });
+ $("#showInfra").addEventListener("change",function(){ showInfra=this.checked; renderGraph(graphMode); });
+ $("#showRegistry").addEventListener("change",function(){ showRegistry=this.checked; renderGraph(graphMode); });
+ $("#heatAll").addEventListener("click",function(){ heatMode="all"; $("#heatAll").setAttribute("aria-pressed","true"); $("#heatDomain").setAttribute("aria-pressed","false"); renderHeat(); });
+ $("#heatDomain").addEventListener("click",function(){ heatMode="domain"; $("#heatDomain").setAttribute("aria-pressed","true"); $("#heatAll").setAttribute("aria-pressed","false"); renderHeat(); });
+ ["全部","删除","收编","降级"].forEach(function(a){ var b=document.createElement("button"); b.className="btn"; b.type="button"; b.textContent=a; b.setAttribute("data-filter",a); b.setAttribute("aria-pressed",a==="全部"?"true":"false"); b.addEventListener("click",function(){renderCuts(a);}); $("#cutFilters").appendChild(b); });
+ $("#themeBtn").addEventListener("click",function(){ var cur=document.documentElement.getAttribute("data-theme"); var next=cur==="midnight"?"paper":"midnight"; document.documentElement.setAttribute("data-theme",next); try{localStorage.setItem("brb-arch-theme",next);}catch(e){} });
+ $("#printBtn").addEventListener("click",function(){window.print();});
+ if("IntersectionObserver" in window){ var io=new IntersectionObserver(function(entries){ entries.forEach(function(en){ if(en.isIntersecting){ $$("#rail a").forEach(function(a){a.classList.remove("active");}); var a=document.querySelector('#rail a[href="#'+en.target.id+'"]'); if(a) a.classList.add("active"); } }); },{rootMargin:"-30% 0px -60% 0px"}); $$("main .sec").forEach(function(s){io.observe(s);}); }
+}
+
+function init(){
+ try{ var saved=localStorage.getItem("brb-arch-theme"); if(saved) document.documentElement.setAttribute("data-theme",saved); }catch(e){}
+ renderSummary(); renderTree("",false); selectNode("root"); renderCaps(); renderMap("total"); renderGraph("be"); renderHeat(); renderOverlap(); renderCuts("全部"); renderQuad(); renderTarget(); renderAppendix(); initEvents();
+}
+if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",init); else init();
+})();
+</script>
+</body>
+</html>

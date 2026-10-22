@@ -90,11 +90,7 @@ impl Config {
                     .join(name)
             });
         if explicit_secret && !secret_path.is_file() {
-            return Err(format!(
-                "BRAINBOW_SECRETS 指向的 {} 不存在",
-                secret_path.display()
-            )
-            .into());
+            return Err(format!("BRAINBOW_SECRETS 指向的 {} 不存在", secret_path.display()).into());
         }
         if let Some(secret) = crate::shared::config_file::read_secret(&secret_path)? {
             vars.insert("JWT_SECRET".into(), secret);

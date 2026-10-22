@@ -32,10 +32,6 @@ pub struct Config {
     pub service_port: u16,
     pub bind_host: String,
     pub database_url: String,
-    /// 上传根目录（`UPLOAD_DIR`）：文件服务用其下的 `file/`、favicon 缓存用
-    /// `favicons/`。默认 `uploads`（相对 WorkingDirectory，会落在 `service/` 里）；
-    /// 生产应当指到 `data/` 下 —— 用户数据不该住在可整体替换的代码目录里。
-    pub upload_dir: String,
     pub cors_allow_origin: String,
     /// 缺省 `false`（deploy.sh 用的也是这个默认值）。
     pub allow_register: String,
@@ -169,7 +165,6 @@ impl Config {
             // 上传根的默认值走**部署约定**（`data/uploads`），而不是后端的开发默认
             // （相对的 `uploads`）—— 后者会让数据落进 WorkingDirectory，
             // 也就是"随时可整体替换的" service/ 里。
-            upload_dir: lookup("UPLOAD_DIR").unwrap_or_else(|| format!("{data_dir}/uploads")),
             cors_allow_origin: lookup("CORS_ALLOW_ORIGIN")
                 .unwrap_or_else(|| "http://localhost:3000,http://localhost:5173".into()),
             allow_register: lookup("ALLOW_REGISTER").unwrap_or_else(|| "false".into()),
@@ -466,7 +461,6 @@ mod tests {
         // 这几个值与后端从 `BRAINBOW_ROOT=/opt/brb` 推出来的完全一致
         // （见 src/shared/config.rs 的 root_dir_derives_the_data_paths）——
         // 两边的约定必须同步改，改一处漏另一处就会把数据放到别的地方。
-        assert_eq!(cfg.upload_dir, "/opt/brb/data/uploads");
         // 默认值与 deploy.sh 一致
         assert_eq!(cfg.remote_port, 22);
         assert_eq!(cfg.service_port, 8080);

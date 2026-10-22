@@ -72,16 +72,6 @@ pub fn systemd_unit(cfg: &Config) -> Result<String> {
             ("SERVICE_DIR", cfg.service_dir.clone()),
             ("CONFIG_DIR", cfg.config_dir()),
             ("REMOTE_DIR", cfg.remote_dir.clone()),
-            // 兼容回滚到迁移前的旧二进制：旧版本只读 env。JWT 不在这里（旧版会随机生成，
-            // 只影响会话，不影响数据路径）；新版本优先读 TOML。
-            ("SERVICE_PORT", cfg.service_port.to_string()),
-            ("BIND_HOST", cfg.bind_host.clone()),
-            ("DATABASE_URL", cfg.database_url.clone()),
-            ("UPLOAD_DIR", cfg.upload_dir.clone()),
-            ("BACKUP_DIR", cfg.backup_dir.clone()),
-            ("CORS_ALLOW_ORIGIN", cfg.cors_allow_origin.clone()),
-            ("ALLOW_REGISTER", cfg.allow_register.clone()),
-            ("JWT_TTL_SECS", cfg.jwt_ttl_secs.clone()),
         ],
     )
 }
@@ -196,15 +186,11 @@ mod tests {
             unit.contains("Environment=\"BRAINBOW_ROOT=/opt/brb\""),
             "{unit}"
         );
-        assert!(
-            unit.contains("Environment=\"SERVICE_PORT=8080\""),
-            "旧二进制回滚需要 env: {unit}"
-        );
-        assert!(
-            unit.contains("Environment=\"UPLOAD_DIR=/opt/brb/data/uploads\""),
-            "{unit}"
-        );
         assert!(!unit.contains("JWT_SECRET="), "密钥不应进 unit: {unit}");
+        assert!(
+            !unit.contains("SERVICE_PORT="),
+            "运行字段由 TOML 提供: {unit}"
+        );
     }
 
     #[test]

@@ -66,5 +66,5 @@
 3. 前端：按分层放到 `web/src/{domains|capabilities|platform|tools}/<name>/`，内部用 `model/`（纯规则）、`view/`（页面状态）、`data/`（多文件数据适配）、`components/`
 4. 在 `config/module-registry.ts` 登记模块分类（漏登记会被 `app/layer-boundaries.test.ts` 判为未分类模块）
 5. 在 `config/paths.ts`、`config/navigation.ts`、`app/routes.ts` 登记路由（PAGE_LOADERS 是 `Record<PathValue, PageLoader>`，漏加 loader 直接编译失败）
-6. 若新增表：在 `crates/db/src/schema/tables.rs` 加声明 + `SCHEMA_VERSION += 1`（时间列进 `time.rs`、全文索引进 `fts.rs`、废弃对象进 `legacy.rs`）→ `just sqlx-prepare`
+6. 若新增表：在 `crates/db/src/schema/tables.rs` 加声明 + `SCHEMA_VERSION += 1`（时间列进 `time.rs`、全文索引进 `fts.rs`）→ `just sqlx-prepare`；删表/删列/数据搬移需手工处理
 7. 补测试（后端模块内 `#[cfg(test)]`；前端 `*.test.ts(x)`）

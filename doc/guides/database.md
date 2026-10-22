@@ -26,10 +26,7 @@
 | `tables.rs` | 表与索引的 DDL 声明，**顺序即应用顺序**；带 `requires` 的索引在缺列的旧库上跳过 |
 | `time.rs` | `TIME_COLUMNS` 清单 + 时间归一化触发器 `trg_<表>_time_iso_{ins,upd}`（写入即规范化为 `+00:00`） |
 | `fts.rs` | `FTS_SPECS` 清单 + FTS5 虚拟表与同步触发器（trigram tokenizer） |
-| `legacy.rs` | 废弃对象：要删的表 / 索引 / 列（`conv`、`media`、`task_decomposition`、`task_time_allocation`、`file_category` …） |
-| `repairs.rs` | 版本化的幂等数据修复（去重、标签合并、认领无主行、PDF 正文置空重抽、v26 `time_window` → `task_block`）+ **无条件跑的时间戳规范化** |
-| `rebuild.rs` | 版本化的表重建：只用于 SQLite 加不上的表级约束（目前一条，v24 的 `task`） |
-| `apply.rs` | `reconcile` 的实现与声明镜像（列定义取自声明文本） |
+| `apply.rs` | 结构同步：补缺表/缺列、替换索引（列定义取自声明文本） |
 | `mod.rs` | `SCHEMA_VERSION`（当前 **26**）+ `migrate` + `create_tables` |
 
 应用侧的 `src/db/mod.rs` 只是 facade（`pub use brainbow_db::{connect, migrate, verify}`）；实现全在 `crates/db/`，repository 仍留在各业务模块。
@@ -58,35 +55,26 @@
 1. **改声明**（唯一一处）—— 加列/表就改 `tables.rs` 里那句 DDL；动时间列改 `time.rs`；
    动全文索引改 `fts.rs`
 2. **`SCHEMA_VERSION += 1`**（`schema/mod.rs`）—— 老库据此跑一次 `reconcile`
-3. 视情况补三类东西：
-   - 删表/删列/删索引 → 登记进 `legacy.rs`
-   - 要动存量数据（搬值、回填、合并）→ 在 `repairs.rs` 加一条**幂等**修复
-   - 表级约束（CHECK / UNIQUE / 外键）→ 在 `rebuild.rs` 的 `REBUILDS` 登记 `(版本, 表)`，按声明重建
+3. **不再有自动的历史迁移**：删表/删列/数据搬移/表级约束变更都不再自动执行。
+   单机部署下，这类变更直接手工改库（或重建库）；程序只做结构同步（补缺表/列、替换索引）。
+   旧备份/旧库若不是当前 `SCHEMA_VERSION`，由启动检查/手工处理，不再有版本化 repair。
 
-就这样，没有"写第二遍 DDL"这回事：新库与老库补列用的是**同一份声明文本**（老库那侧
-是 `ALTER TABLE ADD COLUMN <声明里的列定义>`，文本由 SQLite 自己从声明里解析出来）。
-两条纪律：**已发布条目的 DDL 文本别改写**（老库的列是照它逐字追加的，改文本会造成新旧库分叉）；
-列形状一律用 `pragma_table_xinfo` 读（`table_info` 不列 VIRTUAL 生成列）。生成列
-（如 `file.category`）的表达式还要在声明里登记一份（`Decl::generated`），有测试盯着两份一致。
+新库与现有库补列用的是**同一份声明文本**（现有库那侧是
+`ALTER TABLE ADD COLUMN <声明里的列定义>`，文本由 SQLite 自己从声明里解析出来）。
+两条纪律：**已发布条目的 DDL 文本别改写**；列形状一律用 `pragma_table_xinfo` 读
+（`table_info` 不列 VIRTUAL 生成列）。生成列（如 `file.category`）的表达式还要在声明里
+登记一份（`Decl::generated`），有测试盯着两份一致。
 
-## reconcile 的阶段顺序（每一步的次序都有理由，别随手调）
+## reconcile 的阶段顺序
 
-0. **表重建**（`rebuild.rs`）—— 只做声明里新增的表级约束（SQLite 的 `ALTER` 加不上）。
-   在 reconcile 的**事务之外、reconcile 之前**跑：外键要在事务外关（事务内是 no-op），
-   重建会带走索引/触发器，所以必须早于 ④⑤⑥ 让它们建回来
-1. **废弃表/索引** —— 索引先删：可能引用着第 7 步要删的旧列，也可能与声明的新形态冲突
-2. **表与列** —— 建缺表、补缺列
-3. **数据修复** —— 先跑**无条件**的时间戳规范化，再跑版本门控的 `repairs`；必须早于建索引：
-   唯一索引要靠去重先清干净（v17 的教训）
-4. **索引** —— 缺则建，文本与声明不符则替换
-5. **时间触发器** —— **必须早于 FTS 触发器**
-6. **FTS** —— 虚表形状不符则整组重建并 `rebuild`；**触发器每次重铺**，让第 5 步的
-   时间触发器始终排在它们前面（老库上 FTS 触发器早就在了，不重铺就会反序）
-7. **声明之外的列** —— 只删登记在 `legacy.rs` 里的；不认识的列留着并告警
+只剩结构同步，没有历史迁移：
 
-时间戳规范化**不受版本门控**：它的正确性依赖一份会增长的清单（`TIME_COLUMNS`），按版本
-门控就意味着"清单扩了、忘了抬门槛"会静默漏掉一类列（`file.updated_at` 就是这么漏的）。
-代价是几十条 UPDATE，只在版本升级时发生。
+1. **表与列** —— 建缺表、补缺列
+2. **索引** —— 缺则建，文本与声明不符则替换
+3. **时间触发器** —— **必须早于 FTS 触发器**
+4. **FTS** —— 虚表形状不符则整组重建并回填；**触发器每次重铺**，让时间触发器排在前面
+
+废弃对象清理、版本化数据修复、表重建都已删除；需要这些变更时手工处理。
 
 `user_version` 的语义是**schema 代次**（`schema::SCHEMA_VERSION`）：老库升级看它、
 `just rollback` 判断"要不要连数据库一起回滚"也看它。库版本高于程序支持版本 → 拒绝启动。
@@ -95,9 +83,6 @@
 
 | 不变量 | 谁盯着 | 它拦的是什么 |
 |--------|--------|--------------|
-| 老形状补齐 ≡ 新建库（列定义 + 对象清单） | `db::tests::reconcile_restores_pre_v18_shape_to_fresh_equivalent` | 形状对账漏了东西 |
-| 升级路径 ≡ 新建库（**补进库里的列定义**） | `db::tests::upgrade_path_reproduces_column_definitions` | 补出来的列与声明不一致（删列 → reconcile → 逐列比对；清单是**推导**的，不靠人工登记） |
-| 表重建保留行与子表指向、新约束生效 | `db::schema::rebuild::tests::rebuild_carries_constraints_and_keeps_rows` | 重建把数据/引用弄丢，或约束没落地 |
 | 触发器创建顺序：时间归一化早于同表的 FTS | `db::tests::time_triggers_precede_fts_triggers` | 顺序反了会撞出 `database disk image is malformed` |
 | 每个 TIMESTAMP 列都被时间归一化触发器覆盖 | `db::tests::time_columns_cover_every_timestamp_column` | 漏进 `TIME_COLUMNS` 的列会把默认值格式**原样落库**（`file.updated_at` 的教训） |
 | 声明自洽（名字在 DDL 里、不重名、前置条件指向已声明的表、生成列表达式与 DDL 一致） | `db::schema::tests::*` | 手写声明里的低级错误 |
@@ -112,17 +97,10 @@
 
 ## SQLite 表达不了的变更
 
-`reconcile` 只做加列与删列；改列类型 / 改默认值 / 加约束 / 改名都要重建表。
-
-**表级约束已经有路径**：`rebuild.rs` 的 `REBUILDS` 按版本登记要重建的表（目前 v24 的
-`task`，新增了两条 CHECK），重建时：
-
-- 在 **reconcile 事务外**先 `PRAGMA foreign_keys = OFF`（事务内是 no-op），无论成败都开回来
-- `CREATE TABLE __rebuild_<表>`（声明的 DDL 换个名字）→ 只搬**两边都有的列** → `DROP TABLE` → `RENAME`
-- 提交前 `PRAGMA foreign_key_check` 必须干净，脏了上抛 → 事务回滚 → 表原样还在
-
-**改名 / 改类型 / 改默认值**至今没用到过；真要做时写一条显式修复，并记住上面两个坑
-（关外键在事务外、`DROP TABLE` 开着外键会把子表行级联删掉）。
+结构同步只能加列；改列类型 / 改默认值 / 加约束 / 改名 / 删列都要手工重建表。
+单机部署下没有自动重建路径：先备份 `data/brainbow.db`，按 SQLite 的
+“关外键 → 建新表 → 搬列 → DROP → RENAME → foreign_key_check”手工执行。
+`DROP TABLE` 开着外键会级联删子表，`PRAGMA foreign_keys` 在事务内是 no-op。
 
 ## `--check` 与自检
 
@@ -146,22 +124,21 @@
 
 ## 真库副本演练
 
-迁移/reconcile 的改动不能只靠内存库的合成形状验收 —— 真库有数据量与历史形状。
-拿副本跑一遍，前后各 dump 一份对照：
+结构同步的改动不能只靠内存库的合成形状验收 —— 真库有数据量。
+拿副本手工演练，前后各 dump 一份对照：
 
 ```bash
 cp brainbow.db target/rehearsal.db        # 先复制，别碰真库
-BRAINBOW_FIXTURE_DB=target/rehearsal.db \
-  cargo test -p brainbow-db migrate_fixture_db -- --ignored --nocapture
 sqlite3 target/rehearsal.db 'PRAGMA user_version;'
+# 在副本上手工执行 ALTER/DDL，或让新程序启动时做结构同步
 ```
 
-对照项：`pragma_table_xinfo` 的列定义、`sqlite_master` 的对象清单、逐表行数、
-以及数据事实（认领 / 时间戳 / 标签）。
+对照项：`pragma_table_xinfo` 的列定义、`sqlite_master` 的对象清单、逐表行数。
+没有自动迁移测试可跑（`migrate_fixture_db` 已随历史迁移删除）。
 
 **SQLite 的 `-wal` 陷阱**：换库文件前不连 `-wal`/`-shm` 一起删，陈旧 WAL 会被拼进新库
 （`cp` 出来的库 salt 相同，SQLite 的校验拦不住；实测拿到过一个"迁移完成 0.01s"的假象）。
-`prepare_schema_fixture` 与 `migrate_fixture_db` 都在收尾 `close()` 连接，避免把 `-wal` 留下来。
+`prepare_schema_fixture` 收尾会 `close()` 连接，避免把 `-wal` 留下来。
 
 ## sqlx 离线数据
 

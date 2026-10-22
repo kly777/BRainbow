@@ -72,8 +72,7 @@ ssh <host> "cd <SERVICE_DIR> && BRAINBOW_ROOT=<根> ./brainbow --check"
 **unit 以路径为主，另保留 legacy env 供回滚**：`BRAINBOW_CONFIG` 指向
 `config/app.toml`，`BRAINBOW_SECRETS` 指向 `config/secret.toml`，`BRAINBOW_ROOT` 指向
 `/opt/<APP_NAME>`。应用自己按根派生 DB/uploads/backup；`xtask` 为了备份/Caddy 仍读同一份
-`app.prod.toml`。unit 里另外保留 `SERVICE_PORT` 等旧字段（不含 JWT），只用于迁移期
-回滚旧二进制；新版忽略它们。
+`app.prod.toml`。unit 不再保留旧字段——只认这三条路径。
 
 **别让进程环境参与部署配置**：`cargo xtask` 是 `cargo run`，而 `.cargo/config.toml`
 的 `[env]` 会把 `DATABASE_URL=sqlite:brainbow.db` 注进 xtask 进程。曾经配置会回落读

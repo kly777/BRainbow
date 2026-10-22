@@ -110,8 +110,8 @@ struct Database {
 #[derive(Deserialize, Default)]
 #[serde(deny_unknown_fields)]
 struct Uploads {
-    #[serde(default)]
-    dir: Option<String>,
+    #[serde(default, rename = "dir")]
+    _dir: Option<String>,
 }
 
 #[derive(Deserialize, Default)]
@@ -289,9 +289,6 @@ pub fn load(config_dir: &Path) -> Result<BTreeMap<String, String>> {
     if let Some(url) = app.database.url {
         put(&mut map, "DATABASE_URL", url);
     }
-    if let Some(dir) = app.uploads.dir {
-        put(&mut map, "UPLOAD_DIR", dir);
-    }
     if let Some(dir) = app.backup.dir {
         put(&mut map, "BACKUP_DIR", dir);
     }
@@ -299,6 +296,7 @@ pub fn load(config_dir: &Path) -> Result<BTreeMap<String, String>> {
         put(&mut map, "FFMPEG_PATH", path);
     }
     let _ = app.frontend;
+    let _ = app.uploads;
 
     if let Some(target) = build.build.target {
         put(&mut map, "BUILD_TARGET", target);

@@ -14,7 +14,7 @@ cargo clippy --workspace --all-targets   # lint 门禁（含 xtask），提交�
 也走 justfile 入口：`just test`（xtask 优先用 cargo-nextest，没有就退回
 `cargo test --workspace`）与 `just test-web`（`pnpm run test`）。
 
-- 测试覆盖：数据库迁移、repository、service、handler、共享工具
+- 测试覆盖：schema 结构同步、repository、service、handler、共享工具
 - SQL 相关测试使用内存 SQLite + `crate::db::migrate`
 - 生产代码 lint 门禁：禁止 unwrap/expect/panic/dbg/println 等（只作用于应用本体；
   `xtask/` 与 `crates/db/` 是独立 crate，不继承）

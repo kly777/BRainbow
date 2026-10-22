@@ -1,66 +1,25 @@
-//! 把声明落到**任意**库：新库直建（`create_tables`），老库按形状补齐（[`reconcile`]）。
+//! 把声明落到现有库：补缺表、补缺列、补齐索引/触发器/FTS。
 //!
-//! `reconcile` 按**形状**而不按版本工作：它不重放历史，而是拿声明与库里的实际形状对一遍
-//! —— 缺的补上、废弃的清掉、数据修一遍。因此"基线 ≡ 基线 + 完整迁移链"那类不变量在这里
-//! 是结构性成立的（结构只有一份来源），不再靠测试维持两份书写不漂移。
+//! 这是"当前形状同步"，不是历史迁移链：不重放版本、不删废弃对象、不跑数据修复。
+//! 旧版本的数据修复与废弃对象清理已经删除（单机部署，不再支持跨很多版本升级）。
 
 use sqlx::{SqliteConnection, SqlitePool};
-use tracing::{info, warn};
+use tracing::info;
 
-use super::{
-    Decl, DeclKind, columns_exist, fts, legacy, rebuild, repairs, same_ddl, schema_error,
-    stored_sql, tables, time,
-};
+use super::{Decl, DeclKind, columns_exist, fts, same_ddl, schema_error, stored_sql, tables, time};
 
 /// 一次 reconcile 里做过的动作（日志与测试用）
 pub(crate) type Actions = Vec<String>;
 
-/// 按形状把库补齐到声明的样子，并跑一遍数据修复。
-///
-/// `from_version` 是库的当前 `PRAGMA user_version`：用来决定哪些**数据修复**与
-/// **表重建**要跑（结构同步永远按形状做，与版本无关）。
-///
-/// ## 阶段顺序（每一步的次序都有理由，别随手调）
-///
-/// 0. **表级约束** —— SQLite 加不上（`ALTER` 只能加列），只能按声明重建表；要在事务外
-///    关外键、且必须早于第 ④⑤⑥ 阶段（重建会把索引/触发器带走，那三步负责建回来），
-///    详见 [`rebuild`]
-/// 1. **废弃表/索引** —— 索引先删：可能引用着第 7 步要删的旧列，也可能与声明里的新形态
-///    冲突（`idx_file_category` 就是从 `file_category` 挪到生成列 `category` 上的）
-/// 2. **表与列** —— 建缺表、补缺列（列定义取自声明文本，与新建库同源）
-/// 3. **数据修复** —— 必须早于建索引：唯一索引要靠去重先清干净（v17 的教训）
-/// 4. **索引** —— 缺则建，文本与声明不符则替换
-/// 5. **时间触发器** —— 同上；**必须早于 FTS 触发器**（AFTER 触发器按创建顺序触发，
-///    顺序反了会撞出 `database disk image is malformed`）
-/// 6. **FTS** —— 虚表/触发器：形状不符则整组重建并 `rebuild` 回填
-/// 7. **声明之外的列** —— 只删登记在 `legacy::COLUMNS` 里的；不认识的留着并告警
-pub(crate) async fn reconcile(
-    pool: &SqlitePool,
-    from_version: i64,
-) -> Result<Actions, sqlx::Error> {
-    // 第 ⓪ 步在事务外（要关外键），它自己管自己的原子性
-    let mut actions = Actions::new();
-    actions.extend(rebuild::run(pool, from_version).await?);
-
+/// 把库补齐到当前声明：缺表建、缺列 ALTER、索引/时间触发器/FTS 对齐。
+pub(crate) async fn reconcile(pool: &SqlitePool) -> Result<Actions, sqlx::Error> {
     let mut tx = pool.begin().await?;
 
-    actions.extend(phase("① 废弃对象", drop_legacy_objects(&mut tx).await)?);
+    let mut actions = Actions::new();
     actions.extend(phase("② 表与列", sync_structure(&mut tx).await)?);
-    actions.extend(phase(
-        "③ 时间戳规范化",
-        repairs::normalize_timestamps(&mut tx).await,
-    )?);
-    actions.extend(phase(
-        "③ 数据修复",
-        repairs::run(&mut tx, from_version).await,
-    )?);
     actions.extend(phase("④ 索引", sync_indexes(&mut tx).await)?);
     actions.extend(phase("⑤ 时间触发器", time::sync_triggers(&mut tx).await)?);
     actions.extend(phase("⑥ FTS", fts::sync(&mut tx).await)?);
-    actions.extend(phase(
-        "⑦ 声明之外的列",
-        drop_unknown_columns(&mut tx).await,
-    )?);
 
     tx.commit().await?;
 
@@ -111,24 +70,6 @@ async fn exec(conn: &mut SqliteConnection, sql: &str) -> Result<(), sqlx::Error>
     Ok(())
 }
 
-/// ① 废弃表与索引（`legacy` 清单里的）
-async fn drop_legacy_objects(conn: &mut SqliteConnection) -> Result<Actions, sqlx::Error> {
-    let mut actions = Actions::new();
-    for name in legacy::INDEXES {
-        if stored_sql(conn, name).await?.is_some() {
-            exec(conn, &format!("DROP INDEX {name}")).await?;
-            actions.push(format!("删废弃索引 {name}"));
-        }
-    }
-    for name in legacy::TABLES {
-        if stored_sql(conn, name).await?.is_some() {
-            exec(conn, &format!("DROP TABLE {name}")).await?;
-            actions.push(format!("删废弃表 {name}"));
-        }
-    }
-    Ok(actions)
-}
-
 /// ② 表与列：缺表建表、缺列 ALTER 补
 async fn sync_structure(conn: &mut SqliteConnection) -> Result<Actions, sqlx::Error> {
     let mut actions = Actions::new();
@@ -176,44 +117,6 @@ async fn sync_indexes(conn: &mut SqliteConnection) -> Result<Actions, sqlx::Erro
                 actions.push(format!("替换索引 {}", decl.name));
             }
             Some(_) => {}
-        }
-    }
-    Ok(actions)
-}
-
-/// ⑦ 删声明之外的列：只删登记在 `legacy::COLUMNS` 里的，其余留着并告警
-async fn drop_unknown_columns(conn: &mut SqliteConnection) -> Result<Actions, sqlx::Error> {
-    let mut actions = Actions::new();
-    for decl in tables::DECLS
-        .iter()
-        .filter(|decl| decl.kind == DeclKind::Table)
-    {
-        if stored_sql(conn, decl.name).await?.is_none() {
-            continue;
-        }
-        let declared: Vec<String> = declared_columns(conn, decl)
-            .await?
-            .into_iter()
-            .map(|column| column.name)
-            .collect();
-        for column in live_columns(conn, decl.name).await? {
-            if declared.contains(&column) {
-                continue;
-            }
-            if legacy::COLUMNS.contains(&(decl.name, column.as_str())) {
-                exec(
-                    conn,
-                    &format!("ALTER TABLE {} DROP COLUMN {column}", decl.name),
-                )
-                .await
-                .map_err(|e| schema_error(format!("删废弃列 {}.{column} 失败：{e}", decl.name)))?;
-                actions.push(format!("删废弃列 {}.{column}", decl.name));
-            } else {
-                warn!(
-                    "{}.{column} 既不在声明里、也不在废弃清单里 —— 留着不动，跑 --check 看漂移细节",
-                    decl.name
-                );
-            }
         }
     }
     Ok(actions)
@@ -296,7 +199,7 @@ async fn declared_columns(
         .collect())
 }
 
-/// 把声明的 DDL 换成临时表名（`rebuild` 用同一套换名法建新表）。
+/// 把声明的 DDL 换成临时表名（读声明列定义时用）。
 ///
 /// 只换 `CREATE TABLE … <名>` 这一处 —— 全局替换会把 `file_id` 这类**列名**一起改掉，
 /// 于是临时表的列名与真表对不上，补列逻辑会照着错的名单补。

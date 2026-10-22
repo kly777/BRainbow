@@ -1,20 +1,19 @@
 //! 基线 schema：声明 + 应用。
 //!
 //! 结构由声明给出（[`tables::DECLS`] / [`time::TIME_COLUMNS`] / [`fts::FTS_SPECS`]），
-//! `create_tables` 顺序执行它们 —— 新库由此得到最新 schema；老库由迁移链补齐
-//! （第 3 步起改为按声明的**形状**补齐，不再重放历史）。
+//! `create_tables` 顺序执行它们 —— 新库由此得到最新 schema；已有库只做结构同步
+//! （补缺表/列、索引/触发器），不再重放历史或做数据修复。
 
 pub(crate) mod apply;
 pub(crate) mod fts;
-pub(crate) mod legacy;
-pub(crate) mod rebuild;
-pub(crate) mod repairs;
 pub(crate) mod tables;
 pub(crate) mod time;
 
 // 对外仍以 `db::schema::XXX` 暴露（`create_tables`、`verify` 与测试都用这个路径）
 pub(crate) use fts::{FTS_SPECS, create_fts_indexes};
-pub(crate) use time::{TIME_COLUMNS, create_time_iso_triggers};
+#[cfg(test)]
+pub(crate) use time::TIME_COLUMNS;
+pub(crate) use time::create_time_iso_triggers;
 
 use sqlx::{SqliteConnection, SqlitePool};
 
@@ -143,7 +142,7 @@ pub async fn migrate(pool: &SqlitePool) -> Result<(), sqlx::Error> {
         // 这条快路径值得留着：实测后端测试执行 51s → 20s
         create_tables(pool).await?;
     } else if current < SCHEMA_VERSION {
-        apply::reconcile(pool, current).await?;
+        apply::reconcile(pool).await?;
     }
 
     if current != SCHEMA_VERSION {
@@ -156,10 +155,10 @@ pub async fn migrate(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     Ok(())
 }
 
-/// 创建基线 schema（v1）：顺序执行声明，再建时间归一化触发器与 FTS 虚拟表。
+/// 创建当前 schema：顺序执行声明，再建时间归一化触发器与 FTS 虚拟表。
 ///
-/// 幂等：DDL 全是 `IF NOT EXISTS`，前置条件不满足的索引自动跳过。新库直接拥有
-/// 最新列；旧库通过迁移补齐列后再建同样的索引（同一句 DDL）。
+/// 幂等：DDL 全是 `IF NOT EXISTS`，前置条件不满足的索引自动跳过。
+/// 只用于全新库；已有库走结构同步补缺表/列。
 pub async fn create_tables(pool: &SqlitePool) -> Result<(), sqlx::Error> {
     let mut conn = pool.acquire().await?;
     for decl in tables::DECLS {

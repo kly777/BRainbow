@@ -20,7 +20,7 @@
   （"共享数据，任意登录用户可读写"）**已取消**；无主行现在只有 admin 看得见、改得动
   （fail-closed，见 `isolation_tests::ownerless_rows_are_admin_only`）。
 - **模块边界已收口**：旧的 `time_window` 模块在 v26 并进了 task 的 `task_block`
-  （`repairs.rs::move_time_windows_to_task_blocks`，旧表已删），子表随父的模板改成
+  （v26 迁移已完成，旧 `time_window` 表已从当前 schema 删除），子表随父的模板改成
   `task_block`（见 §3.1）。本文里凡是"时间窗口"都按 `task_block` 读。
 
 ## 2. 唯一的判据

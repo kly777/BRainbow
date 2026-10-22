@@ -51,10 +51,6 @@ impl Config {
     ///
     /// 缺失的配置使用安全默认值，不会 panic。
     /// `JWT_SECRET` 若未设置则自动生成随机值（启动时会打日志说明）。
-    pub fn from_env() -> Self {
-        Self::from_vars(|key| std::env::var(key))
-    }
-
     /// 从 TOML 加载配置。
     ///
     /// 路径：`BRAINBOW_CONFIG` > debug 的 `config/app.dev.toml` >

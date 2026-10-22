@@ -118,7 +118,7 @@ CREATE INDEX idx_file_tag_rel_tag ON file_tag_rel(tag_id);
 ### 2.3 迁移
 
 - 新建 `file`、`file_tag`、`file_tag_rel`、`file_meta` 四张表
-- 删除旧 `media` 表（`legacy.rs` 里登记为 v15 退役的废弃对象）
+- 旧 `media` 表已从当前 schema 删除；不再保留历史迁移清理
 
 ---
 
@@ -989,7 +989,7 @@ epub 也是 zip（规范要求**首个条目是未压缩的 `mimetype`**，内�
 
 1. 设计文档 ✅
 2. 新建 `file` 模块目录结构 ✅
-3. 建表 + 迁移（删 media 表）✅ —— 现在走声明 + `legacy.rs`，不再改 `db/schema.rs`
+3. 建表 ✅ —— 当前 schema 直接由声明创建；旧 `media` 表不再保留
 4. 实现后端代码 ✅
 5. 注册路由 + 删除 media 模块 ✅
 6. 前端页面与 API ✅（物理层见 §8：`web/src/platform/file/`）

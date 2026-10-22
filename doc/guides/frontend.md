@@ -183,11 +183,11 @@ CSS 产物是构建期生成的，TS 里手写字符串引用它时**编译器�
 ```bash
 cd web
 pnpm install
-pnpm run dev        # vp dev --mode dev（代理 /api → :3000，读根目录 .env.dev）
+pnpm run dev        # vp dev --mode dev（代理 /api → :3000，读 config/app.dev.toml）
 pnpm run check      # vp check + stylelint（format/lint/typecheck，提交前必过）
 pnpm run lint       # vp lint --fix + stylelint --fix
 pnpm run test       # vp test run（Vitest 5；test:watch 常驻）
-pnpm run build      # vp build --mode prod（读根目录 .env.prod）
+pnpm run build      # vp build --mode prod（读 config/app.prod.toml）
 pnpm run e2e        # playwright test（等价于 just e2e）
 ```
 

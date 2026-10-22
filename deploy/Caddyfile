@@ -1,4 +1,4 @@
-# Caddy 配置模板（占位符由 xtask 的 render 用 .env.prod 渲染后同步到远端；
+# Caddy 配置模板（占位符由 xtask 的 render 用 config/app.prod.toml 渲染后同步到远端；
 # 想先看渲染结果：`cargo xtask render caddy`）
 
 @@DOMAIN@@ {

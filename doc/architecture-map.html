@@ -966,7 +966,7 @@ var TREE = {
      "db；file；bookmark","保留；部署收尾自动跑一次。","①②③ 致命中止启动；④⑤ 只告警。"),
     L2("deploy","部署 / 备份 / 回滚","infra",
      "SSH 通道 tar 流、systemd/Caddy、备份/回滚、glibc/musl 兼容、db push/pull。",
-     [["INFRA","xtask/src/deploy.rs + rollback.rs","xtask/src/deploy.rs"],["INFRA","deploy/brainbow.service + Caddyfile","deploy/brainbow.service"],["INFRA","justfile + .env.prod","justfile"]],
+     [["INFRA","xtask/src/deploy.rs + rollback.rs","xtask/src/deploy.rs"],["INFRA","deploy/brainbow.service + Caddyfile","deploy/brainbow.service"],["INFRA","justfile + config/*.toml","justfile"]],
      "—","保留；部署是 Linux 专属，Windows 不跑。","上传在停服之前；回滚按 user_version 判断是否连库一起回。"),
     L2("seo","SEO / Agent 产物","support",
      "sitemap/robots/llms.txt/_md/openapi/api-catalog 构建时生成。",

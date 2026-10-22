@@ -747,7 +747,7 @@ impl Deploy<'_> {
         Ok(())
     }
 
-    /// 本地有哪些 `bin/` 文件要随产物走（取决于 WITH_FFPROBE）。
+    /// 本地有哪些 `bin/` 文件要随产物走（取决于 build.toml 的 with_ffprobe）。
     fn bin_files(&self) -> Vec<(PathBuf, String)> {
         let vendor = self.cfg.project_dir.join("vendor/ffmpeg/bin");
         let wants_ffprobe = self.cfg.with_ffprobe;

@@ -13,8 +13,8 @@
 //!    （`db_deploy_<ts>` → `code_deploy_<ts>`），可实际的代码备份叫
 //!    `code_<ts>.tar.gz` —— 对不上，于是"回滚代码"这一步被静默跳过。
 //!
-//! 备份只含 `brainbow` + `dist/`（这是 `code_*.tar.gz` 的定义，也让它保持在
-//! 十几 MB 而不是把 76MB 的 ffmpeg 一起打包）；因为第 2 点，`bin/` 不受影响。
+//! 备份含 `brainbow` + `dist/` + `config/`（这是 `code_*.tar.gz` 的定义，
+//! 配置必须和二进制一起回滚；仍不打包 76MB 的 ffmpeg，所以 `bin/` 不受影响）。
 
 use chrono::NaiveDateTime;
 

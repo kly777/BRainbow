@@ -8,7 +8,7 @@
 // 契约变化**（字段改名、分页语义）—— 后者归 Rust 侧测试与 `just health`。
 import { defineConfig, devices } from "@playwright/test";
 
-/** 与 .env.dev 的 VITE_PORT 一致 */
+/** 与 config/app.dev.toml 的 frontend.port 一致 */
 const PORT = 3001;
 const BASE = `http://localhost:${PORT}`;
 

@@ -8,7 +8,7 @@
 //!   版本与哈希钉在 `deploy/ffmpeg.lock`，没填就拒绝下载。
 //! - **许可是 GPLv3**（johnvansickle 的静态构建）：本项目以**子进程**方式调用
 //!   （不链接 libav*），所以不构成传染；把二进制随产物发出去时别把这句话删了。
-//! - `ffprobe` 默认**不发**（产物里通过 `WITH_FFPROBE=1` 控制）：它两个各约
+//! - `ffprobe` 默认**不发**（`config/build.toml` 的 `with_ffprobe` 控制）：它两个各约
 //!   77MB，而 ffprobe 只负责给"浏览器读不出容器"的视频回填时长。
 //!
 //! 平台限制：来源是 **linux amd64** 的静态构建，所以只适用于产物发往

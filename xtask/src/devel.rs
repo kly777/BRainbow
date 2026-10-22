@@ -214,7 +214,7 @@ pub fn run_sqlx_prepare(cfg: &Config) -> Result<()> {
 /// `check-backend`：用本地开发库跑一次只读自检（`brainbow --check`）。
 ///
 /// 与部署后自动跑的那条只差数据库：这里连仓库根的 dev 库（debug 构建会读
-/// `.env.dev`），所以**不设** `SQLX_OFFLINE` —— 开发流程本来就要求在线。
+/// `config/app.dev.toml`），所以**不设** `SQLX_OFFLINE` —— 开发流程本来就要求在线。
 pub fn run_check_backend(cfg: &Config) -> Result<()> {
     ui::info("后端只读自检（本地开发库）…");
     Cmd::new("cargo")
@@ -246,7 +246,7 @@ pub fn run_clean(cfg: &Config, all: bool) -> Result<()> {
 ///
 /// 用来强制重新编译 brainbow、又不必把整个 `target/` 重来（依赖重编一次很贵）。
 ///
-/// **产物的实际位置取决于 `BUILD_TARGET`**：本项目用 musl 交叉目标，指纹在
+/// **产物的实际位置取决于 `config/build.toml` 的 target**：本项目用 musl 交叉目标，指纹在
 /// `target/<triple>/release/` 下 —— 只清 `target/{release,debug}` 在这个配置下
 /// 等于什么都没清（老 Makefile 正是如此）。
 pub fn run_clean_cache(cfg: &Config) -> Result<()> {

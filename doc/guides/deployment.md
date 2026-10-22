@@ -20,12 +20,15 @@
 
 ```
 /opt/<APP_NAME>/
-├── service/            运行文件（部署只动这四个）
+├── service/            运行文件（部署只动 brainbow + dist/ + bin/）
 │   ├── brainbow        后端可执行
 │   ├── dist/           前端产物（Caddy 的 root）
 │   ├── bin/ffmpeg      第三方可执行（可选，缺了视频缩略图降级）
 │   ├── REVISION        部署时是哪个 git 版本（构建时写进产物，`just info` 显示）
-│   └── uploads/        ← 不该出现在这里；有就说明 UPLOAD_DIR 没配
+│   └── uploads/        ← 不该出现在这里；有就说明配置没指到 data/
+├── config/             应用配置（部署时随产物上传，权限 700）
+│   ├── app.toml        运行时配置（server/cors/security/...）
+│   └── secret.toml     JWT 密钥（600）
 ├── data/               数据
 │   ├── brainbow.db     数据库（+ -wal / -shm）
 │   └── uploads/        用户上传（UPLOAD_DIR 指向它）
@@ -36,7 +39,7 @@
                         超过一天的 deploy_*/web_*/rollback_* 残骸下次部署时自动清掉）
 ```
 
-维持这条边界的是 **`UPLOAD_DIR`**（unit 里注入，值来自 `.env.prod` 或按约定派生）。
+维持这条边界的是 **`UPLOAD_DIR`**（由 `BRAINBOW_ROOT` 或 `app.toml` 的 `[uploads].dir` 派生/覆盖）。
 不配它会退回默认的相对路径 `uploads`，而 `WorkingDirectory` 是 `service/` —— 用户数据
 就住进了代码目录，任何"重建 service"的操作（老回滚的 `rm -rf $SERVICE_DIR`）都会删掉它。
 
@@ -52,7 +55,7 @@
 
 | 优先级 | 来源 | 例 |
 |---|---|---|
-| 1 | 单项显式配置 | `UPLOAD_DIR=...` / `DATABASE_URL=...` 写进 `.env.prod`（渲染进 unit） |
+| 1 | 单项显式配置 | `app.toml` 的 `[uploads].dir` / `[database].url` / `[backup].dir` |
 | 2 | 根目录约定 | `{根}/data/<DATABASE_FILE>`、`{根}/data/uploads`、`{根}/backup`；根 = `{REMOTE_BASE}/{APP_NAME}` |
 | 3 | 开发默认 | `uploads`、`sqlite:brainbow.db`（相对 cwd，只在本地开发时用）；**备份目录没有开发默认** |
 
@@ -66,44 +69,37 @@ ssh <host> "cd <SERVICE_DIR> && BRAINBOW_ROOT=<根> ./brainbow --check"
 为什么不做成"编译期写死"：那样同一个产物就不能发给不同机器了，而部署的第一性要求是
 "同一个二进制在哪台机器上都一样"。
 
-**为什么 unit 里仍然是物化的绝对路径（不是只注入根）**：部署工具自己也要用这些路径
-（备份、`quick_check`、回滚），由它派生一次、渲染进 unit，两侧就不可能各算各的 ——
-"算出两个不同的数据库路径"这种错是静默的（备份会备空气），代价太大。应用侧的根目录
-支持是给"手动跑一次"用的便利，不是部署时的真源。
+**unit 以路径为主，另保留 legacy env 供回滚**：`BRAINBOW_CONFIG` 指向
+`config/app.toml`，`BRAINBOW_SECRETS` 指向 `config/secret.toml`，`BRAINBOW_ROOT` 指向
+`/opt/<APP_NAME>`。应用自己按根派生 DB/uploads/backup；`xtask` 为了备份/Caddy 仍读同一份
+`app.prod.toml`。unit 里另外保留 `SERVICE_PORT` 等旧字段（不含 JWT），只用于迁移期
+回滚旧二进制；新版忽略它们。
 
 **别让进程环境参与部署配置**：`cargo xtask` 是 `cargo run`，而 `.cargo/config.toml`
 的 `[env]` 会把 `DATABASE_URL=sqlite:brainbow.db` 注进 xtask 进程。曾经配置会回落读
 进程环境，于是"开发机的构建配置"悄悄改掉了"部署配置"（部署把库指到开发库的相对路径，
-而 `.env.prod` 里根本没写它）。现在部署配置**只认 `.env.prod`**。
+而配置文件里根本没写它）。现在部署配置**只认 `config/*.toml`**。
 
-## 环境变量
+## 配置文件
 
-`.env.prod` 里真正必填的只有三项：`REMOTE_HOST`、`REMOTE_USER`、`APP_NAME`；
-其余都有缺省值（见下表）。生产上一般把 `SERVICE_PORT` / `DOMAIN` / `BUILD_TARGET`
-显式写出来，别依赖缺省。
+按"谁读"拆成四份 TOML（真实文件 gitignored，模板在 `config/*.example.toml`）：
 
-| 变量 | 说明 |
-|------|------|
-| `REMOTE_HOST` | 远端 IP/域名（必填；还是模板占位值会被拒绝） |
-| `REMOTE_USER` | SSH 用户（必填） |
-| `APP_NAME` | 应用名（必填；远端目录名，也是 systemd unit 名） |
-| `REMOTE_PORT` | SSH 端口，缺省 22 |
-| `REMOTE_BASE` | 远端根目录，缺省 `/opt`（与 `APP_NAME` 一起构成"根"） |
-| `SERVICE_PORT` | 后端监听端口，缺省 8080（同时渲染进 unit 与 Caddyfile） |
-| `DOMAIN` | Caddy 域名，缺省 `brainbow.top`；生产应显式写 |
-| `JWT_SECRET` | 缺失时**部署时**自动生成并写回 `.env.prod`（只读命令不会动它） |
-| `BUILD_TARGET` | 构建目标，缺省不交叉编译；部署产物应当是 `x86_64-unknown-linux-musl`（见下面的"构建注意"） |
-| `VITE_SITE_URL` | 前端构建用（sitemap / `_md` 的绝对 URL）；由 `vite --mode prod` 读取，不进 unit |
+| 文件 | 谁读 | 必填/说明 |
+|---|---|---|
+| `config/deploy.toml` | `xtask` | `remote.host`、`remote.user`、`remote.app` 必填；`port`/`base`/`backup.*` 有缺省 |
+| `config/app.prod.toml` | 后端 + `xtask` + Vite | `server`、`security`、`site`、`cors`；`[database]`/`[uploads]`/`[backup]` 一般不用写 |
+| `config/build.toml` | `xtask build` | `target` 缺省本机；部署产物应为 `x86_64-unknown-linux-musl` |
+| `config/secret.toml` | 后端 + `xtask` | `[jwt].secret`；缺失时部署时生成并写回，权限 600 |
 
-可选（**一般不用写**，写了就覆盖约定派生或默认值，见上面的"路径怎么决定"）：
-`DATABASE_URL`、`UPLOAD_DIR`、`BACKUP_DIR`、`DATABASE_FILE`、`BIND_HOST`（缺省 `0.0.0.0`）、
-`CORS_ALLOW_ORIGIN`、`ALLOW_REGISTER`（缺省 `false`）、`JWT_TTL_SECS`（缺省 `864000`）、
-`BACKUP_RETAIN_DAYS`（缺省 30）、`BACKUP_RETAIN_COUNT`（缺省 20）。
+`app.prod.toml` 里 `[server].port` 同时供 unit 路径与 Caddy 反代；`[site].url` 同时
+供 Caddy 域名、CORS 与 Vite 的 sitemap；`[database].file`（或 `url`）供备份路径。
+这些值不再通过旧的 `.env.prod` 或 unit 的 `Environment=` 传递。
 
-`BACKUP_DIR` 只被应用**读**：`/admin` 的「服务器」卡片用它报"备份多少份、占多大、
-最近一次什么时候"（部署工具负责往里写，unit 里注入的就是部署工具算出来的那个目录）。
+可选覆盖（**一般不用写**）：`[database].url/file`、`[uploads].dir`、`[backup].dir`、
+`[ffmpeg].path`、`[frontend]`、`[security].jwt_ttl_secs`、`[cors].allow_origins`。
+`BRAINBOW_ROOT` 由 unit 注入，用于派生 `{根}/data`、`{根}/data/uploads`、`{根}/backup`。
 
-**配置只来自这个文件**（加约定派生），不读进程环境 —— 原因见上面那节。
+**配置只来自 TOML**（加约定派生），不读进程环境 —— 原因见上面那节。
 
 ## 常用命令
 
@@ -146,13 +142,15 @@ just render unit|caddy   # 打印渲染结果，可与现网逐字节 diff
 1. **同步**（停服前，服务照常对外）：打 tar.gz 灌进 `ssh` 的 stdin，先落到
    `$REMOTE_DIR/tmp/deploy_<ts>/`，校验（`brainbow` 非空、`dist/index.html` 在）
    之后先不动运行目录；`bin/` 与远端 sha256 一致时跳过（省 76MB 那次传输）；
-   `REVISION`（构建时的 git 版本）随产物一起传
+   `REVISION`（构建时的 git 版本）与 `config/app.toml` + `config/secret.toml`
+   一起传
 2. 停服（首次部署时服务不存在，`stop` 失败是正常的）
 3. 备份：`PRAGMA quick_check` 体检 → 数据库一致性备份 → 代码归档 → 清理过期备份
-4. 就位：`brainbow` / `dist` / `bin` / `REVISION` 从暂存目录 `mv` 过去；`dist` 用
-   `.old` 过渡；`dist` 的目录 755 / 文件 644 也在这步设好（**只扫 dist**，不碰 `uploads/`）
+4. 就位：`brainbow` / `dist` / `bin` / `REVISION` / `config/` 从暂存目录 `mv` 过去；
+   `dist` 用 `.old` 过渡；`dist` 的目录 755 / 文件 644 也在这步设好（**只扫 dist**，
+   不碰 `uploads/`）；`config/` 目录 700、app 644、secret 600
 5. 权限：`brainbow` 与 `bin/*` 可执行
-6. 渲染并安装 systemd unit（`sudo tee` + `chmod 600`，里面有 JWT 密钥）
+6. 渲染并安装 systemd unit（`sudo tee` + `chmod 600`；unit 里只有路径与迁移兼容 env，不含 JWT）
 7. `daemon-reload` + `enable` + `start`
 8. 等 `/api/health` 就绪（30 次 × 1 秒）
 
@@ -195,18 +193,21 @@ just render caddy | diff - <(ssh <host> 'cat /etc/caddy/Caddyfile')
 服务就绪后自动跑一次只读自检：
 
 ```
-cd <SERVICE_DIR> && RUST_LOG=info DATABASE_URL=<.env.prod 值> UPLOAD_DIR=<.env.prod 值> ./brainbow --check
+cd <SERVICE_DIR> && RUST_LOG=info \
+  BRAINBOW_CONFIG=<根>/config/app.toml \
+  BRAINBOW_SECRETS=<根>/config/secret.toml \
+  BRAINBOW_ROOT=<根> ./brainbow --check
 ```
 
-- 环境对齐 systemd：`cd` 到 unit 的 `WorkingDirectory`，并显式传入 `DATABASE_URL`
-  与 `UPLOAD_DIR`（少传 `UPLOAD_DIR` 会退回相对的 `uploads`，于是去检查一个跟服务
-  无关的目录，报出假的"上传目录不可用"）
+- 环境对齐 systemd：`cd` 到 unit 的 `WorkingDirectory`，并传入 unit 里的四个变量。
+  少传 `BRAINBOW_ROOT` 会让 DB/uploads/backup 退回相对开发默认，检查的是一个跟服务
+  无关的目录
 - 检查项（6 项）：schema 漂移（含外键）、`PRAGMA quick_check` 全库扫描、上传目录、
   存储一致性、缩略图缓存、时间戳格式扫描
 - **只读**：不迁移、不建目录、不删文件
 - 失败**只告警不阻断部署** —— 它报告的是数据层问题（缺文件、孤儿、schema 漂移、
   时间戳格式），回滚代码解决不了，而服务本身是好的
-- 手动复跑：`ssh <host> "cd <SERVICE_DIR> && DATABASE_URL=<值> UPLOAD_DIR=<值> ./brainbow --check"`；本地则是 `just check-backend`
+- 手动复跑：`ssh <host> "cd <SERVICE_DIR> && BRAINBOW_CONFIG=... BRAINBOW_SECRETS=... BRAINBOW_ROOT=... ./brainbow --check"`；本地则是 `just check-backend`
 
 ## 构建注意
 
@@ -229,7 +230,7 @@ cd <SERVICE_DIR> && RUST_LOG=info DATABASE_URL=<.env.prod 值> UPLOAD_DIR=<.env.
 file-thumbs 加的 ffmpeg（`src/modules/file/thumb/video.rs`），所以 Sep 12 那版
 还能跑、带缩略图的那版就跑不了 —— 与构建/部署工具无关。
 
-**对策**：`.env.prod` 里 `BUILD_TARGET=x86_64-unknown-linux-musl`，产物完全静态、
+**对策**：`config/build.toml` 里 `target = "x86_64-unknown-linux-musl"`，产物完全静态、
 不再依赖服务器 libc（顺带以后升级服务器 OS 也不会再撞这类问题）。前置：
 
 ```bash
@@ -272,7 +273,7 @@ x86_64-unknown-linux-gnu.2.35`（需要 zig），运行时语义与动态链接�
 每次部署自动：
 
 - 数据库备份：`db_deploy_YYYYMMDD_HHMMSS.db`（与代码备份**共用同一个时间戳**，回滚据此配对）
-- 代码备份：`code_YYYYMMDD_HHMMSS.tar.gz`（只含 `brainbow` + `dist/`）
+- 代码备份：`code_YYYYMMDD_HHMMSS.tar.gz`（含 `brainbow` + `dist/` + `config/`）
 - 自动清理：**每类各**按"超过 30 天或超出最新 20 份"删除；数据库备份连
   `-wal`/`-shm` 兄弟文件一起清（`db_*.db` 这个 glob 匹配不到它们）
 - 部署收尾会 `PRAGMA quick_check` 验一遍**刚拍的那份备份**（失败只告警）：

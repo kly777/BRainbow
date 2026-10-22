@@ -87,8 +87,8 @@ mod tests {
     #[test]
     fn io_error_keeps_context_and_source() {
         let io = std::io::Error::new(std::io::ErrorKind::NotFound, "没有这个文件");
-        let e = Error::io("读取 .env.prod", io);
-        assert_eq!(e.to_string(), "读取 .env.prod: 没有这个文件");
+        let e = Error::io("读取 config/deploy.toml", io);
+        assert_eq!(e.to_string(), "读取 config/deploy.toml: 没有这个文件");
         assert!(std::error::Error::source(&e).is_some());
     }
 }

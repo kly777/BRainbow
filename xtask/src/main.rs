@@ -64,7 +64,7 @@ struct Cli {
 enum Command {
     /// 构建前端 + 后端并组装 build/（前端与后端并行）
     Build {
-        /// 构建目标：`native` 或目标三元组（缺省用配置文件的 BUILD_TARGET）
+        /// 构建目标：`native` 或目标三元组（缺省用 config/build.toml 的 target）
         #[arg(long, value_name = "TRIPLE")]
         target: Option<String>,
     },
@@ -72,7 +72,7 @@ enum Command {
     BuildWeb,
     /// 只构建后端，复用现成的 web/dist
     BuildBackend {
-        /// 构建目标：`native` 或目标三元组（缺省用配置文件的 BUILD_TARGET）
+        /// 构建目标：`native` 或目标三元组（缺省用 config/build.toml 的 target）
         #[arg(long, value_name = "TRIPLE")]
         target: Option<String>,
     },

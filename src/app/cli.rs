@@ -24,7 +24,7 @@ BRainbow 后端
   brainbow --check      只读自检：数据库 schema/完整性 + 上传目录 + 存储一致性
   brainbow --help       显示本帮助
 
-环境变量见 .env.dev.example / .env.prod.example（DATABASE_URL、UPLOAD_DIR、SERVICE_PORT 等）";
+配置见 config/*.toml（模板 config/*.example.toml；BRAINBOW_CONFIG 指路）";
 
 /// 解析命令行参数（`args` 不含程序名本身）。
 ///

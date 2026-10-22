@@ -102,7 +102,7 @@ cd web && pnpm run check && pnpm run test
 just sqlx-prepare
 ```
 
-默认后端端口 `3000`，前端开发端口 `3001`（由 `.env.dev` 配置）。
+默认后端端口 `3000`，前端开发端口 `3001`（由 `config/app.dev.toml` 配置）。
 
 ## 目录结构
 

@@ -9,8 +9,6 @@ web/dist/
 build/
 
 .env*
-!.env.dev.example
-!.env.prod.example
 
 config/*.toml
 !config/*.example.toml

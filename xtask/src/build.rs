@@ -317,7 +317,7 @@ fn normalise_target(text: &str) -> Option<String> {
 
 /// 解析本次构建实际用的目标：`None` = 本机。
 ///
-/// 优先级：命令行 `--target` > 配置里的 `BUILD_TARGET`（`native`/空 = 本机）。
+/// 优先级：命令行 `--target` > `config/build.toml` 的 `build.target`（`native`/空 = 本机）。
 ///
 /// 配置里的目标**本机没装**时退回本机构建，并把这件事说出来。这不是"配置写错了"：
 /// Windows 上装 `x86_64-unknown-linux-musl` 需要一整套 Linux 工具链，

@@ -68,16 +68,16 @@ HTTP → handler → service/query → repository → SQLite
 
 ## 配置
 
-配置由环境变量驱动，集中读取于 `src/shared/config.rs`：
+配置由 TOML 驱动，集中读取于 `src/shared/config.rs`（`config/app.<env>.toml`），部署/构建字段分别读 `config/deploy.toml`、`config/build.toml`。完整字段见 `config/README.md`。
 
-| 变量 | 默认 | 说明 |
+| 字段 | 默认 | 说明 |
 |------|------|------|
-| `DATABASE_URL` | `sqlite:brainbow.db` | SQLite 数据库位置（设了 `BRAINBOW_ROOT` 时按 `{root}/data/<DATABASE_FILE>` 派生） |
-| `BRAINBOW_ROOT` | 未设置 | 只写这一个根时的数据/上传/备份约定来源（部署侧同一根叫 `REMOTE_BASE`） |
-| `SERVICE_PORT` | `3000` | 后端端口 |
-| `BIND_HOST` | `0.0.0.0` | 绑定地址 |
-| `JWT_SECRET` | 随机生成 | JWT 密钥；缺省时重启即失效，生产必须持久化（实际生效密钥以 DB `app_settings` 为准，优先于 env） |
-| `JWT_TTL_SECS` | `864000` | JWT 有效期（秒），默认 10 天 |
-| `UPLOAD_DIR` | `uploads`（或 `{root}/data/uploads`） | 上传根；文件服务用其下 `file/` |
-| `CORS_ALLOW_ORIGIN` | `http://localhost:3000` | 逗号分隔来源；配置为空才完全不加 CORS 层 |
-| `ALLOW_REGISTER` | `false` | 是否开放注册（运行时可被 admin 写 DB 覆盖） |
+| `[database].url` / `file` | `sqlite:brainbow.db` | SQLite 位置；设了 `BRAINBOW_ROOT` 时按 `{root}/data/<file>` 派生 |
+| `BRAINBOW_ROOT` | 未设置 | 部署根；派生 `data/`、`uploads/`、`backup/`（部署侧同一根叫 `REMOTE_BASE`/`APP_NAME`） |
+| `[server].port` | `3000`（dev）/ `8080`（prod） | 后端端口 |
+| `[server].bind` | `127.0.0.1` / `0.0.0.0` | 绑定地址 |
+| `[security].jwt_ttl_secs` | `864000` | JWT 有效期（秒），默认 10 天 |
+| `[security].allow_register` | `false` | 是否开放注册（运行时可被 admin 写 DB 覆盖） |
+| `[uploads].dir` | `uploads`（或 `{root}/data/uploads`） | 上传根；文件服务用其下 `file/` |
+| `[cors].allow_origins` | `["http://localhost:3000"]` | 来源数组；空数组才完全不加 CORS 层 |
+| `config/secret.toml` | 随机生成 | JWT 密钥文件；生产必须持久化（实际生效密钥以 DB `app_settings` 为准） |

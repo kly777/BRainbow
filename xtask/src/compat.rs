@@ -182,7 +182,7 @@ pub fn compare(remote: &Remote, binary: &Path) -> Result<Verdict> {
             return Ok(Verdict::Broken(format!(
                 "{} 是 {}，不是 Linux 的 ELF —— 推上去服务起不来。\
                  这台机器只能出本机产物，部署产物请在 Linux / WSL 上构建\
-                 （`BUILD_TARGET=x86_64-unknown-linux-musl`）",
+                 （`config/build.toml` 的 `target = \"x86_64-unknown-linux-musl\"`）",
                 binary.display(),
                 other.label()
             )));
@@ -206,7 +206,7 @@ pub fn compare(remote: &Remote, binary: &Path) -> Result<Verdict> {
         Some(required) => Verdict::Broken(format!(
             "本地产物需要 glibc 2.{required}，远端只有 2.{minor} —— \
              部署上去会「加载即失败」（`version `GLIBC_2.{required}' not found`）。\
-             修法：用 musl 静态构建（`BUILD_TARGET=x86_64-unknown-linux-musl`，\
+             修法：用 musl 静态构建（`config/build.toml` 的 `target = \"x86_64-unknown-linux-musl\"`，\
              见 doc/guides/deployment.md），或把构建机换成与服务器同代的发行版"
         )),
     })
@@ -224,7 +224,7 @@ fn missing_binary_hint(binary: &Path) -> Option<String> {
     }
     Some(format!(
         "{} 不在，只有 {}（本机构建产物）：部署要的是 Linux 产物，\
-         请在 Linux / WSL 上构建（`BUILD_TARGET=x86_64-unknown-linux-musl`）",
+         请在 Linux / WSL 上构建（`config/build.toml` 的 `target = \"x86_64-unknown-linux-musl\"`）",
         binary.display(),
         exe.display()
     ))

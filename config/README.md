@@ -13,7 +13,8 @@
 ## 读取顺序
 
 - 后端：`BRAINBOW_CONFIG` 指向 app 文件；debug 缺省 `config/app.dev.toml`。
-- 密钥：`BRAINBOW_SECRETS` 指向 secret 文件；生产缺省 `/opt/brb/config/secret.toml`。
+- 密钥：`BRAINBOW_SECRETS` 指向 secret 文件；生产缺省 `/opt/brb/config/secret.toml`，
+  debug 缺省 `config/secret.dev.toml`（不存在就随机生成，不读生产 secret）。
 - `xtask`：默认读本目录的 `deploy.toml` + `app.prod.toml` + `build.toml` + `secret.toml`。
 - Vite：按 `--mode` 读 `app.dev.toml` / `app.prod.toml` 的 `[frontend]` / `[site]`。
 - `BRAINBOW_ROOT` 仍由 systemd 注入，用于派生 `data/`、`uploads/`、`backup/`。

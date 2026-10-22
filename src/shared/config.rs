@@ -148,7 +148,7 @@ impl Config {
         // `{root}/data/<DATABASE_FILE>` 与 `{root}/data/uploads`。
         // 单独指定 `DATABASE_URL` / `UPLOAD_DIR` 仍然优先 —— 逃生口一直在。
         //
-        // 为什么要有根：否则"数据在哪"这件事要在 unit、.env.prod、以及任何手动
+        // 为什么要有根：否则"数据在哪"这件事要在 unit、app.toml、以及任何手动
         // 跑一次的命令行里各写一遍，改根目录时漏掉一处就会把数据写到别的地方，
         // 而且这种错是静默的（服务照跑，文件不见了）。
         let root = vars("BRAINBOW_ROOT").ok().map(PathBuf::from);

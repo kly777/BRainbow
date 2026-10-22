@@ -153,12 +153,14 @@ missing field `name`"），未认证发一个畸形 JSON 就能看到，等于�
 
 ## 配置
 
-见 [architecture.md](./architecture.md) 的配置表。开发时 `.env.dev` 由 main 加载（仅
-`debug_assertions`）；生产由 systemd 注入环境变量，不读 `.env` 文件。
+见 [architecture.md](./architecture.md) 的配置表。`Config::load` 读
+`BRAINBOW_CONFIG` 指向的 TOML（debug 缺省 `config/app.dev.toml`），密钥读同目录的
+`secret.dev.toml`/`secret.toml`；生产由 systemd 只注入 `BRAINBOW_CONFIG` /
+`BRAINBOW_SECRETS` / `BRAINBOW_ROOT`。
 
-路径按三层级联：单项显式配置（`DATABASE_URL` / `UPLOAD_DIR` / `BACKUP_DIR`）>
-根目录约定（`BRAINBOW_ROOT` 下的 `data/<DATABASE_FILE>`、`data/uploads`、`backup`）>
-开发默认（`sqlite:brainbow.db`、`uploads`；`BACKUP_DIR` 没有开发默认）。上传目录一律用
+路径按三层级联：单项显式配置（`[database].url/file`、`[uploads].dir`、
+`[backup].dir`）> 根目录约定（`BRAINBOW_ROOT` 下的 `data/<file>`、`data/uploads`、
+`backup`）> 开发默认（`sqlite:brainbow.db`、`uploads`；备份没有开发默认）。上传目录一律用
 `Config::file_upload_dir()`（`{UPLOAD_DIR}/file`），别在 handler 里硬编码。
 
 ## 构建速度（2026-09-25 实测，本机 WSL：16 核 / 7.6 GB）

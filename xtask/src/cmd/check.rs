@@ -25,7 +25,7 @@ const REQUIRED_SUDO: &[(&str, &str)] = &[
     ("tee /etc/systemd/system", "安装 systemd unit"),
     (
         "chmod 600 /etc/systemd/system",
-        "收紧 unit 权限（里面有 JWT 密钥）",
+        "收紧 unit 权限（避免暴露远端布局）",
     ),
     ("tee /etc/caddy/Caddyfile", "安装 Caddy 配置"),
 ];

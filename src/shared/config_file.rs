@@ -163,7 +163,14 @@ pub fn read_secret(path: &Path) -> Result<Option<String>, Box<dyn Error>> {
     }
     let secret: SecretFile = read_toml(path)?;
     version_ok(secret.version, path)?;
-    Ok(secret.jwt.secret.filter(|s| !s.trim().is_empty()))
+    match secret.jwt.secret.filter(|s| !s.trim().is_empty()) {
+        Some(value) if value == "replace-with-openssl-rand-hex-32" => Err(format!(
+            "{} 的 [jwt].secret 还是模板占位值，请换成 openssl rand -hex 32 的输出",
+            path.display()
+        )
+        .into()),
+        other => Ok(other),
+    }
 }
 
 /// 展开成 Config::from_vars 使用的扁平键表。

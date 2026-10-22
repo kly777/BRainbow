@@ -545,6 +545,23 @@ mod tests {
     }
 
     #[test]
+    fn writes_generated_secret_into_secret_toml() {
+        let path = std::env::temp_dir().join(format!(
+            "xtask-secret-{}-{}.toml",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        write_secret_toml(&path, "deadbeef").expect("写 secret 应当成功");
+        let text = std::fs::read_to_string(&path).expect("读回");
+        assert!(text.contains("[jwt]"), "{text}");
+        assert!(text.contains("secret = \"deadbeef\""), "{text}");
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
     fn random_hex_32_is_64_hex_chars_and_unique() {
         let a = random_hex_32().expect("熵源可用");
         let b = random_hex_32().expect("熵源可用");

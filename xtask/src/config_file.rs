@@ -314,6 +314,12 @@ pub fn load(config_dir: &Path) -> Result<BTreeMap<String, String>> {
         let secret: SecretFile = read_toml(&secret_path, "密钥配置")?;
         check_version(secret.version, &secret_path)?;
         if let Some(secret) = secret.jwt.secret {
+            if secret == "replace-with-openssl-rand-hex-32" {
+                return Err(Error::msg(format!(
+                    "{} 的 [jwt].secret 还是模板占位值，请换成 openssl rand -hex 32 的输出",
+                    secret_path.display()
+                )));
+            }
             put(&mut map, "JWT_SECRET", secret);
         }
     }
@@ -353,5 +359,58 @@ mod tests {
     #[test]
     fn rejects_non_url_site() {
         assert!(host_from_url("brainbow.top").is_err());
+    }
+
+    #[test]
+    fn loads_all_four_files_and_maps_legacy_keys() {
+        let dir = std::env::temp_dir().join(format!(
+            "xtask-config-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("deploy.toml"),
+            "version = 1\n[remote]\nhost = \"203.0.113.7\"\nuser = \"kly\"\napp = \"brb\"\n[backup]\nretain_days = 7\nretain_count = 3\n",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("app.prod.toml"),
+            "version = 1\n[server]\nport = 9090\nbind = \"127.0.0.1\"\n[site]\nurl = \"https://example.test/path\"\n[cors]\nallow_origins = [\"https://a\", \"https://b\"]\n[security]\nallow_register = true\njwt_ttl_secs = 60\n",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("build.toml"),
+            "version = 1\n[build]\ntarget = \"x86_64-unknown-linux-musl\"\nwith_ffprobe = true\n",
+        )
+        .unwrap();
+        std::fs::write(
+            dir.join("secret.toml"),
+            "version = 1\n[jwt]\nsecret = \"deadbeef\"\n",
+        )
+        .unwrap();
+
+        let map = load(&dir).unwrap();
+        assert_eq!(
+            map.get("REMOTE_HOST").map(String::as_str),
+            Some("203.0.113.7")
+        );
+        assert_eq!(map.get("SERVICE_PORT").map(String::as_str), Some("9090"));
+        assert_eq!(map.get("DOMAIN").map(String::as_str), Some("example.test"));
+        assert_eq!(
+            map.get("CORS_ALLOW_ORIGIN").map(String::as_str),
+            Some("https://a,https://b")
+        );
+        assert_eq!(map.get("ALLOW_REGISTER").map(String::as_str), Some("true"));
+        assert_eq!(
+            map.get("BUILD_TARGET").map(String::as_str),
+            Some("x86_64-unknown-linux-musl")
+        );
+        assert_eq!(map.get("WITH_FFPROBE").map(String::as_str), Some("1"));
+        assert_eq!(map.get("JWT_SECRET").map(String::as_str), Some("deadbeef"));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

@@ -14,10 +14,20 @@ TimeoutStopSec=15
 MemoryMax=1024M
 CPUQuota=80%
 Environment="RUST_LOG=info"
-# 配置在远端 config/ 下；unit 只负责指路，不再把运行时字段和密钥写进 Environment
+# 配置在远端 config/ 下；新版只按这三个路径读，密钥不进 unit
 Environment="BRAINBOW_CONFIG=@@CONFIG_DIR@@/app.toml"
 Environment="BRAINBOW_SECRETS=@@CONFIG_DIR@@/secret.toml"
 Environment="BRAINBOW_ROOT=@@REMOTE_DIR@@"
+# 迁移兼容：旧二进制只读 env；新版忽略这些同名字段。JWT_SECRET 刻意不放，
+# 回滚到旧版时会随机生成（只影响会话，不影响数据路径）。
+Environment="SERVICE_PORT=@@SERVICE_PORT@@"
+Environment="BIND_HOST=@@BIND_HOST@@"
+Environment="DATABASE_URL=@@DATABASE_URL@@"
+Environment="UPLOAD_DIR=@@UPLOAD_DIR@@"
+Environment="BACKUP_DIR=@@BACKUP_DIR@@"
+Environment="CORS_ALLOW_ORIGIN=@@CORS_ALLOW_ORIGIN@@"
+Environment="ALLOW_REGISTER=@@ALLOW_REGISTER@@"
+Environment="JWT_TTL_SECS=@@JWT_TTL_SECS@@"
 
 [Install]
 WantedBy=multi-user.target

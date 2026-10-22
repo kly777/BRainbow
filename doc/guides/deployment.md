@@ -122,6 +122,9 @@ just render unit|caddy   # 打印渲染结果，可与现网逐字节 diff
 只读命令（`check` / `status` / `info` / `logs` / `health` / `list-backups`）可以随时
 对着生产跑；会改动远端的东西先过 `--dry-run`。
 
+Unix / WSL 上部署默认复用一条 SSH 连接（`ControlMaster`，60s），减少 20+ 次
+TCP/认证往返和偶发 `Connection closed`；排障时可设 `BRAINBOW_SSH_NO_MULTIPLEX=1` 关闭。
+
 `just deploy` **不构建**（老 `make deploy` 是 build + deploy 一步）：产物比源码旧时
 它会提示一句（比的是产物里的 `REVISION` 与当前 HEAD，拿不准再看 mtime），但不会
 替你重新构建。顺序是 `just build && just deploy`。

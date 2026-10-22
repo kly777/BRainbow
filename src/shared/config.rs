@@ -75,6 +75,7 @@ impl Config {
         let app = crate::shared::config_file::read_app(&config_path)?;
         let mut vars = crate::shared::config_file::to_map(app);
 
+        let explicit_secret = std::env::var_os("BRAINBOW_SECRETS").is_some();
         let secret_path = std::env::var_os("BRAINBOW_SECRETS")
             .map(PathBuf::from)
             .unwrap_or_else(|| {
@@ -88,6 +89,13 @@ impl Config {
                     .unwrap_or_else(|| Path::new("."))
                     .join(name)
             });
+        if explicit_secret && !secret_path.is_file() {
+            return Err(format!(
+                "BRAINBOW_SECRETS 指向的 {} 不存在",
+                secret_path.display()
+            )
+            .into());
+        }
         if let Some(secret) = crate::shared::config_file::read_secret(&secret_path)? {
             vars.insert("JWT_SECRET".into(), secret);
         }

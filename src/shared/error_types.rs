@@ -139,11 +139,6 @@ pub fn json_error(
         .into_response()
 }
 
-/// 400（带自定义错误码）
-pub fn bad_request_with_code(code: impl Into<String>, message: impl Into<String>) -> Response {
-    json_error(StatusCode::BAD_REQUEST, code, message)
-}
-
 /// 401（机器可读错误码 UNAUTHORIZED）
 pub fn unauthorized(message: impl Into<String>) -> Response {
     json_error(StatusCode::UNAUTHORIZED, "UNAUTHORIZED", message)

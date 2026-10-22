@@ -1,28 +1,11 @@
 //! SQL 查询构建辅助函数。
 //!
-//! 对 sqlx::QueryBuilder 的轻量扩展：条件式拼接 SQL 片段。
-//! 消除条件推字段时的重复 `if let Some` 模式。
-//!
-//! # 用法
-//!
-//! ```ignore
-//! use crate::shared::db_query::{QueryBuilderExt, sanitize_table_name};
-//!
-//! // 条件式 UPDATE SET
-//! let mut builder = QueryBuilder::new("UPDATE card SET ");
-//! let mut sep = builder.separated(", ");
-//! // QueryBuilderExt::push_opt 可用于 QueryBuilder
-//! // Separated 的条件拼接需手动 if let Some
-//!
-//! // 条件式 WHERE
-//! builder.push_opt(" AND id != ", &exclude_id);
-//!
-//! // 表名家化（只含字母数字下划线）
-//! let safe = sanitize_table_name(user_input)?;
-//! ```
+//! - [`SortDir`]：ORDER BY 方向
+//! - [`escape_like`] / [`like_contains`] / [`like_prefix`]：LIKE 转义
+//! - [`push_owner_scope`]：行级归属过滤
 
 use serde::Deserialize;
-use sqlx::{Database, Encode, QueryBuilder, Type};
+use sqlx::QueryBuilder;
 
 use super::actor::Actor;
 
@@ -60,29 +43,6 @@ impl SortDir {
     /// 是否降序（给"只关心方向"的调用方用，如 db_viewer 的 `sort_desc: bool`）。
     pub fn is_desc(self) -> bool {
         matches!(self, Self::Desc)
-    }
-}
-
-// ── QueryBuilder 扩展 ──
-
-/// [`QueryBuilder`] 扩展：条件式拼接 SQL 片段。
-pub trait QueryBuilderExt<DB: Database> {
-    /// 当 `value` 为 `Some` 时，拼接 `sql` 然后绑定值。
-    fn push_opt<'t, T>(&mut self, sql: &'static str, value: &Option<T>) -> &mut Self
-    where
-        T: 't + Encode<'t, DB> + Type<DB>;
-}
-
-impl<DB: Database> QueryBuilderExt<DB> for QueryBuilder<DB> {
-    fn push_opt<'t, T>(&mut self, sql: &'static str, value: &Option<T>) -> &mut Self
-    where
-        T: 't + Encode<'t, DB> + Type<DB>,
-    {
-        if let Some(v) = value {
-            self.push(sql);
-            self.push_bind(v);
-        }
-        self
     }
 }
 

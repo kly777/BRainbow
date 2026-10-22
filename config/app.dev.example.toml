@@ -1,0 +1,32 @@
+# 开发环境：后端 runtime + Vite dev
+# 复制为 config/app.dev.toml 使用（真实文件被 gitignore）
+version = 1
+
+[server]
+port = 3000
+bind = "127.0.0.1"
+
+[security]
+allow_register = false
+jwt_ttl_secs = 864000
+
+[site]
+url = "http://localhost:3001"
+
+[cors]
+allow_origins = ["http://localhost:3001"]
+
+[frontend]
+port = 3001
+api_target = "http://localhost:3000"
+
+# 可选覆盖；默认按 BRAINBOW_ROOT 派生
+# [database]
+# file = "brainbow.db"
+# url = "sqlite:brainbow.db"
+# [uploads]
+# dir = "uploads"
+# [backup]
+# dir = "backup"
+# [ffmpeg]
+# path = "./vendor/ffmpeg/bin/ffmpeg"

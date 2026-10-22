@@ -12,6 +12,9 @@ build/
 !.env.dev.example
 !.env.prod.example
 
+config/*.toml
+!config/*.example.toml
+
 *.log
 logs/
 

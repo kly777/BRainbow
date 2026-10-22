@@ -1,0 +1,14 @@
+# 部署目标（仅 xtask 读取；不进应用进程）
+# 复制为 config/deploy.toml 使用（真实文件被 gitignore）
+version = 1
+
+[remote]
+host = "your-server-ip-or-domain.com"
+user = "your-user"
+port = 22
+base = "/opt"
+app = "brb"
+
+[backup]
+retain_days = 30
+retain_count = 20

@@ -1,0 +1,9 @@
+# 构建参数（仅 xtask build / just build 读取）
+# 复制为 config/build.toml 使用（真实文件被 gitignore）
+version = 1
+
+[build]
+# x86_64-unknown-linux-musl — 推荐：完全静态，不依赖服务器 glibc
+# native                    — 本机架构
+target = "x86_64-unknown-linux-musl"
+with_ffprobe = false

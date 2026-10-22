@@ -1,0 +1,28 @@
+# 生产环境：后端 runtime + Vite prod build
+# 复制为 config/app.prod.toml 使用（真实文件被 gitignore）
+version = 1
+
+[server]
+port = 8080
+bind = "0.0.0.0"
+
+[security]
+allow_register = false
+jwt_ttl_secs = 864000
+
+[site]
+url = "https://example.com"
+
+[cors]
+allow_origins = ["https://example.com", "http://example.com"]
+
+# 可选覆盖；默认按 BRAINBOW_ROOT 派生
+# [database]
+# file = "brainbow.db"
+# url = "sqlite:/opt/brb/data/brainbow.db"
+# [uploads]
+# dir = "/opt/brb/data/uploads"
+# [backup]
+# dir = "/opt/brb/backup"
+# [ffmpeg]
+# path = "/opt/brb/service/bin/ffmpeg"
